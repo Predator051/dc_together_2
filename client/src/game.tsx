@@ -254,16 +254,30 @@ function Group({ g, c }: { g: GroupView; c: Ctx }) {
   );
 }
 
-function Stock({ v }: { v: PlayerView }) {
+function Stock({ v, foldable = false }: { v: PlayerView; foldable?: boolean }) {
   const res = v.res.filter((r) => r.kind === 'res' || r.kind === 'food' || r.kind === 'use');
   const tools = v.res.filter((r) => (r.kind === 'tool' || r.kind === 'gear') && r.n > 0);
   const folk = v.res.filter((r) => r.kind === 'people' && r.n > 0);
+  // on a phone the long ledger folds away (the choice is remembered)
+  const [open, setOpen] = useState(() => load('bezgomin.stock') !== 'closed');
   if (res.length === 0 && tools.length === 0 && folk.length === 0) return null;
+  const shown = !foldable || open;
+  const toggle = () => {
+    store('bezgomin.stock', open ? 'closed' : 'open');
+    setOpen(!open);
+  };
   return (
-    <section class="stock">
-      {res.length > 0 && (
+    <section class={`stock ${foldable ? 'foldable' : ''} ${shown ? '' : 'folded'}`}>
+      {foldable && (
+        <button type="button" class="stock-toggle" aria-expanded={shown} onClick={toggle}>
+          <span>{T.stock}</span>
+          <span class="stock-count">{res.filter((r) => r.n > 0).length}</span>
+          <IconDown class="topic-chev" />
+        </button>
+      )}
+      {shown && res.length > 0 && (
         <>
-          <h3>{T.stock}</h3>
+          {!foldable && <h3>{T.stock}</h3>}
           <dl class="ledger">
             {res.map((r) => (
               <div
@@ -279,7 +293,7 @@ function Stock({ v }: { v: PlayerView }) {
           </dl>
         </>
       )}
-      {folk.length > 0 && (
+      {shown && folk.length > 0 && (
         <p class="inline-list folk">
           <span class="il-head">{T.folk}:</span>{' '}
           {folk.map((r, i) => (
@@ -290,7 +304,7 @@ function Stock({ v }: { v: PlayerView }) {
           ))}
         </p>
       )}
-      {tools.length > 0 && (
+      {shown && tools.length > 0 && (
         <p class="inline-list tools">
           <span class="il-head">{T.items}:</span> {tools.map((r) => (r.n > 1 ? `${r.name} ×${r.n}` : r.name)).join(', ')}.
         </p>
@@ -602,14 +616,15 @@ export function Game({ s }: { s: NetState }) {
         </p>
       )}
       <div class="only-mobile">
-        <BagPanel v={v} locked={locked} />
-        <Stock v={v} />
+        {!v.atHome && <BagPanel v={v} locked={locked} />}
+        <Stock v={v} foldable />
       </div>
       {groups.map((g) => (
         <Group key={g.id} g={g} c={ctx} />
       ))}
       {v.atHome && <ResidentsPanel v={v} locked={locked} />}
       <div class="only-mobile">
+        {v.atHome && <BagPanel v={v} locked={locked} />}
         <PackList v={v} locked={locked} />
       </div>
     </div>

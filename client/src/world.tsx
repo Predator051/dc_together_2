@@ -441,6 +441,8 @@ export function FightPanel({ f, v, locked }: { f: FightView; v: PlayerView; lock
             {T.fightRound} {f.round}
           </span>
         </header>
+        <div class="fight-grid">
+        <div class="fight-side">
         <ul class="foes">
           {f.foes.map((x) => (
             <li class={`foe ${x.out ? 'out' : ''}`}>
@@ -505,6 +507,8 @@ export function FightPanel({ f, v, locked }: { f: FightView; v: PlayerView; lock
             </li>
           )}
         </ul>
+        </div>
+        <div class="fight-main">
         {f.lines.length > 0 && (
           <div class="fight-lines">
             {f.lines.map((l) => (
@@ -535,6 +539,8 @@ export function FightPanel({ f, v, locked }: { f: FightView; v: PlayerView; lock
           })}
           {f.waiting && <p class="waiting">{T.fightWaiting}</p>}
           {!f.moves.length && <p class="waiting">{T.fightDown}…</p>}
+        </div>
+        </div>
         </div>
       </section>
     </div>
@@ -592,7 +598,10 @@ export function ResidentsPanel({ v, locked }: { v: PlayerView; locked: boolean }
                 disabled={locked || r.job === j.id}
                 onClick={() => net.send({ c: 'job', who: r.id, id: j.id })}
               >
-                {j.label} <small>{j.place}</small>
+                {j.label}{' '}
+                <small>
+                  {j.place} · ~{j.rate} {T.residentPerHour}
+                </small>
               </button>
             ))}
             <button class={`chip-btn ${r.job === null ? 'on' : ''}`} disabled={locked || r.job === null} onClick={() => net.send({ c: 'job', who: r.id, id: null })}>

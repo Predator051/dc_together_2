@@ -197,8 +197,12 @@ export function residentJobs(g: Game, id: string): Array<{ id: string; area: str
   const def = g.ix.c.residents.find((x) => x.id === id);
   const avoid = new Set((def?.traits ?? []).flatMap((t) => t.avoid ?? []));
   const out: Array<{ id: string; area: string }> = [];
+  // a resident works with what lies in the store (an axe, a crowbar), not with what the heroes wear
+  const stored = new Set<string>();
+  for (const r of g.ix.c.resources) if ((g.s.res[r.id] ?? 0) > 0) for (const t of r.gear?.tools ?? []) stored.add(t);
   for (const a of g.ix.c.actions) {
     if (!a.job || avoid.has(a.id)) continue;
+    if (a.tool && !stored.has(a.tool)) continue;
     const area = g.ix.areaOf(a.group);
     if (!areaKnown(g, area)) continue;
     if (a.visible && !g.test(a.visible)) continue;

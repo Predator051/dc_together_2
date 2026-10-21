@@ -205,10 +205,10 @@ export const locations: LocationDef[] = [
   },
   {
     id: L.bunks,
-    name: 'Люди',
+    name: 'Лежанки',
     area: A.home,
     order: 8,
     visible: { flag: 'p2_ulyana' },
-    desc: 'Лежанки під стіною. Тут ті, хто живе з вами.',
+    desc: 'Дві лежанки під стіною, очерет і шкури. Тепер тут живуть не лише ви.',
   },
 ];

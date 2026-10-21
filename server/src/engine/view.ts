@@ -763,7 +763,10 @@ function residentsView(g: Game, pid: PlayerId): ResidentView[] {
       const st = g.s.residents[r.id]!;
       const jobs = residentJobs(g, r.id).map((j) => {
         const a = g.ix.actions.get(j.id)!;
-        return { id: j.id, label: g.render(a.label, pid), place: areaDef(g, j.area)?.name ?? j.area, rate: a.job!.rate };
+        let mult = 1;
+        for (const t of r.traits) mult *= t.mult?.[a.id] ?? 1;
+        const per = Object.values(a.yield ?? {}).reduce((s: number, y) => s + (Array.isArray(y) ? (y[0] + y[1]) / 2 : y), 0);
+        return { id: j.id, label: g.render(a.label, pid), place: areaDef(g, j.area)?.name ?? j.area, rate: Math.round(a.job!.rate * per * mult) };
       });
       const cur = st.job ? g.ix.actions.get(st.job) : undefined;
       return {

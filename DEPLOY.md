@@ -1,91 +1,106 @@
-# Как запустить игру на своём сервере
+# Как запустить вторую часть на своём сервере
 
-Нужен VPS с Linux (Ubuntu или Debian), хватит 1 ГБ памяти. На сервере должен быть открыт порт 80, а для варианта с доменом ещё и 443.
+Вторая часть живёт **рядом с первой** и её не трогает. Это отдельная папка, отдельный мир и отдельный порт. Первая часть продолжает работать как раньше.
 
-## 1. Установить Docker (один раз)
+Нужен тот же VPS, где уже стоит первая часть. Docker там уже установлен.
 
-```bash
-curl -fsSL https://get.docker.com | sh
-```
+## 1. Скопировать игру на сервер
 
-## 2. Скопировать игру на сервер
-
-На своём компьютере, из папки проекта (вместо `root@1.2.3.4` подставьте пользователя и IP сервера):
+Удобнее всего клонировать репозиторий второй части в отдельную папку:
 
 ```bash
-rsync -av --exclude node_modules --exclude dist --exclude client/dist --exclude deploy/data ./ root@1.2.3.4:~/bezgomin/
+git clone git@github.com:Predator051/dc_together_2.git ~/bezgomin2
 ```
 
-Если проект лежит в своём git-репозитории, вместо этого можно сделать `git clone` на сервере.
+Можно и с компьютера, из папки проекта (вместо `root@1.2.3.4` подставьте пользователя и IP сервера):
+
+```bash
+rsync -av --exclude node_modules --exclude dist --exclude client/dist --exclude deploy/data ./ root@1.2.3.4:~/bezgomin2/
+```
+
+## 2. Перенести героев из первой части
+
+Вторая часть продолжает историю ваших героев: подхватит их имена, роли и то, чем закончилась первая часть. Для этого ей нужна копия мира первой части. Сама первая часть при этом не меняется: мы только читаем копию.
+
+Сделать свежую копию мира первой части и положить её во вторую:
+
+```bash
+cd ~/bezgomin/deploy && docker compose exec game node dist/backup.js
+mkdir -p ~/bezgomin2/deploy/data
+cp "$(ls -t ~/bezgomin/deploy/data/backups/*.db | head -1)" ~/bezgomin2/deploy/data/part1.db
+```
+
+Если этот шаг пропустить, вторая часть начнётся с «усреднённой» концовки, а героев вы создадите заново.
 
 ## 3. Первый запуск
 
-На сервере:
-
 ```bash
-cd ~/bezgomin/deploy && cp .env.example .env && nano .env
+cd ~/bezgomin2/deploy && cp .env.example .env && nano .env
 ```
 
-В файле `.env` впишите свой код приглашения, например `INVITE_CODE=VOVK-2025`. Сохраните (Ctrl+O, Enter, Ctrl+X) и запустите:
+В `.env` впишите код приглашения, например `INVITE_CODE=SOLE-2026`. Порт оставьте `8081`, пока работает первая часть. Сохраните (Ctrl+O, Enter, Ctrl+X) и запустите:
 
 ```bash
 docker compose up -d --build
 ```
 
-Через минуту игра откроется по адресу `http://IP-сервера/`.
+Через минуту игра откроется по адресу `http://IP-сервера:8081/`. Если в настройках сервера есть файрвол, откройте порт 8081:
 
-Если код в `.env` не указан, сервер придумает его сам. Посмотреть код:
+```bash
+ufw allow 8081
+```
+
+Если герои перенесены из первой части, при входе нажмите «Я — …» со своим именем. Если нет, создайте персонажей заново.
+
+Посмотреть код приглашения, если он не задан в `.env`:
 
 ```bash
 docker compose logs game | grep "Invite code"
 ```
 
-### Вариант со своим доменом и HTTPS
+## 4. Когда первая часть пройдена
 
-1. У регистратора домена создайте A-запись, указывающую на IP сервера (например, `game.example.com`).
-2. В `deploy/.env` напишите `SITE_ADDRESS=game.example.com`.
-3. Запустите ту же команду `docker compose up -d --build`. Сертификат HTTPS выпустится автоматически, игра будет по адресу `https://game.example.com`.
+Первую часть можно остановить, а вторую перевести на обычный адрес (80/443 или ваш домен):
 
-## 4. Вход в игру
+```bash
+cd ~/bezgomin/deploy && docker compose down
+cd ~/bezgomin2/deploy && nano .env
+```
 
-Оба игрока открывают адрес игры (с телефона или компьютера), вводят код приглашения и создают персонажей. Посторонний без кода не войдёт.
+В `.env` поставьте `HTTP_PORT=80`, `HTTPS_PORT=443`, а для домена — `SITE_ADDRESS=ваш.домен`. Затем:
 
-Чтобы зайти тем же персонажем с другого устройства, введите тот же код и нажмите «Я — …» со своим именем.
+```bash
+docker compose up -d
+```
+
+Мир первой части при этом не удаляется: он остаётся в `~/bezgomin/deploy/data`.
 
 ## 5. Обновление после нового акта
 
-Скопируйте новую версию на сервер (шаг 2), затем на сервере:
-
 ```bash
-cd ~/bezgomin/deploy && docker compose exec game node dist/backup.js && docker compose up -d --build
+cd ~/bezgomin2 && git pull && cd deploy && docker compose exec game node dist/backup.js && docker compose up -d --build
 ```
 
-Первая часть команды делает резервную копию мира, вторая пересобирает и перезапускает игру. Ваш мир хранится в `deploy/data` и переживает обновления: вы продолжите с того места, где остановились.
+Сначала делается резервная копия мира, потом игра пересобирается. Мир хранится в `~/bezgomin2/deploy/data` и переживает обновления.
 
 ## 6. Резервная копия мира
 
 Сделать копию вручную:
 
 ```bash
-cd ~/bezgomin/deploy && docker compose exec game node dist/backup.js
+cd ~/bezgomin2/deploy && docker compose exec game node dist/backup.js
 ```
 
-Копии лежат в `~/bezgomin/deploy/data/backups/`. Кроме того, сервер сам сохраняет копию при каждом запуске (хранятся последние 10).
-
-Забрать копии себе на компьютер:
-
-```bash
-scp 'root@1.2.3.4:~/bezgomin/deploy/data/backups/*.db' .
-```
+Копии лежат в `~/bezgomin2/deploy/data/backups/`. Сервер сам делает копию при каждом запуске (хранятся последние 10).
 
 Восстановить мир из копии (подставьте имя нужного файла):
 
 ```bash
-cd ~/bezgomin/deploy && docker compose stop game && cp data/backups/ИМЯ-ФАЙЛА.db data/world.db && rm -f data/world.db-wal data/world.db-shm && docker compose start game
+cd ~/bezgomin2/deploy && docker compose stop game && cp data/backups/ИМЯ-ФАЙЛА.db data/world.db && rm -f data/world.db-wal data/world.db-shm && docker compose start game
 ```
 
 ## Полезное
 
 - Логи: `docker compose logs -f game`
 - Перезапуск: `docker compose restart`
-- Остановить: `docker compose down` (мир при этом сохраняется)
+- Остановить: `docker compose down` (мир сохраняется)
