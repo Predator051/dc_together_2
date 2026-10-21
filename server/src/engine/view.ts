@@ -766,7 +766,13 @@ function residentsView(g: Game, pid: PlayerId): ResidentView[] {
         let mult = 1;
         for (const t of r.traits) mult *= t.mult?.[a.id] ?? 1;
         const per = Object.values(a.yield ?? {}).reduce((s: number, y) => s + (Array.isArray(y) ? (y[0] + y[1]) / 2 : y), 0);
-        return { id: j.id, label: g.render(a.label, pid), place: areaDef(g, j.area)?.name ?? j.area, rate: Math.round(a.job!.rate * per * mult) };
+        return {
+          id: j.id,
+          label: g.render(a.label, pid),
+          place: areaDef(g, j.area)?.name ?? j.area,
+          rate: Math.round(a.job!.rate * per * mult),
+          ...(j.missing ? { reason: `${g.ix.ui('job_needs')} ${g.ix.ui(`tool_${j.missing}`)}` } : {}),
+        };
       });
       const cur = st.job ? g.ix.actions.get(st.job) : undefined;
       return {

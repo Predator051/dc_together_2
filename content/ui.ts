@@ -146,6 +146,7 @@ export const ui: Record<string, string> = {
   // ----- household -----
   residents_hungry: 'У варниці нема що їсти. Люди працюють упівсили.',
   resident_hurt: 'поранено на роботі. Відлежиться.',
+  job_needs: 'на складі потрібен',
 
   // ----- fights -----
   fight_start: 'Напад: {foes}.',

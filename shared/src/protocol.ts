@@ -414,7 +414,7 @@ export interface ResidentView {
   traits: Array<{ name: string; text: string }>;
   job: string | null;
   jobLabel?: string;
-  jobs: Array<{ id: string; label: string; place: string; rate: number }>;
+  jobs: Array<{ id: string; label: string; place: string; rate: number; reason?: string }>;
   hurt: boolean;
   hungry: boolean;
 }

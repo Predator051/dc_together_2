@@ -163,6 +163,7 @@ export function settleWork(g: Game): boolean {
     if (!r.job || r.hurtUntil > g.now) continue;
     const a = g.ix.actions.get(r.job);
     if (!a?.job) continue;
+    if (a.tool && !g.ix.c.resources.some((x) => (g.s.res[x.id] ?? 0) > 0 && x.gear?.tools?.includes(a.tool!))) continue;
     const def = g.ix.c.residents.find((x) => x.id === id);
     let mult = 1;
     for (const t of def?.traits ?? []) {
@@ -193,20 +194,19 @@ export function settleWork(g: Game): boolean {
   return changed;
 }
 
-export function residentJobs(g: Game, id: string): Array<{ id: string; area: string }> {
+export function residentJobs(g: Game, id: string): Array<{ id: string; area: string; missing?: string }> {
   const def = g.ix.c.residents.find((x) => x.id === id);
   const avoid = new Set((def?.traits ?? []).flatMap((t) => t.avoid ?? []));
-  const out: Array<{ id: string; area: string }> = [];
+  const out: Array<{ id: string; area: string; missing?: string }> = [];
   // a resident works with what lies in the store (an axe, a crowbar), not with what the heroes wear
   const stored = new Set<string>();
   for (const r of g.ix.c.resources) if ((g.s.res[r.id] ?? 0) > 0) for (const t of r.gear?.tools ?? []) stored.add(t);
   for (const a of g.ix.c.actions) {
     if (!a.job || avoid.has(a.id)) continue;
-    if (a.tool && !stored.has(a.tool)) continue;
     const area = g.ix.areaOf(a.group);
     if (!areaKnown(g, area)) continue;
     if (a.visible && !g.test(a.visible)) continue;
-    out.push({ id: a.id, area });
+    out.push({ id: a.id, area, ...(a.tool && !stored.has(a.tool) ? { missing: a.tool } : {}) });
   }
   return out;
 }
@@ -214,7 +214,7 @@ export function residentJobs(g: Game, id: string): Array<{ id: string; area: str
 export function setJob(g: Game, who: string, id: string | null): Result {
   const r = g.s.residents[who];
   if (!r) return g.fail('err_not_now');
-  if (id !== null && !residentJobs(g, who).some((j) => j.id === id)) return g.fail('err_not_now');
+  if (id !== null && !residentJobs(g, who).some((j) => j.id === id && !j.missing)) return g.fail('err_not_now');
   settleWork(g);
   r.job = id;
   return { ok: true };

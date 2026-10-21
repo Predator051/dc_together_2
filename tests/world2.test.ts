@@ -192,9 +192,12 @@ describe('the household', () => {
     w.state.flags['done:s_04'] = 1;
     w.g().apply([{ resident: 'h_01' }]);
     w.state.res['r_05'] = 10;
-    const jobs = w.view(h).residents[0]!.jobs.map((j) => j.id);
-    expect(jobs).toContain('x_06');
-    expect(jobs).not.toContain('x_34'); // she is afraid of water
+    const jobs = w.view(h).residents[0]!.jobs;
+    expect(jobs.map((j) => j.id)).not.toContain('x_34'); // she is afraid of water
+    // cutting reeds needs a blade lying in the store
+    expect(jobs.find((j) => j.id === 'x_06')?.reason).toContain('ніж');
+    expect(w.cmd(h, { c: 'job', who: 'h_01', id: 'x_06' }).ok).toBe(false);
+    w.state.res['g_18'] = 1;
     expect(w.cmd(h, { c: 'job', who: 'h_01', id: 'x_06' }).ok).toBe(true);
     for (const pid of ['p1', 'p2'] as PlayerId[]) w.online(pid, false);
     w.now += 2 * 3_600_000;

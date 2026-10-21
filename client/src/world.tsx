@@ -595,12 +595,12 @@ export function ResidentsPanel({ v, locked }: { v: PlayerView; locked: boolean }
             {r.jobs.map((j) => (
               <button
                 class={`chip-btn ${r.job === j.id ? 'on' : ''}`}
-                disabled={locked || r.job === j.id}
+                disabled={locked || r.job === j.id || !!j.reason}
                 onClick={() => net.send({ c: 'job', who: r.id, id: j.id })}
               >
                 {j.label}{' '}
                 <small>
-                  {j.place} · ~{j.rate} {T.residentPerHour}
+                  {j.place} · {j.reason ?? `~${j.rate} ${T.residentPerHour}`}
                 </small>
               </button>
             ))}

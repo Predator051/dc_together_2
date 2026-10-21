@@ -53,9 +53,10 @@ export class Bot {
     if (v.busyUntil > v.now || v.map.travel) return null;
     if (v.nearFight) return { c: 'help' };
 
-    const idle = v.residents.find((r) => !r.job && r.jobs.length && !r.hurt);
+    const idle = v.residents.find((r) => !r.job && r.jobs.some((j) => !j.reason) && !r.hurt);
     if (idle) {
-      const pick = idle.jobs.find((j) => this.wanted(g).has(this.jobRes(j.id))) ?? idle.jobs[0]!;
+      const ok = idle.jobs.filter((j) => !j.reason);
+      const pick = ok.find((j) => this.wanted(g).has(this.jobRes(j.id))) ?? ok[0]!;
       return { c: 'job', who: idle.id, id: pick.id };
     }
 
