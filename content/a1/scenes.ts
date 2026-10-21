@@ -107,7 +107,7 @@ export const scenes1: SceneDef[] = [
           { stove: 3 },
           { wear: G.knife, who: 'maker' },
           { add: { [R.flint]: 1, [R.food]: 2 } },
-          { xp: 15, who: 'both' },
+          { xp: 8, who: 'both' },
           { checkpoint: 'a1.1' },
         ],
         next: null,
@@ -152,7 +152,7 @@ export const scenes1: SceneDef[] = [
         text: 'Худий, лапа поранена, на боці свіжа подряпина. Але живий.',
         hunter: 'Відтепер він не відходить від тебе ні на крок. І в бійці буде поруч.',
         maker: 'Відтепер він ходить за {p:Ловцем|Ловчинею}, як прив\'язаний.',
-        effects: [{ set: 'p2_dog_back' }, { meet: N.dog }, { xp: 10, who: 'both' }],
+        effects: [{ set: 'p2_dog_back' }, { meet: N.dog }, { xp: 5, who: 'both' }],
         next: null,
       },
     },
@@ -182,7 +182,7 @@ export const scenes1: SceneDef[] = [
       },
       n3: {
         text: 'Ще далі на сході, над краєм білого, — тонка смужка диму. Чи то хмара, чи то хтось щось варить.',
-        effects: [{ moveTo: A.flat, who: 'both' }, { xp: 10, who: 'both' }],
+        effects: [{ moveTo: A.flat, who: 'both' }, { xp: 5, who: 'both' }],
         next: null,
       },
     },
@@ -209,7 +209,7 @@ export const scenes1: SceneDef[] = [
       },
       n2: {
         text: 'На кориті вирізано риски — облік. Хтось черпав тут ропу щодня й рахував відра. Остання риска давня, сіль у ній уже затяглася.',
-        effects: [{ moveTo: A.well, who: 'both' }, { set: 'p2_well_found' }, { xp: 10, who: 'both' }],
+        effects: [{ moveTo: A.well, who: 'both' }, { set: 'p2_well_found' }, { xp: 5, who: 'both' }],
         next: null,
       },
     },
@@ -222,7 +222,7 @@ export const scenes1: SceneDef[] = [
     group: L.yard,
     label: 'Поставити чрен на піч',
     visible: { all: [{ flag: 'done:s_05' }, { noFlag: 'p2_pan_set' }] },
-    cost: { [R.clay]: 4, [R.wood]: 4 },
+    cost: { [R.clay]: 8, [R.wood]: 8 },
     gives: 'Солеварня',
     start: 'n1',
     nodes: {
@@ -235,7 +235,7 @@ export const scenes1: SceneDef[] = [
         mode: 'joint',
         text: 'Узялися? Тепер — разом.',
         options: [
-          { id: 'three', label: 'На рахунок «три»' },
+          { id: 'three', label: 'На раз-два-три' },
           { id: 'now', label: 'Тягнути зараз' },
         ],
         mismatch: 'n2m',
@@ -248,7 +248,7 @@ export const scenes1: SceneDef[] = [
       n3: {
         text: 'Чрен піднімається. Ви несете його, ступаючи в ногу, — і він сідає на піч рівно, як на своє місце. Бо це і є його місце.',
         maker: 'На денці, з-під іржі, проступає вибитий знак: коло, а в ньому три крапки. Такий самий, як на дошці в солончаку.',
-        effects: [{ set: 'p2_pan_set' }, { xp: 10, who: 'both' }],
+        effects: [{ set: 'p2_pan_set' }, { xp: 5, who: 'both' }],
         next: null,
       },
     },
@@ -260,6 +260,8 @@ export const scenes1: SceneDef[] = [
     title: 'Мертвий гай',
     label: 'Розвідати мертвий гай',
     visible: { flag: 'done:s_04' },
+    enabled: { level: 3 },
+    disabledHint: 'Звідти чути виття. Спершу набратися сили (рівень 3).',
     gives: 'Нове місце',
     start: 'n1',
     nodes: {
@@ -275,7 +277,7 @@ export const scenes1: SceneDef[] = [
       n3: {
         text: 'Між двома дубами, на сухій купині, — кістяк. Людина. Лежить на боці, підтягнувши коліна, у лахмітті сірого полотна.',
         hunter: 'Біля кісток — пряжка від пояса. Важка, литва, з виступом під ремінь. Вояцька, південна. Такі ти {бачив|бачила} в Пониззі на тих, хто йшов на війну.',
-        maker: 'На пряжці вибито: «III сотня». А сорочка — грубе сіре полотно, однакове, наче шите відразу на багатьох. Жодного шва на свій смак.',
+        maker: 'На пряжці вибито: «Третя сотня». А сорочка — грубе сіре полотно, однакове, наче шите відразу на багатьох. Жодного шва на свій смак.',
         effects: [{ clue: 'c_08' }, { clue: 'c_09' }, { mystery: M.bones, level: 1 }],
         next: 'n4',
       },
@@ -297,7 +299,7 @@ export const scenes1: SceneDef[] = [
       },
       n5: {
         text: 'Виття стихає. Не тому, що звір пішов, — тому, що він вас почув.',
-        effects: [{ moveTo: A.grove, who: 'both' }, { xp: 15, who: 'both' }],
+        effects: [{ moveTo: A.grove, who: 'both' }, { xp: 8, who: 'both' }],
         next: null,
       },
     },
@@ -326,7 +328,7 @@ export const scenes1: SceneDef[] = [
       },
       n3: {
         text: 'Дорога туди — через стару греблю на півночі. Звідси видно її темний горб над водою, розібраний посередині.',
-        effects: [{ set: 'p2_smoke_seen' }, { xp: 15, who: 'both' }, { checkpoint: 'a1.2' }],
+        effects: [{ set: 'p2_smoke_seen' }, { xp: 8, who: 'both' }, { checkpoint: 'a1.2' }],
         next: null,
       },
     },
@@ -421,7 +423,7 @@ export const scenes1: SceneDef[] = [
       n1: {
         type: 'choice',
         mode: 'each',
-        text: 'Пряжка з гаю лежить на камені біля вогню. «III сотня». Війна, від якої ви втекли, лежить у плавнях за сотні верст від Пониззя.',
+        text: 'Пряжка з гаю лежить на камені біля вогню. «Третя сотня». Війна, від якої ви втекли, лежить у плавнях за сотні верст від Пониззя.',
         options: [
           { id: 'mine', label: 'Згадати, як вербували в нашому селі', effects: [{ pset: 'bg2_war_seen' }] },
           { id: 'none', label: 'Не згадувати', effects: [{ pset: 'bg2_war_shut' }] },

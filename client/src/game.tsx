@@ -8,10 +8,11 @@ import { Notes, useSeenClues } from './notes.js';
 import { notifier } from './notify.js';
 import { sound } from './sound.js';
 import { Scene } from './scene.js';
-import { IconBell, IconBellOff, IconDown, IconFlame, IconLock, IconLog, IconMute, IconNotes, IconPair, IconPin, IconSnow, IconSound, IconWork } from './icons.js';
+import { IconBell, IconBellOff, IconDown, IconFlame, IconHero, IconLock, IconLog, IconMap, IconMute, IconNotes, IconPair, IconPin, IconSnow, IconSound, IconWork } from './icons.js';
 import { T } from './strings.js';
+import { BagPanel, FightPanel, HeroPanel, MapPanel, NearFight, PackList, ResidentsPanel } from './world.js';
 
-type Tab = 'work' | 'notes' | 'log';
+type Tab = 'work' | 'map' | 'hero' | 'notes' | 'log';
 
 /** A button unlocks this long after the server says it may (absorbs clock jitter). */
 const SAFETY_MS = 150;
@@ -114,18 +115,19 @@ function Entry({ e, c }: { e: EntryView; c: Ctx }) {
   const busy = v.busyUntil + SAFETY_MS > now;
   const mine = v.busyAction === e.id && v.busyUntil > now;
   const recharge = e.readyAt && e.readyAt + SAFETY_MS > now ? e.readyAt : 0;
-  const disabled = c.locked || !e.enabled || (e.kind === 'act' && (busy || !!recharge));
+  const disabled = c.locked || !e.enabled || ((e.kind === 'act' || e.kind === 'go') && (busy || !!recharge));
   const reason = e.enabled ? (recharge ? secsLeft(recharge, now) : null) : e.reason;
   const gains = e.gain ?? [];
   const costs = e.cost ?? [];
-  const meta = gains.length > 0 || costs.length > 0 || !!reason || !!e.hint;
+  const walk = e.kind === 'go' && e.cooldown ? `${Math.round(e.cooldown / 1000)} ${T.sec}` : null;
+  const meta = gains.length > 0 || costs.length > 0 || !!reason || !!e.hint || !!walk;
   const ring = useEcho(mine);
 
   return (
     <button
       class={`tile ${e.together ? 'together' : ''} ${mine ? 'running' : ''} ${!e.enabled ? 'blocked' : ''}`}
       disabled={disabled}
-      onClick={() => net.send({ c: 'act', id: e.id })}
+      onClick={() => (e.kind === 'go' ? net.send({ c: 'go', to: e.id.slice(3) }) : net.send({ c: 'act', id: e.id }))}
     >
       {mine && <Fill key={v.busyUntil} from={v.busyFrom} until={v.busyUntil} offset={c.offset} cls="tile-fill" />}
       {ring > 0 && <span key={ring} class="ring" aria-hidden="true" />}
@@ -165,6 +167,7 @@ function Entry({ e, c }: { e: EntryView; c: Ctx }) {
               {reason}
             </span>
           )}
+          {walk && <span class="m walk">{walk}</span>}
           {!reason && e.hint && <span class="m hint">{e.hint}</span>}
         </span>
       )}
@@ -252,8 +255,8 @@ function Group({ g, c }: { g: GroupView; c: Ctx }) {
 }
 
 function Stock({ v }: { v: PlayerView }) {
-  const res = v.res.filter((r) => r.kind === 'res');
-  const tools = v.res.filter((r) => r.kind === 'tool' && r.n > 0);
+  const res = v.res.filter((r) => r.kind === 'res' || r.kind === 'food' || r.kind === 'use');
+  const tools = v.res.filter((r) => (r.kind === 'tool' || r.kind === 'gear') && r.n > 0);
   const folk = v.res.filter((r) => r.kind === 'people' && r.n > 0);
   if (res.length === 0 && tools.length === 0 && folk.length === 0) return null;
   return (
@@ -289,7 +292,7 @@ function Stock({ v }: { v: PlayerView }) {
       )}
       {tools.length > 0 && (
         <p class="inline-list tools">
-          <span class="il-head">{T.items}:</span> {tools.map((r) => r.name).join(', ')}.
+          <span class="il-head">{T.items}:</span> {tools.map((r) => (r.n > 1 ? `${r.name} ×${r.n}` : r.name)).join(', ')}.
         </p>
       )}
     </section>
@@ -560,14 +563,24 @@ export function Game({ s }: { s: NetState }) {
     return () => window.clearTimeout(id);
   }, [s.toast?.id]);
 
-  const hasNotes = v.journal.clues.length + v.journal.questions.length + v.journal.people.length > 0;
+  const hasNotes = v.journal.clues.length + v.journal.questions.length + v.journal.people.length + v.bestiary.length > 0;
   const groups = useMemo(() => v.groups.filter((g) => g.entries.length > 0 || g.desc), [v.groups]);
+  const hasMap = v.tabs.includes('map');
+  const hasHero = v.tabs.includes('hero');
+  const heroBadge = v.hero.points > 0 || !!v.hero.perkChoice;
+  // a tab that is not open (yet) falls back to the work
+  const view: Tab = (tab === 'map' && !hasMap) || (tab === 'hero' && !hasHero) ? 'work' : tab;
 
   const tabs: Array<{ id: Tab; label: string; icon: JSX.Element; badge?: boolean }> = [
-    { id: 'work', label: T.tabWork, icon: <IconWork /> },
-    ...(hasNotes ? [{ id: 'notes' as Tab, label: T.tabNotes, icon: <IconNotes />, badge: newNotes && tab !== 'notes' }] : []),
+    { id: 'work', label: T.tabHere, icon: <IconWork /> },
+    ...(hasMap ? [{ id: 'map' as Tab, label: T.tabMap, icon: <IconMap /> }] : []),
+    ...(hasHero ? [{ id: 'hero' as Tab, label: T.tabHero, icon: <IconHero />, badge: heroBadge && view !== 'hero' }] : []),
+    ...(hasNotes ? [{ id: 'notes' as Tab, label: T.tabNotes, icon: <IconNotes />, badge: newNotes && view !== 'notes' }] : []),
     { id: 'log', label: T.tabLog, icon: <IconLog /> },
   ];
+  // on a computer the middle column switches between work, map and hero
+  const midTabs = tabs.filter((t) => t.id === 'work' || t.id === 'map' || t.id === 'hero');
+  const mid: Tab = desktop ? (view === 'map' || view === 'hero' ? view : 'work') : view;
 
   const work = (
     <div class="work">
@@ -589,11 +602,16 @@ export function Game({ s }: { s: NetState }) {
         </p>
       )}
       <div class="only-mobile">
+        <BagPanel v={v} locked={locked} />
         <Stock v={v} />
       </div>
       {groups.map((g) => (
         <Group key={g.id} g={g} c={ctx} />
       ))}
+      {v.atHome && <ResidentsPanel v={v} locked={locked} />}
+      <div class="only-mobile">
+        <PackList v={v} locked={locked} />
+      </div>
     </div>
   );
 
@@ -616,7 +634,7 @@ export function Game({ s }: { s: NetState }) {
         <div class="top-info">
           <span class="place">
             <IconPin />
-            <span>{v.me.where}</span>
+            <span>{v.map.travel ? `${T.travelling} → ${v.map.travel.name}` : v.me.where}</span>
           </span>
           {v.day > 0 && (
             <span class="day">
@@ -638,18 +656,35 @@ export function Game({ s }: { s: NetState }) {
 
       <main class="layout">
         <aside class="col-left only-desktop">
+          <BagPanel v={v} locked={locked} />
           <Stock v={v} />
+          <PackList v={v} locked={locked} />
         </aside>
-        <div class={`col-mid ${tab === 'work' ? '' : 'hide-mobile'}`}>
-          {work}
-          <div class="only-mobile mini-log">
-            <Log v={{ ...v, log: v.log.slice(-4) }} />
-          </div>
+        <div class={`col-mid ${mid === 'work' || mid === 'map' || mid === 'hero' ? '' : 'hide-mobile'}`}>
+          {desktop && midTabs.length > 1 && (
+            <div class="side-switch mid-switch" role="tablist">
+              {midTabs.map((t) => (
+                <button role="tab" aria-selected={mid === t.id} class={mid === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>
+                  {t.icon}
+                  {t.label}
+                  {t.badge && <span class="badge" />}
+                </button>
+              ))}
+            </div>
+          )}
+          {mid === 'work' && work}
+          {mid === 'map' && <MapPanel v={v} locked={locked} />}
+          {mid === 'hero' && <HeroPanel v={v} locked={locked} />}
+          {mid === 'work' && (
+            <div class="only-mobile mini-log">
+              <Log v={{ ...v, log: v.log.slice(-4) }} />
+            </div>
+          )}
         </div>
-        <div class={`col-notes only-mobile ${tab === 'notes' ? '' : 'hide-mobile'}`}>
-          {!desktop && <Notes v={v} seen={seen} markSeen={markSeen} active={tab === 'notes'} />}
+        <div class={`col-notes only-mobile ${view === 'notes' ? '' : 'hide-mobile'}`}>
+          {!desktop && <Notes v={v} seen={seen} markSeen={markSeen} active={view === 'notes'} />}
         </div>
-        <aside class={`col-right ${tab === 'log' ? '' : 'hide-mobile'}`}>
+        <aside class={`col-right ${view === 'log' ? '' : 'hide-mobile'}`}>
           {desktop && hasNotes && (
             <div class="side-switch" role="tablist">
               <button role="tab" aria-selected={side === 'log'} class={side === 'log' ? 'on' : ''} onClick={() => setSide('log')}>
@@ -680,7 +715,7 @@ export function Game({ s }: { s: NetState }) {
       <nav class="bottom-nav only-mobile">
         {tabs.map((t) => (
           <button
-            class={tab === t.id ? 'on' : ''}
+            class={view === t.id ? 'on' : ''}
             onClick={() => {
               setTab(t.id);
               window.scrollTo({ top: 0 });
@@ -695,6 +730,7 @@ export function Game({ s }: { s: NetState }) {
         ))}
       </nav>
 
+      {!v.fight && !v.scene && <NearFight v={v} locked={locked} />}
       {v.proposal && !v.scene && (
         <div class="proposal">
           {v.proposal.mine ? (
@@ -732,8 +768,9 @@ export function Game({ s }: { s: NetState }) {
       )}
 
       {v.scene && <Scene v={v} sc={v.scene} locked={locked} />}
-      {!v.scene && v.summary && <Summary s={v.summary} me={v.me.name} partner={v.partner.name} />}
-      {!v.scene && !v.summary && v.welcome && <Welcome w={v.welcome} partner={v.partner.name} />}
+      {v.fight && <FightPanel f={v.fight} v={v} locked={locked} />}
+      {!v.scene && !v.fight && v.summary && <Summary s={v.summary} me={v.me.name} partner={v.partner.name} />}
+      {!v.scene && !v.fight && !v.summary && v.welcome && <Welcome w={v.welcome} partner={v.partner.name} />}
       {s.toast && <div class="toast">{s.toast.text}</div>}
       {s.deltas.length > 0 && (
         <div class="deltas" aria-live="polite">

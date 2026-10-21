@@ -47,6 +47,7 @@ import {
   pack,
   pickPerk,
   refreshHero,
+  settleHealth,
   skillOf,
   spendPoint,
 } from './hero.js';
@@ -146,7 +147,10 @@ const OK: Result = { ok: true };
 export class Game {
   readonly rng: Rng;
   /** Scenes queued by effects; started when the current scene ends. */
-  private chain: string[] = [];
+  /** Kept in the world: a scene queued now may start after a later command ends the current one. */
+  private get chain(): string[] {
+    return (this.s.chain ??= []);
+  }
   /** Checkpoints asked for by effects; the server saves snapshots after the operation. */
   readonly checkpoints: string[] = [];
 
@@ -227,7 +231,8 @@ export class Game {
   settle(): boolean {
     const a = settleTravel(this);
     const b = settleWork(this);
-    return a || b;
+    const c = settleHealth(this);
+    return a || b || c;
   }
 
   // ----- conditions ----------------------------------------------------------
@@ -763,7 +768,7 @@ export class Game {
     if (a.train) gainSkill(this, pid, a.train.skill, a.train.xp);
     if ((a.kind === 'craft' || a.kind === 'build') && !this.flag(`made:${a.id}`)) {
       this.s.flags[`made:${a.id}`] = 1;
-      gainXp(this, pid, a.kind === 'build' ? 6 : 3);
+      gainXp(this, pid, a.kind === 'build' ? 4 : 2);
     }
     // hardships of the place
     const area = areaDef(this, this.ix.areaOf(a.group));

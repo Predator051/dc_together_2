@@ -150,3 +150,17 @@ export const IconBellOff = (p: P) => (
     <path d="M10 20.5a2 2 0 0 0 4 0M4 4l16 16" />
   </Svg>
 );
+
+export const IconMap = (p: P) => (
+  <Svg {...p}>
+    <path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z" />
+    <path d="M9 4v14M15 6v14" />
+  </Svg>
+);
+
+export const IconHero = (p: P) => (
+  <Svg {...p}>
+    <circle cx="12" cy="7" r="3.2" />
+    <path d="M5 20c.8-4 3.6-6 7-6s6.2 2 7 6" />
+  </Svg>
+);

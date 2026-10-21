@@ -10,7 +10,7 @@ console.log('slots', JSON.stringify(l.slots));
 if (l.freeRoles.length) {
   await a.join(code!, 'Перевірка', 'm', l.freeRoles[0]!);
   console.log('joined as', a.pid, 'goal:', a.view?.goal);
-  const r = await a.cmd({ c: 'act', id: 'act_p1' });
+  const r = await a.cmd({ c: 'act', id: 'x_01' });
   console.log('act ok', r.ok);
 }
 await a.close();

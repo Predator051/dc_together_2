@@ -86,6 +86,7 @@ export const G = {
   coat: 'g_15',
   helm: 'g_16',
   ironspear: 'g_17',
+  boneknife: 'g_18',
 } as const;
 
 export const E = {

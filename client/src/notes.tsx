@@ -135,6 +135,7 @@ export function Notes({
     .filter((t) => !filtering || t.shown.length > 0 || (t.titleHit && filter === 'all'));
   const people =
     filter === 'all' ? j.people.filter((p) => !needle || norm(`${p.name} ${p.desc}`).includes(needle)) : [];
+  const beasts = filter === 'all' ? v.bestiary.filter((b) => !needle || norm(`${b.name} ${b.desc}`).includes(needle)) : [];
   const isOpen = (id: string) => filtering || open.has(id);
 
   // Whatever is actually on screen counts as read; it keeps a highlight for a while.
@@ -168,7 +169,7 @@ export function Notes({
       return next;
     });
 
-  if (!j.clues.length && !j.questions.length && !j.people.length) return <p class="empty">{T.emptyNotes}</p>;
+  if (!j.clues.length && !j.questions.length && !j.people.length && !v.bestiary.length) return <p class="empty">{T.emptyNotes}</p>;
 
   const newCount = j.clues.filter(isNew).length;
   const mineCount = j.clues.filter((c) => c.personal).length;
@@ -213,7 +214,7 @@ export function Notes({
         </div>
       </div>
 
-      {shown.length === 0 && people.length === 0 && <p class="empty">{T.nothingFound}</p>}
+      {shown.length === 0 && people.length === 0 && beasts.length === 0 && <p class="empty">{T.nothingFound}</p>}
 
       <div class="topics">
         {shown.map((t) => {
@@ -293,6 +294,54 @@ export function Notes({
                     <div>
                       <b>{hl(p.name, needle)}</b>
                       <p>{hl(p.desc, needle)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {beasts.length > 0 && (
+          <section class={`topic people-topic ${isOpen('_beasts') ? 'open' : ''}`}>
+            <button
+              type="button"
+              class="topic-head"
+              aria-expanded={isOpen('_beasts')}
+              disabled={filtering}
+              onClick={() => toggle('_beasts')}
+            >
+              <span class="topic-main">
+                <span class="topic-q">{T.beasts}</span>
+                <span class="topic-sub">
+                  <span>{beasts.length}</span>
+                </span>
+              </span>
+              {!filtering && <IconDown class="topic-chev" />}
+            </button>
+            {isOpen('_beasts') && (
+              <div class="topic-body people">
+                {beasts.map((b) => (
+                  <div class="person beast">
+                    <span class="avatar small">{b.level}</span>
+                    <div>
+                      <b>{hl(b.name, needle)}</b>
+                      {b.beaten > 0 && (
+                        <span class="beast-beaten">
+                          {' '}
+                          · {T.beaten} {b.beaten}
+                        </span>
+                      )}
+                      <p>{hl(b.desc, needle)}</p>
+                      {b.traits.length > 0 && (
+                        <ul class="traits">
+                          {b.traits.map((t) => (
+                            <li>
+                              <b>{t.name}.</b> {t.text}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   </div>
                 ))}

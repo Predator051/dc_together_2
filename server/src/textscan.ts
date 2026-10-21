@@ -118,6 +118,52 @@ export function collectStrings(c: Content): Found[] {
     pushText(out, `npc ${n.id}.name`, n.name);
     pushText(out, `npc ${n.id}.desc`, n.desc);
   }
+  for (const a of c.areas) {
+    pushText(out, `area ${a.id}.name`, a.name);
+    pushText(out, `area ${a.id}.where`, a.where);
+    pushText(out, `area ${a.id}.desc`, a.desc);
+    (a.cond ?? []).forEach((x, i) => pushText(out, `area ${a.id}.cond${i}`, x.text));
+  }
+  for (const e of c.enemies ?? []) {
+    for (const k of ['name', 'acc', 'gen', 'verb'] as const) pushText(out, `enemy ${e.id}.${k}`, e[k]);
+    pushText(out, `enemy ${e.id}.desc`, e.desc);
+    (e.phases ?? []).forEach((ph, i) => pushText(out, `enemy ${e.id}.phase${i}`, ph.text));
+  }
+  for (const r of c.residents ?? []) {
+    pushText(out, `resident ${r.id}.name`, r.name);
+    pushText(out, `resident ${r.id}.desc`, r.desc);
+    r.traits.forEach((t, i) => {
+      pushText(out, `resident ${r.id}.trait${i}`, t.name);
+      pushText(out, `resident ${r.id}.trait${i}.text`, t.text);
+    });
+  }
+  for (const [k, t] of Object.entries(c.traits ?? {})) {
+    pushText(out, `trait ${k}`, t.name);
+    pushText(out, `trait ${k}.text`, t.text);
+  }
+  for (const p of c.perks ?? []) {
+    pushText(out, `perk ${p.id}`, p.name);
+    pushText(out, `perk ${p.id}.text`, p.text);
+  }
+  for (const r of c.resources) {
+    if (!r.use) continue;
+    pushText(out, `res ${r.id}.use`, r.use.label);
+    pushLog(out, `res ${r.id}.use.log`, r.use.log);
+  }
+  for (const a of c.actions) pushText(out, `act ${a.id}.why`, a.why);
+  for (const s of c.scenes)
+    for (const [id, n] of Object.entries(s.nodes)) {
+      const w = `scene ${s.id}.${id}`;
+      if (n.type === 'stealth') for (const [k, v] of Object.entries(n.sees)) pushText(out, `${w}.sees.${k}`, v);
+      if (n.type === 'operation') {
+        n.tracks.forEach((t) => pushText(out, `${w}.track.${t.id}`, t.label));
+        n.moves.forEach((m) => {
+          pushText(out, `${w}.move.${m.id}`, m.label);
+          pushLog(out, `${w}.move.${m.id}.log`, m.log);
+        });
+        n.events.forEach((e, i) => pushText(out, `${w}.event${i}`, e.text));
+      }
+    }
   for (const [k, v] of Object.entries(c.actEnd)) pushText(out, `actEnd ${k}`, v);
   for (const [r, t] of Object.entries(c.roleTitles)) {
     out.push({ where: `role ${r}.m`, text: t.m });
@@ -128,7 +174,7 @@ export function collectStrings(c: Content): Found[] {
 }
 
 const RUSSIAN_LETTERS = /[ыэъёЫЭЪЁ]/;
-const PLACEHOLDER = /\{(?:p:)?[^{}|]*\|[^{}|]*\}|\{(?:name|partner|role|p:role)\}/g;
+const PLACEHOLDER = /\{(?:p:)?[^{}|]*\|[^{}|]*\}|\{(?:name|partner|role|p:role|foe|foeAcc|foeGen|foes|n|item|verb|who)\}/g;
 
 /**
  * Russian words and typical russisms/calques. Each entry is a regex source; a whole-word match

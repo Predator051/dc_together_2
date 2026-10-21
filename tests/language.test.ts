@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 describe('player-visible text is Ukrainian', () => {
   it('content strings', () => {
     const found = collectStrings(content);
-    expect(found.length).toBeGreaterThan(300);
+    expect(found.length).toBeGreaterThan(400);
     const bad = found
       .map((f) => ({ ...f, problems: checkUkrainian(f.text) }))
       .filter((f) => f.problems.length)
@@ -16,8 +16,13 @@ describe('player-visible text is Ukrainian', () => {
   });
 
   it('client interface strings', () => {
-    const bad = Object.entries(T)
-      .map(([k, v]) => ({ k, problems: checkUkrainian(v, [/XXXX-XXXX/]) }))
+    const flat: Array<[string, string]> = [];
+    for (const [k, v] of Object.entries(T)) {
+      if (typeof v === 'string') flat.push([k, v]);
+      else for (const [k2, v2] of Object.entries(v)) flat.push([`${k}.${k2}`, v2]);
+    }
+    const bad = flat
+      .map(([k, v]) => ({ k, problems: checkUkrainian(v, [/XXXX-XXXX/, /\{p\}/]) }))
       .filter((x) => x.problems.length)
       .map((x) => `${x.k}: ${x.problems.join(', ')}`);
     expect(bad).toEqual([]);
@@ -38,6 +43,7 @@ describe('player-visible text is Ukrainian', () => {
     expect(checkUkrainian('Він відкрив двері')).not.toEqual([]);
     expect(checkUkrainian('Hello світ')).toContain('Latin letters');
     expect(checkUkrainian('{name} {пішов|пішла} додому.')).toEqual([]);
+    expect(checkUkrainian('{foe} кусає тебе: −{n}.')).toEqual([]);
     expect(checkUkrainian('Зламаний {шаблон')).toContain('broken placeholder');
   });
 });

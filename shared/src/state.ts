@@ -53,6 +53,8 @@ export interface PlayerState {
   fight: number | null;
   /** Poison ticks left. */
   poison: number;
+  /** Last time health was restored by rest. */
+  regenAt: number;
 }
 
 export interface Snapshot {
@@ -195,6 +197,8 @@ export interface FightState {
   down: PlayerId[];
   /** Players who ran. */
   fled: PlayerId[];
+  /** Heroes already lifted once (a second fall is for good). */
+  lifted?: PlayerId[];
   /** Enemy traits revealed during this fight (for the bestiary line). */
   startedAt: number;
 }
@@ -256,4 +260,6 @@ export interface WorldState {
   legacy: Legacy | null;
   /** Last time residents' work was counted. */
   workAt: number;
+  /** Scenes queued by effects, started when the current scene ends. */
+  chain?: string[];
 }

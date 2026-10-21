@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { content } from '../content/index.js';
 import type { PlayerId } from '../shared/src/content.js';
+import { ContentIndex, Game } from '../server/src/engine/index.js';
 import { startServer, type Running } from '../server/src/main.js';
 import { Bot } from './bot.js';
 import { TestClient } from './wsclient.js';
 
 const CODE = 'ABCD-EFGH';
+const ix = new ContentIndex(content);
 
 let running: Running | null = null;
 let clock = 1_700_000_000_000;
@@ -53,24 +55,51 @@ function advance(ms: number): void {
   running!.game.tick();
 }
 
+/** Fresh views for everyone (time moved on without anything to broadcast). */
+async function refresh(...cs: TestClient[]): Promise<void> {
+  await Promise.all(
+    cs.map((c) => {
+      const v = c.wait('view');
+      c.send({ t: 'sync' });
+      return v;
+    }),
+  );
+}
+
 afterEach(async () => {
   for (const c of clients.splice(0)) await c.close().catch(() => {});
   if (running) await running.stop();
   running = null;
 });
 
-/** Drive both prologues and the hatch over the wire. */
-async function throughHatch(a: TestClient, b: TestClient): Promise<void> {
+/** Both come to on the shore. */
+async function wake(a: TestClient, b: TestClient): Promise<void> {
   for (const c of [a, b]) {
-    expect((await c.cmd({ c: 'act', id: 'act_p1' })).ok).toBe(true);
-    advance(3000);
-    expect((await c.cmd({ c: 'act', id: 'act_p2' })).ok).toBe(true);
-    advance(3000);
+    expect((await c.cmd({ c: 'act', id: 'x_01' })).ok).toBe(true);
+    advance(4000);
   }
-  expect((await a.cmd({ c: 'act', id: 'act_p3' })).ok).toBe(true);
-  advance(3000);
-  expect((await a.cmd({ c: 'act', id: 'act_p4' })).ok).toBe(true);
-  advance(3000);
+  await settle(a, b);
+}
+
+/** The shore scene, all the way to the hut. */
+async function toHut(a: TestClient, b: TestClient, pick = (o: string[]) => o[0]!): Promise<void> {
+  await wake(a, b);
+  expect((await a.cmd({ c: 'act', id: 's_01' })).ok).toBe(true);
+  await settle(b);
+  await b.cmd({ c: 'accept' });
+  for (let i = 0; i < 20; i++) {
+    await settle(a, b);
+    const sc = a.view!.scene;
+    if (!sc) break;
+    if (sc.kind === 'choice') {
+      await Promise.all(
+        [a, b].map((c) => {
+          const opts = c.view!.scene!.options!.filter((o) => o.enabled).map((o) => o.id);
+          return c.cmd({ c: 'choose', id: pick(opts) });
+        }),
+      );
+    } else await Promise.all([a.cmd({ c: 'next' }), b.cmd({ c: 'next' })]);
+  }
   await settle(a, b);
 }
 
@@ -114,18 +143,25 @@ describe('connection and access', () => {
     expect((await e).code).toBe('rate_limited');
   });
 
-  it('commands require authentication', async () => {
+  it('commands require authentication, and malformed commands are ignored', async () => {
     await boot();
     const x = await client();
     const e = x.wait('err');
-    x.send({ t: 'cmd', cmd: { c: 'act', id: 'act_p1' } });
+    x.send({ t: 'cmd', cmd: { c: 'act', id: 'x_01' } });
     expect((await e).code).toBe('not_authed');
+    const [a] = await pair();
+    const before = running!.game.rev;
+    for (const bad of [{ c: 'go' }, { c: 'equip', slot: 1, id: 'x' }, { c: 'pack', id: 'r_01', n: 1.5 }, { c: 'job', who: 'h_01', id: 5 }, { c: 'nope' }]) {
+      a.send({ t: 'cmd', cmd: bad as never });
+    }
+    await new Promise((r) => setTimeout(r, 60));
+    expect(running!.game.rev).toBe(before);
   });
 
   it('reconnects with a token, from another device by code, and keeps state', async () => {
     await boot();
     const [a, b] = await pair();
-    await a.cmd({ c: 'act', id: 'act_p1' });
+    await a.cmd({ c: 'act', id: 'x_01' });
     const token = a.token!;
     await a.close();
     await b.until((v) => !v.partner.online);
@@ -135,7 +171,7 @@ describe('connection and access', () => {
     expect(m.t).toBe('welcome');
     await settle(a2, b);
     expect(a2.view!.me.name).toBe('Марко');
-    expect(a2.view!.log.some((l) => l.text.includes('Темрява') || l.text.includes('Світло'))).toBe(true);
+    expect(a2.view!.log.some((l) => l.text.includes('Пісок під щокою'))).toBe(true);
     await b.until((v) => v.partner.online);
 
     const phone = await client();
@@ -161,12 +197,10 @@ describe('synchronisation', () => {
     const [a, b] = await pair();
     running!.game.state.meta.actDone = 1;
     running!.game.state.players.p1.welcome = { at: 0, day: 0, res: {}, log: 0 };
-    const r1 = await a.cmd({ c: 'ack', what: 'summary' });
-    expect(r1.ok).toBe(true);
+    expect((await a.cmd({ c: 'ack', what: 'summary' })).ok).toBe(true);
     expect(running!.game.state.players.p1.seenSummary).toBe(1);
     expect(running!.game.state.players.p2.seenSummary).toBe(0);
-    const r2 = await a.cmd({ c: 'ack', what: 'welcome' });
-    expect(r2.ok).toBe(true);
+    expect((await a.cmd({ c: 'ack', what: 'welcome' })).ok).toBe(true);
     expect(running!.game.state.players.p1.welcome).toBeNull();
     await settle(b);
   });
@@ -174,41 +208,21 @@ describe('synchronisation', () => {
   it('simultaneous actions both apply and both players see them', async () => {
     await boot();
     const [a, b] = await pair();
-    await throughHatch(a, b);
-    // Hatch scene
-    const pr = await a.cmd({ c: 'act', id: 'scn_01' });
-    expect(pr.ok).toBe(true);
-    await settle(b);
-    expect(b.view!.proposal?.mine).toBe(false);
-    await b.cmd({ c: 'accept' });
-    for (let i = 0; i < 12; i++) {
-      await settle(a, b);
-      const sc = a.view!.scene;
-      if (!sc) break;
-      if (sc.kind === 'choice') await Promise.all([a.cmd({ c: 'choose', id: 'quiet' }), b.cmd({ c: 'choose', id: 'call' })]);
-      else await Promise.all([a.cmd({ c: 'next' }), b.cmd({ c: 'next' })]);
-    }
-    await settle(a, b);
-    expect(a.view!.scene).toBeNull();
-    // Mismatch branch was taken and both saw the same transcript summary in the log.
-    expect(running!.game.state.flags['a1_called']).toBeUndefined();
-
-    // Both act at the same moment.
-    const before = running!.game.state.res['res_03'] ?? 0;
-    const [r1, r2] = await Promise.all([a.cmd({ c: 'act', id: 'act_13' }), b.cmd({ c: 'act', id: 'act_13' })]);
+    await wake(a, b);
+    const [r1, r2] = await Promise.all([a.cmd({ c: 'act', id: 'x_02' }), b.cmd({ c: 'act', id: 'x_02' })]);
     expect(r1.ok && r2.ok).toBe(true);
     await settle(a, b);
-    expect(running!.game.state.res['res_03']).toBe(before + 2);
-    expect(a.view!.res.find((r) => r.id === 'res_03')!.n).toBe(before + 2);
-    expect(b.view!.res.find((r) => r.id === 'res_03')!.n).toBe(before + 2);
-    expect(a.view!.partner.busy?.text).toContain('погребі');
+    expect(running!.game.state.players.p1.bag['r_01']).toBe(2);
+    expect(running!.game.state.players.p2.bag['r_01']).toBe(2);
+    expect(a.view!.bag.items.find((i) => i.id === 'r_01')?.n).toBe(2);
+    expect(a.view!.partner.busy?.text).toContain('плавник');
   });
 
   it('conflicting proposals: only one wins, the other is told why', async () => {
     await boot();
     const [a, b] = await pair();
-    await throughHatch(a, b);
-    const [r1, r2] = await Promise.all([a.cmd({ c: 'act', id: 'scn_01' }), b.cmd({ c: 'act', id: 'scn_01' })]);
+    await wake(a, b);
+    const [r1, r2] = await Promise.all([a.cmd({ c: 'act', id: 's_01' }), b.cmd({ c: 'act', id: 's_01' })]);
     expect([r1.ok, r2.ok].filter(Boolean).length).toBe(1);
     const loser = r1.ok ? r2 : r1;
     expect(loser.text).toBe(content.ui.err_proposal_pending);
@@ -217,8 +231,8 @@ describe('synchronisation', () => {
   it('a disconnect mid-scene pauses it; it resumes at the same place', async () => {
     await boot();
     const [a, b] = await pair();
-    await throughHatch(a, b);
-    await a.cmd({ c: 'act', id: 'scn_01' });
+    await wake(a, b);
+    await a.cmd({ c: 'act', id: 's_01' });
     await b.cmd({ c: 'accept' });
     await Promise.all([a.cmd({ c: 'next' }), b.cmd({ c: 'next' })]);
     await settle(a, b);
@@ -227,9 +241,9 @@ describe('synchronisation', () => {
     await b.close();
     await a.until((v) => !!v.scene?.paused);
     expect(a.view!.scene!.pausedText).toContain('Оксана');
-    // Routine is allowed while paused, scene commands are not.
-    expect((await a.cmd({ c: 'next' })).ok).toBe(false);
-    expect((await a.cmd({ c: 'act', id: 'act_p5' })).ok).toBe(true);
+    // routine is allowed while paused, scene commands are not
+    expect((await a.cmd({ c: 'choose', id: 'strike' })).ok).toBe(false);
+    expect((await a.cmd({ c: 'act', id: 'x_02' })).ok).toBe(true);
 
     running!.game.flush();
     const b2 = await client();
@@ -252,57 +266,91 @@ describe('synchronisation', () => {
     await b.until((v) => !v.partner.online);
   });
 
-  it('views never leak the partner\'s private clues', async () => {
+  it("views never leak the partner's private clues", async () => {
     await boot();
     const [a, b] = await pair();
-    await throughHatch(a, b);
-    await settle(a, b);
+    await toHut(a, b);
     const hunterRaw = JSON.stringify(a.view);
     const makerRaw = JSON.stringify(b.view);
-    expect(hunterRaw).toContain('Уривок пам');
-    expect(hunterRaw).not.toContain('Мед і дим');
-    expect(makerRaw).not.toContain('тягнув');
+    expect(hunterRaw).toContain('Зарубки на стіні');
+    expect(hunterRaw).not.toContain('Гірка кірка');
+    expect(makerRaw).toContain('Гірка кірка');
+    expect(makerRaw).not.toContain('Зарубки на стіні');
+  });
+
+  it('a fight goes on when one of the two drops out, and the other can come to help', async () => {
+    await boot();
+    const [a, b] = await pair();
+    await toHut(a, b);
+    const g = running!.game;
+    // both walk to the shore; the hunter is attacked there
+    for (const c of [a, b]) expect((await c.cmd({ c: 'go', to: 'a_02' })).ok).toBe(true);
+    advance(20_000);
+    await settle(a, b);
+    for (const pid of ['p1', 'p2'] as PlayerId[]) {
+      g.state.players[pid].fight = null;
+      g.state.players[pid].busy = null;
+    }
+    g.state.fights = [];
+    g.state.players.p2.online = false; // the maker is busy elsewhere for a moment
+    const game = new Game(ix, g.state, clock);
+    const { startFight } = await import('../server/src/engine/fight.js');
+    startFight(game, 'a_02', [{ enemy: 'e_01', n: 2 }], { party: ['p1'] });
+    g.state.players.p2.online = true;
+    g.broadcast();
+    await settle(a, b);
+    expect(a.view!.fight).not.toBeNull();
+    expect(b.view!.nearFight).not.toBeNull();
+    expect((await b.cmd({ c: 'help' })).ok).toBe(true);
+    await settle(a, b);
+    expect(b.view!.fight?.party.length).toBe(2);
+    // the maker leaves: the round still resolves on the hunter's move
+    await b.close();
+    await a.until((v) => v.partner.online === false);
+    const round = a.view!.fight!.round;
+    const hit = a.view!.fight!.moves.find((m) => m.group === 'hit')!;
+    expect((await a.cmd({ c: 'fight', id: hit.id })).ok).toBe(true);
+    await settle(a);
+    expect(a.view!.fight === null || a.view!.fight.round > round).toBe(true);
   });
 });
 
 describe('two bot clients over WebSocket', () => {
-  it('play the whole story to an ending', async () => {
+  it('play act one to its end', async () => {
     await boot();
     const [a, b] = await pair();
     const cs: Record<PlayerId, TestClient> = { p1: a, p2: b };
-    const bots: Record<PlayerId, Bot> = {
-      p1: new Bot('A', content, { choice: 'first', combat: 'smart', seed: 1 }),
-      p2: new Bot('B', content, { choice: 'first', combat: 'smart', seed: 2 }),
-    };
+    const bots: Record<PlayerId, Bot> = { p1: new Bot('p1', content), p2: new Bot('p2', content) };
     let steps = 0;
-    const finished = () => !!running!.game.state.flags['a5_done'] && !running!.game.state.scene;
-    while (!finished() && steps < 90000) {
+    const finished = () => !!running!.game.state.flags['p2_act1_done'] && !running!.game.state.scene;
+    while (!finished() && steps < 30000) {
       steps++;
       let acted = false;
       for (const pid of (steps % 2 ? ['p1', 'p2'] : ['p2', 'p1']) as PlayerId[]) {
         await settle(cs.p1, cs.p2);
-        const cmd = bots[pid].decide(cs[pid].view!, clock);
+        const g = new Game(ix, running!.game.state, clock);
+        const cmd = bots[pid].decide(cs[pid].view!, g);
         if (!cmd) continue;
         const r = await cs[pid].cmd(cmd);
         if (r.ok) acted = true;
       }
       if (!acted) {
-        const views = [cs.p1.view!, cs.p2.view!];
         let next = Infinity;
-        for (const v of views) {
+        for (const v of [cs.p1.view!, cs.p2.view!]) {
           if (v.busyUntil > clock) next = Math.min(next, v.busyUntil);
-          for (const g of v.groups) for (const e of g.entries) if (e.readyAt && e.readyAt > clock) next = Math.min(next, e.readyAt);
+          if (v.map.travel && v.map.travel.until > clock) next = Math.min(next, v.map.travel.until);
+          for (const gr of v.groups) for (const e of gr.entries) if (e.readyAt && e.readyAt > clock) next = Math.min(next, e.readyAt);
         }
         advance(Number.isFinite(next) ? next - clock + 1 : 1000);
-        await settle(cs.p1, cs.p2);
-      } else advance(200);
+        await refresh(cs.p1, cs.p2);
+      }
     }
-    if (!finished()) console.log('WS autoplay stopped', steps, JSON.stringify(running!.game.state.flags), JSON.stringify(a.view?.groups.map((g) => g.entries.map((e) => `${e.id}:${e.enabled}:${e.reason ?? ''}`))));
+    if (!finished()) console.log('WS autoplay stopped', steps, JSON.stringify(running!.game.state.flags));
     expect(finished()).toBe(true);
     await settle(a, b);
-    expect(a.view!.actDone?.act).toBe(5);
-    expect(b.view!.actDone?.act).toBe(5);
-  });
+    expect(a.view!.actDone?.act).toBe(1);
+    expect(b.view!.actDone?.act).toBe(1);
+  }, 240_000);
 });
 
 describe('fresh state on request', () => {
@@ -319,25 +367,29 @@ describe('fresh state on request', () => {
 });
 
 describe('stock change popups', () => {
-  it('both players get a delta with what the actor gained and spent', async () => {
+  it('both see what the store lost; only the actor sees their own bag', async () => {
     await boot();
     const [a, b] = await pair();
-    await throughHatch(a, b);
-    await a.cmd({ c: 'act', id: 'scn_01' });
-    await b.cmd({ c: 'accept' });
-    for (let i = 0; i < 12; i++) {
-      await settle(a, b);
-      const sc = a.view!.scene;
-      if (!sc) break;
-      if (sc.kind === 'choice') await Promise.all([a.cmd({ c: 'choose', id: 'quiet' }), b.cmd({ c: 'choose', id: 'quiet' })]);
-      else await Promise.all([a.cmd({ c: 'next' }), b.cmd({ c: 'next' })]);
-    }
+    await toHut(a, b);
     const da = a.wait('delta');
     const db = b.wait('delta');
-    expect((await b.cmd({ c: 'act', id: 'act_10' })).ok).toBe(true);
+    expect((await b.cmd({ c: 'act', id: 'x_13' })).ok).toBe(true);
     const [ma, mb] = await Promise.all([da, db]);
     expect(ma.by).toBe('p2');
-    expect(mb.items).toEqual([{ id: 'res_01', name: 'Дрова', n: 1 }]);
+    expect(mb.items).toEqual([{ id: 'r_05', name: 'Харчі', n: -1 }]);
     expect(ma.together).toBe(false);
+    // the bag: gathering on the shore is the gatherer's own business
+    advance(10_000);
+    for (const c of [a, b]) expect((await c.cmd({ c: 'go', to: 'a_02' })).ok).toBe(true);
+    advance(20_000);
+    await settle(a, b);
+    for (const pid of ['p1', 'p2'] as PlayerId[]) running!.game.state.players[pid].fight = null;
+    running!.game.state.fights = [];
+    const mine = b.wait('delta');
+    const r = await b.cmd({ c: 'act', id: 'x_02' });
+    expect(r.text ?? 'ok').toBe('ok');
+    const m = await mine;
+    expect(m.by).toBe('p2');
+    expect(m.items.some((i) => i.id === 'r_01' && i.n > 0)).toBe(true);
   });
 });

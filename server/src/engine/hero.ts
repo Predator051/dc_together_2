@@ -280,11 +280,34 @@ export function useNote(g: Game, id: string): string {
 
 export function blankHero(): Pick<
   PlayerState,
-  'level' | 'xp' | 'points' | 'stats' | 'perks' | 'perkChoice' | 'skills' | 'equip' | 'sets' | 'bag' | 'travel' | 'fight' | 'poison'
+  'level' | 'xp' | 'points' | 'stats' | 'perks' | 'perkChoice' | 'skills' | 'equip' | 'sets' | 'bag' | 'travel' | 'fight' | 'poison' | 'regenAt'
 > {
   const skills = {} as Record<SkillId, number>;
   for (const s of SKILLS) skills[s] = 0;
   const stats = {} as Record<StatId, number>;
   for (const s of STATS) stats[s] = 2;
-  return { level: 1, xp: 0, points: 0, stats, perks: [], perkChoice: null, skills, equip: {}, sets: {}, bag: {}, travel: null, fight: null, poison: 0 };
+  return { level: 1, xp: 0, points: 0, stats, perks: [], perkChoice: null, skills, equip: {}, sets: {}, bag: {}, travel: null, fight: null, poison: 0, regenAt: 0 };
+}
+
+/** Rest heals: one point every 15 s by the fire at home, every 45 s elsewhere (never in a fight). */
+export const REGEN_HOME = 15_000;
+export const REGEN_AWAY = 45_000;
+
+export function settleHealth(g: Game): boolean {
+  let changed = false;
+  for (const pid of g.joinedIds()) {
+    const p = g.p(pid);
+    if (!p.regenAt) p.regenAt = g.now;
+    if (p.fight !== null || p.hp >= p.hpMax) {
+      p.regenAt = g.now;
+      continue;
+    }
+    const every = g.atHome(pid) ? REGEN_HOME : REGEN_AWAY;
+    const n = Math.floor((g.now - p.regenAt) / every);
+    if (n <= 0) continue;
+    p.hp = Math.min(p.hpMax, p.hp + n);
+    p.regenAt += n * every;
+    changed = true;
+  }
+  return changed;
 }

@@ -802,7 +802,7 @@ function bestiaryView(g: Game, pid: PlayerId): BeastView[] {
 /** Panels open as the game opens up. */
 function tabsOf(g: Game, pid: PlayerId): string[] {
   const t = ['here'];
-  if (g.ix.c.areas.some((a) => !a.home && areaOnMap(g, a.id) && a.pos)) t.push('map');
+  if (g.ix.c.areas.filter((a) => areaOnMap(g, a.id) && a.pos).length > 1) t.push('map');
   const p = g.p(pid);
   if (p.level > 1 || Object.keys(p.equip).length > 0 || g.ix.c.resources.some((r) => r.gear && (g.s.res[r.id] ?? 0) > 0)) t.push('hero');
   return t;

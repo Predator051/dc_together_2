@@ -56,5 +56,6 @@ export const ambient: AmbientDef = {
     x_41: 'whet',
     x_42: 'arrow',
     x_43: 'chop',
+    x_44: 'carve',
   },
 };

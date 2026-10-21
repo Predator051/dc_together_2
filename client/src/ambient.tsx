@@ -162,14 +162,17 @@ class Engine {
   private weather(dt: number) {
     const { kind, fire } = this.s;
     const area = this.w * this.h;
-    const want =
-      kind === 'snow'
-        ? Math.round(area / 16000)
-        : kind === 'river'
-          ? Math.round(area / 26000)
-          : kind === 'cave'
-            ? Math.round(area / 30000)
-            : Math.round(area / 60000);
+    const per: Record<string, number> = {
+      snow: 16000,
+      river: 26000,
+      cave: 30000,
+      marsh: 30000,
+      salt: 18000,
+      grove: 34000,
+      hill: 40000,
+      fog: 90000,
+    };
+    const want = Math.round(area / (per[kind] ?? 60000));
     let flakes = 0;
     for (const p of this.back) if (p.shape !== 'dot' || !p.glow) flakes++;
     for (let i = flakes; i < want; i++) this.back.push(this.spawnWeather(flakes === 0));
@@ -201,6 +204,21 @@ class Engine {
       return { x: rnd(0, this.w), y, vx: rnd(-6, 6), vy: rnd(14, 38), age: 0, life: 999, size: rnd(0.8, 2.4), rot: rnd(0, 6), vr: rnd(0.4, 1.2), shape: 'dot', color: INK, alpha: rnd(0.18, 0.5) };
     if (kind === 'river')
       return { x: anywhere ? rnd(0, this.w) : -10, y: rnd(0, this.h), vx: rnd(40, 80), vy: rnd(8, 20), age: 0, life: 999, size: rnd(0.5, 1.5), rot: rnd(0, 6), vr: rnd(0.5, 1.5), shape: 'dot', color: INK, alpha: rnd(0.1, 0.3) };
+    if (kind === 'marsh')
+      // seed fluff off the reeds, drifting sideways
+      return { x: anywhere ? rnd(0, this.w) : -10, y: rnd(0, this.h), vx: rnd(10, 26), vy: rnd(-4, 6), age: 0, life: 999, size: rnd(0.8, 1.8), rot: rnd(0, 6), vr: rnd(0.3, 0.9), shape: 'dot', color: OCHRE, alpha: rnd(0.08, 0.22) };
+    if (kind === 'salt')
+      // salt dust lifting off the crust, glinting
+      return { x: rnd(0, this.w), y: anywhere ? rnd(0, this.h) : this.h + 10, vx: rnd(-10, 10), vy: rnd(-16, -6), age: 0, life: 999, size: rnd(0.5, 1.6), rot: rnd(0, 6), vr: rnd(0.5, 1.5), shape: 'dot', color: INK, alpha: rnd(0.14, 0.4) };
+    if (kind === 'grove')
+      // dark spores sinking between dead trees
+      return { x: rnd(0, this.w), y, vx: rnd(-3, 3), vy: rnd(4, 10), age: 0, life: 999, size: rnd(0.6, 1.4), rot: rnd(0, 6), vr: rnd(0.2, 0.5), shape: 'dot', color: GALL, alpha: rnd(0.08, 0.2) };
+    if (kind === 'hill')
+      // grass seeds on the wind over the hillock
+      return { x: anywhere ? rnd(0, this.w) : -10, y: rnd(0, this.h * 0.8), vx: rnd(30, 60), vy: rnd(-6, 6), age: 0, life: 999, size: rnd(0.6, 1.4), rot: rnd(0, 6), vr: rnd(0.5, 1.2), shape: 'dot', color: INK, alpha: rnd(0.08, 0.2) };
+    if (kind === 'fog')
+      // big soft patches of mist over the water
+      return { x: anywhere ? rnd(0, this.w) : -100, y: rnd(this.h * 0.3, this.h), vx: rnd(4, 10), vy: rnd(-1, 1), age: 0, life: 999, size: rnd(50, 110), rot: 0, vr: 0, shape: 'dot', color: GALL, alpha: rnd(0.025, 0.05) };
     // cave, cellar: slow motes
     return { x: rnd(0, this.w), y: anywhere ? rnd(0, this.h) : this.h + 10, vx: rnd(-4, 4), vy: rnd(-8, -2), age: 0, life: 999, size: rnd(0.5, 1.4), rot: rnd(0, 6), vr: rnd(0.2, 0.6), shape: 'dot', color: kind === 'cave' ? INK : OCHRE, alpha: rnd(0.06, 0.2) };
   }
@@ -309,9 +327,11 @@ class Engine {
       if (p.life === 999) {
         // weather sways and wraps around the screen
         p.vx += Math.sin((p.rot += p.vr * dt)) * 3 * dt;
-        if (p.y > this.h + 12 || p.y < -14 || p.x > this.w + 12 || p.x < -12) {
+        const m = p.size + 12;
+        if (p.y > this.h + m || p.y < -m - 2 || p.x > this.w + m || p.x < -m) {
           Object.assign(p, this.spawnWeather(false));
-          if (this.s.kind === 'river') p.x = -10;
+          if (this.s.kind === 'river' || this.s.kind === 'marsh' || this.s.kind === 'hill') p.x = -10;
+          if (this.s.kind === 'fog') p.x = -(p.size + 8);
         }
       }
       p.x += p.vx * dt;

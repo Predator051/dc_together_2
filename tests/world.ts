@@ -68,7 +68,9 @@ export class World {
     return (
       Object.keys(this.state.flags).filter((k) => !k.startsWith('beat:') && !k.startsWith('flint_used')).length * 10 +
       Object.keys(this.state.clues).length +
-      this.state.meta.day * 3
+      this.state.meta.day * 3 +
+      this.state.players.p1.xp +
+      this.state.players.p2.xp
     );
   }
 }

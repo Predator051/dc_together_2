@@ -15,6 +15,21 @@
         "CLIENT_DIR": "client/dist"
       },
       "autoPort": true
+    },
+    {
+      "name": "game2",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--experimental-sqlite",
+        "/Users/aleksejkukisev/work/dark_cave_together_2/dist/index.js"
+      ],
+      "port": 8791,
+      "env": {
+        "DATA_DIR": "/Users/aleksejkukisev/work/dark_cave_together_2/data",
+        "INVITE_CODE": "TEST-1234",
+        "CLIENT_DIR": "/Users/aleksejkukisev/work/dark_cave_together_2/client/dist",
+        "PORT": "8791"
+      }
     }
   ]
 }

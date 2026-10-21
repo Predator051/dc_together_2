@@ -520,6 +520,64 @@ class Sound {
         timers.push(window.setTimeout(drip, rnd(2500, 8000)));
       };
       timers.push(window.setTimeout(drip, rnd(1000, 3000)));
+    } else if (kind === 'marsh' || kind === 'hill' || kind === 'salt' || kind === 'grove' || kind === 'fog') {
+      // the marshes: wind of different strength, reeds, water, now and then a living sound
+      const level = { marsh: 0.08, hill: 0.13, salt: 0.11, grove: 0.05, fog: 0.05 }[kind];
+      const cut = { marsh: 480, hill: 420, salt: 300, grove: 240, fog: 360 }[kind];
+      wind(level, cut);
+      if (kind === 'marsh' || kind === 'hill') {
+        // reeds hissing in waves
+        const src = this.noiseSrc();
+        const bp = this.filter('bandpass', 3200, 0.8);
+        const g = ctx.createGain();
+        g.gain.value = kind === 'marsh' ? 0.028 : 0.014;
+        src.connect(bp).connect(g).connect(out);
+        src.start();
+        nodes.push(src, this.lfo(g.gain, rnd(0.12, 0.2), kind === 'marsh' ? 0.02 : 0.01));
+      }
+      if (kind === 'grove' || kind === 'fog') {
+        // water lapping slowly
+        const src = this.noiseSrc();
+        const lp = this.filter('lowpass', 520, 0.9);
+        const g = ctx.createGain();
+        g.gain.value = 0.06;
+        src.connect(lp).connect(g).connect(out);
+        src.start();
+        nodes.push(src, this.lfo(g.gain, rnd(0.18, 0.3), 0.045), this.lfo(lp.frequency, 0.11, 160));
+      }
+      // a frog, a bird, a crack of salt crust: short and rare
+      const life = () => {
+        const t = ctx.currentTime;
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        if (kind === 'salt') {
+          o.type = 'square';
+          o.frequency.setValueAtTime(rnd(1800, 2600), t);
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(0.012, t + 0.002);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+        } else if (kind === 'marsh' || kind === 'grove') {
+          o.type = 'sawtooth';
+          o.frequency.setValueAtTime(rnd(90, 140), t);
+          o.frequency.exponentialRampToValueAtTime(rnd(70, 90), t + 0.16);
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(kind === 'grove' ? 0.012 : 0.02, t + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+        } else {
+          o.type = 'sine';
+          o.frequency.setValueAtTime(rnd(2400, 3400), t);
+          o.frequency.exponentialRampToValueAtTime(rnd(1800, 2200), t + 0.12);
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(0.008, t + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
+        }
+        const lp = this.filter('lowpass', 4000);
+        o.connect(g).connect(lp).connect(out);
+        o.start(t);
+        o.stop(t + 0.25);
+        timers.push(window.setTimeout(life, rnd(4000, 12000)));
+      };
+      timers.push(window.setTimeout(life, rnd(2000, 6000)));
     } else {
       // cellar: close, dull room tone
       const src = this.noiseSrc();

@@ -154,7 +154,8 @@ export function Scene({ v, sc, locked }: { v: PlayerView; sc: SceneView; locked:
           {!sc.paused && sc.kind === 'delve' && sc.delve && <DelveFoot d={sc.delve} v={v} locked={locked} />}
           {!sc.paused && sc.kind === 'stealth' && sc.stealth && <StealthFoot sc={sc} st={sc.stealth} v={v} locked={locked} />}
           {!sc.paused && sc.kind === 'operation' && sc.operation && <OperationFoot sc={sc} op={sc.operation} v={v} locked={locked} />}
-          {!sc.paused && sc.kind !== 'text' && sc.kind !== 'delve' && sc.kind !== 'stealth' && sc.kind !== 'operation' && (
+          {!sc.paused && sc.kind === 'fight' && <p class="muted waiting">{T.fightScene}</p>}
+          {!sc.paused && sc.kind !== 'text' && sc.kind !== 'delve' && sc.kind !== 'stealth' && sc.kind !== 'operation' && sc.kind !== 'fight' && (
             <div class="options">
               {sc.partnerPicked && !sc.myPick && <p class="partner-picked">
                   <IconCheck />

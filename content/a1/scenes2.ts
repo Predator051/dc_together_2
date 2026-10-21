@@ -9,6 +9,8 @@ export const scenes2: SceneDef[] = [
     title: 'Стара гребля',
     label: 'Розвідати стару греблю',
     visible: { flag: 'p2_smoke_seen' },
+    enabled: { level: 4 },
+    disabledHint: 'На греблі хазяйнує кабан. Спершу набратися сили (рівень 4).',
     gives: 'Нове місце',
     start: 'n1',
     nodes: {
@@ -33,7 +35,7 @@ export const scenes2: SceneDef[] = [
       },
       n4: {
         text: 'Гать — єдина дорога туди, якщо не вплав. А на гаті, видно, ходять дозорами.',
-        effects: [{ moveTo: A.dyke, who: 'both' }, { xp: 15, who: 'both' }],
+        effects: [{ moveTo: A.dyke, who: 'both' }, { xp: 8, who: 'both' }],
         next: null,
       },
     },
@@ -45,6 +47,8 @@ export const scenes2: SceneDef[] = [
     title: 'Гать',
     label: 'Піти гаттю до ям',
     visible: { flag: 'done:s_09' },
+    enabled: { level: 5 },
+    disabledHint: 'На гаті — Білі й пси. Без сили туди не йти (рівень 5).',
     gives: 'Нове місце · бій',
     start: 'n1',
     nodes: {
@@ -70,7 +74,7 @@ export const scenes2: SceneDef[] = [
       n4: {
         text: 'Пес тікає в очерет — так само мовчки. Ви стоїте, віддихуючись, і чуєте: десь далеко свистять. Свисток — і ще один.',
         hunter: 'Він не гавкнув жодного разу. Як Сірко. Як усі собаки тут.',
-        effects: [{ moveTo: A.causeway, who: 'both' }, { xp: 15, who: 'both' }, { mystery: M.whites, level: 2 }],
+        effects: [{ moveTo: A.causeway, who: 'both' }, { xp: 8, who: 'both' }, { mystery: M.whites, level: 2 }],
         next: null,
       },
     },
@@ -125,7 +129,7 @@ export const scenes2: SceneDef[] = [
           'А біля ближнього чрену — жінка. Сива, хоч ще не стара. Б\'є молотком по солі, як усі. Але губи в неї ворушаться. Вона співає — без голосу, самими губами.',
           'Ти впізнаєш мотив: це південна пісня, з Пониззя. Її співали вдома.',
         ],
-        effects: [{ set: 'p2_recon_done' }, { xp: 15, who: 'both' }],
+        effects: [{ set: 'p2_recon_done' }, { xp: 8, who: 'both' }],
         next: 'n5',
       },
       n5: {
@@ -221,7 +225,7 @@ export const scenes2: SceneDef[] = [
           { clue: 'c_14' },
           { mystery: M.silence, level: 3 },
           { moveTo: A.home, who: 'both' },
-          { xp: 20, who: 'both' },
+          { xp: 10, who: 'both' },
           { checkpoint: 'a1.3' },
         ],
         next: 'n5',
@@ -386,7 +390,7 @@ export const scenes2: SceneDef[] = [
       n8: {
         text: 'Гать іде під воду колода за колодою. Сліди, запахи, все. Пси Білих тепер не знайдуть дороги до вашого горба — хіба через греблю.',
         hunter: 'Хіба через греблю. Ти дивишся на неї: тепер вона єдина суха стежка між ямами й вами.',
-        effects: [{ set: 'p2_sluice_open' }, { xp: 20, who: 'both' }],
+        effects: [{ set: 'p2_sluice_open' }, { xp: 10, who: 'both' }],
         next: 'n9',
       },
       n9: {
@@ -461,7 +465,7 @@ export const scenes2: SceneDef[] = [
       },
       n7: {
         text: 'Фока шкутильгає геть по греблі, не озираючись. Сумка лишається вам. У ній — сіль, мотузка й книжка в шкіряній палітурці.',
-        effects: [{ set: 'p2_foka_beaten' }, { xp: 25, who: 'both' }, { scene: S.ledger }],
+        effects: [{ set: 'p2_foka_beaten' }, { xp: 12, who: 'both' }, { scene: S.ledger }],
         next: null,
       },
     },
@@ -484,7 +488,7 @@ export const scenes2: SceneDef[] = [
       n2: {
         text: 'Ви довго мовчите. Згадується порон на Глуші й Мирославин голос: «Бо платять сіллю».',
         maker: 'Ти перечитуєш останній рядок: «шукати лишніх самим». Восени вас самих так і не встигли вписати в Книгу громади.',
-        effects: [{ set: 'p2_ledger' }, { moveTo: A.home, who: 'both' }, { xp: 20, who: 'both' }, { checkpoint: 'a1.end' }],
+        effects: [{ set: 'p2_ledger' }, { moveTo: A.home, who: 'both' }, { xp: 10, who: 'both' }, { checkpoint: 'a1.end' }],
         next: null,
       },
     },

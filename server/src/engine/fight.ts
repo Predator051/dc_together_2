@@ -38,6 +38,11 @@ export function holder(f: FightState, pid: PlayerId): FoeState | undefined {
   return f.foes.find((x) => !x.out && x.holds === pid);
 }
 
+/** Held so that you cannot fight back (a leech only drinks; a grab or a drag pins you). */
+function pinned(g: Game, f: FightState, pid: PlayerId): FoeState | undefined {
+  return f.foes.find((x) => !x.out && x.holds === pid && !enemyOf(g, x.enemy).traits.includes('leech'));
+}
+
 function armorOf(def: EnemyDef, foe: FoeState): number {
   const ph = foe.phase > 0 ? def.phases?.[foe.phase - 1] : undefined;
   return ph?.armor ?? def.armor ?? 0;
@@ -231,7 +236,7 @@ export function fightMoves(g: Game, f: FightState, pid: PlayerId): FightMove[] {
   const h = heroOf(g, pid);
   const p = g.p(pid);
   const other = f.party.find((x) => x !== pid);
-  if (holder(f, pid)) {
+  if (pinned(g, f, pid)) {
     out.push({ id: 'struggle', label: ui('fm_struggle'), enabled: true, group: 'self' });
   } else {
     for (const foe of activeFoes(f)) {
@@ -255,10 +260,10 @@ export function fightMoves(g: Game, f: FightState, pid: PlayerId): FightMove[] {
       out.push({ id: 'cover', label: g.render(ui('fm_cover'), pid), enabled: true, group: 'help' });
     }
   }
-  if (other && up(g, f, other) && holder(f, other) && !holder(f, pid)) {
+  if (other && up(g, f, other) && holder(f, other) && !pinned(g, f, pid)) {
     out.push({ id: 'free', label: g.render(ui('fm_free'), pid), enabled: true, group: 'help' });
   }
-  if (other && f.party.includes(other) && f.down.includes(other) && !holder(f, pid)) {
+  if (other && f.party.includes(other) && f.down.includes(other) && !(f.lifted ?? []).includes(other) && !pinned(g, f, pid)) {
     out.push({ id: 'lift', label: g.render(ui('fm_lift'), pid), enabled: true, group: 'help' });
   }
   for (const [id, n] of Object.entries(p.bag)) {
@@ -266,7 +271,7 @@ export function fightMoves(g: Game, f: FightState, pid: PlayerId): FightMove[] {
     if (!def?.use || n <= 0) continue;
     out.push({ id: `use:${id}`, label: `${g.render(def.use.label, pid)} (${n})`, enabled: true, group: 'item' });
   }
-  if (!f.scene) out.push({ id: 'flee', label: ui('fm_flee'), enabled: true, group: 'out' });
+  if (!f.scene && !pinned(g, f, pid)) out.push({ id: 'flee', label: ui('fm_flee'), enabled: true, group: 'out' });
   return out;
 }
 
@@ -336,7 +341,7 @@ function damageFoe(g: Game, f: FightState, foe: FoeState, n: number, ctx: RoundC
   if (ctx.foeGuard.has(foe.uid)) n = Math.max(1, Math.floor(n / 2));
   foe.hp -= n;
   ctx.hitFoes.add(foe.uid);
-  if (def.morale !== undefined) foe.fear += n;
+  if (def.morale !== undefined) foe.fear += Math.ceil(n / 2);
   if (foe.hp <= 0) {
     foe.hp = 0;
     foe.out = def.humane ? 'down' : 'dead';
@@ -389,7 +394,7 @@ function foeStrikes(g: Game, f: FightState, foe: FoeState, target: PlayerId, mul
   const def = enemyOf(g, foe.enemy);
   let t = target;
   const coverer = ctx.cover.get(t);
-  if (coverer && up(g, f, coverer) && !holder(f, coverer)) t = coverer;
+  if (coverer && up(g, f, coverer) && !pinned(g, f, coverer)) t = coverer;
   if (!up(g, f, t)) return 0;
   const h = heroOf(g, t);
   const vars = foeVars(g, foe, f);
@@ -545,8 +550,9 @@ function heroActs(g: Game, f: FightState, pid: PlayerId, ctx: RoundCtx): void {
       return;
     }
     case 'lift': {
-      if (!other || !f.down.includes(other)) return;
+      if (!other || !f.down.includes(other) || (f.lifted ?? []).includes(other)) return;
       f.down = f.down.filter((x) => x !== other);
+      (f.lifted ??= []).push(other);
       const o = g.p(other);
       o.hp = Math.max(1, Math.ceil(o.hpMax / 4));
       say(g, f, 'fight_lift', pid, {});
@@ -620,7 +626,7 @@ function dogActs(g: Game, f: FightState, ctx: RoundCtx): void {
   if (!f.dog) return;
   const dog = g.ix.c.dog!;
   const danger = activeFoes(f).find((x) => x.intent && ['charge', 'grab', 'drag'].includes(x.intent.move));
-  if (danger && g.rng.chance(0.45)) {
+  if (danger && g.rng.chance(0.3)) {
     danger.intent = { move: 'none' };
     say(g, f, 'fight_dog_stops', null, { ...foeVars(g, danger, f), item: dog.name });
     return;
@@ -628,7 +634,7 @@ function dogActs(g: Game, f: FightState, ctx: RoundCtx): void {
   const foes = activeFoes(f);
   if (!foes.length) return;
   const foe = g.rng.pick(foes);
-  const n = g.rng.int(1, 3);
+  const n = g.rng.int(1, 2);
   say(g, f, 'fight_dog_bites', null, { ...foeVars(g, foe, f), n, item: dog.name });
   damageFoe(g, f, foe, n, ctx);
   if (enemyOf(g, foe.enemy).morale !== undefined) foe.fear += 1;
@@ -775,7 +781,7 @@ function finishFight(g: Game, f: FightState, how: 'win' | 'lose' | 'fled'): void
     for (const foe of f.foes) {
       const def = enemyOf(g, foe.enemy);
       if (foe.out === 'dead' || foe.out === 'down') {
-        xp += def.level * 4;
+        xp += def.level * 2;
         const b = (g.s.bestiary[foe.enemy] ??= { seen: 1, beaten: 0, known: [] });
         b.beaten += 1;
         // after a few fights everybody knows what the beast is like
@@ -783,7 +789,7 @@ function finishFight(g: Game, f: FightState, how: 'win' | 'lose' | 'fled'): void
         for (const [id, [a, z]] of Object.entries(def.loot ?? {})) loot[id] = (loot[id] ?? 0) + g.rng.int(a, z);
         if (def.rare && g.rng.chance(def.rare.p)) for (const [id, n] of Object.entries(def.rare.loot)) loot[id] = (loot[id] ?? 0) + n;
       } else if (foe.out === 'fled') {
-        xp += Math.ceil(def.level * 2);
+        xp += def.level;
       }
     }
     const standing = party.filter((pid) => !f.down.includes(pid) && !f.fled.includes(pid));

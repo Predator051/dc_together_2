@@ -98,11 +98,11 @@ export function derive(h: HeroLike, gear: (id: string) => GearDef | undefined): 
   const skillDmg = Math.floor(skill / 3);
   const perkCarry = h.perks.includes('steady') ? 4 : 0;
   return {
-    hpMax: 14 + 4 * s.end + 3 * (h.level - 1) + hp,
+    hpMax: 10 + 3 * s.end + 2 * (h.level - 1) + hp,
     carry: 8 + 2 * s.str + carry + perkCarry,
     armor,
-    dodge: Math.min(0.3, 0.03 * s.agi + dodge),
-    hit: 0.65 + 0.04 * s.agi + acc + 0.03 * skill,
+    dodge: Math.min(0.3, 0.025 * s.agi + dodge),
+    hit: 0.7 + 0.03 * s.agi + acc + 0.03 * skill,
     dmg: [Math.max(1, wdmg[0] + bonus + skillDmg), Math.max(1, wdmg[1] + bonus + skillDmg)],
     ranged,
     ammo,
