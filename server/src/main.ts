@@ -17,6 +17,8 @@ export interface StartOptions {
   seed?: number;
   /** Real-time ticking; tests drive ticks manually. */
   autoTick?: boolean;
+  /** A part-one world (raw JSON) to carry over when the world is new. */
+  legacy?: unknown;
   log?: (msg: string) => void;
 }
 
@@ -43,6 +45,7 @@ export async function startServer(o: StartOptions): Promise<Running> {
     inviteCode: o.inviteCode,
     seed: o.seed,
     log: o.log,
+    legacy: o.legacy,
   });
 
   const http = createServer(staticHandler(o.clientDir));

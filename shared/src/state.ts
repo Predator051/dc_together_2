@@ -1,6 +1,11 @@
-import type { Gender, PlayerId, Role, LogKind } from './content.js';
+import type { Gender, PlayerId, Role, LogKind, Slot, StatId, SkillId } from './content.js';
 
-export const STATE_VERSION = 3;
+/**
+ * Part two starts its own line of world versions at 10 (part one ended at 3): a part-one world is
+ * never migrated into part two — it is read once as the legacy and a new world begins.
+ */
+export const STATE_VERSION = 10;
+export const PART = 2;
 
 export interface PlayerState {
   id: PlayerId;
@@ -24,6 +29,30 @@ export interface PlayerState {
   welcome: Snapshot | null;
   /** The last act whose summary this player has closed (v3). */
   seenSummary: number;
+
+  // ----- part two: the hero -----
+  level: number;
+  xp: number;
+  /** Unspent stat points (one per level). */
+  points: number;
+  stats: Record<StatId, number>;
+  perks: string[];
+  /** Perks offered and waiting for a pick. */
+  perkChoice: string[] | null;
+  /** Skill experience. */
+  skills: Record<SkillId, number>;
+  /** Worn things (item ids). */
+  equip: Partial<Record<Slot, string>>;
+  /** Saved outfits. */
+  sets: Record<string, Partial<Record<Slot, string>>>;
+  /** What the hero carries (taken from the place or packed at home). */
+  bag: Record<string, number>;
+  /** On the way somewhere. */
+  travel: { from: string; to: string; since: number; until: number } | null;
+  /** In a fight (id). */
+  fight: number | null;
+  /** Poison ticks left. */
+  poison: number;
 }
 
 export interface Snapshot {
@@ -41,6 +70,7 @@ export interface Stats {
   crafted: number;
   trips: number;
   suppers: number;
+  fights?: number;
 }
 
 export interface CombatState {
@@ -118,8 +148,79 @@ export interface LogEntry {
   text: Partial<Record<PlayerId, string>>;
 }
 
+/** One foe in a fight. */
+export interface FoeState {
+  uid: number;
+  enemy: string;
+  hp: number;
+  hpMax: number;
+  fear: number;
+  out: null | 'dead' | 'fled' | 'down';
+  /** What it does this round, and (seen by the hunter) the next one. */
+  intent: Intent | null;
+  next: Intent | null;
+  /** Holding someone (grab / drag / leech). */
+  holds: PlayerId | null;
+  /** Rounds until its call brings help (0 = no call going). */
+  calling: number;
+  phase: number;
+  /** Rounds since the fight began when it joined. */
+  joined: number;
+  /** Rounds it has acted (for `every` moves). */
+  acted: number;
+  /** Once-moves already used. */
+  used: string[];
+}
+
+export interface Intent {
+  move: string;
+  target?: PlayerId;
+}
+
+export interface FightState {
+  id: number;
+  area: string;
+  /** Part of a story scene (the scene waits for it). */
+  scene: boolean;
+  party: PlayerId[];
+  /** The dog fights along. */
+  dog: boolean;
+  foes: FoeState[];
+  round: number;
+  picks: Partial<Record<PlayerId, string>>;
+  /** What happened last round, per player. */
+  lines: Record<PlayerId, string[]>;
+  nextUid: number;
+  /** Who got down (and is out until lifted). */
+  down: PlayerId[];
+  /** Players who ran. */
+  fled: PlayerId[];
+  /** Enemy traits revealed during this fight (for the bestiary line). */
+  startedAt: number;
+}
+
+export interface ResidentState {
+  /** Action id they work at, or null. */
+  job: string | null;
+  /** Fraction of the next unit (by resource). */
+  acc: Record<string, number>;
+  hurtUntil: number;
+  hungry: boolean;
+  since: number;
+}
+
+/** What part one left behind (imported once from its world). */
+export interface Legacy {
+  ending: number;
+  flags: Record<string, number>;
+  players: Array<{ pid: PlayerId; name: string; gender: Gender; role: Role | null; flags: Record<string, number> }>;
+  rescued: number;
+  npcs: Record<string, number>;
+}
+
 export interface WorldState {
   version: number;
+  part: number;
   meta: {
     seed: number;
     rng: number;
@@ -146,4 +247,13 @@ export interface WorldState {
   npcs: Record<string, { met: boolean; rel: number }>;
   goal: string | null;
   stats: Stats;
+
+  // ----- part two -----
+  fights: FightState[];
+  nextFightId: number;
+  bestiary: Record<string, { seen: number; beaten: number; known: string[] }>;
+  residents: Record<string, ResidentState>;
+  legacy: Legacy | null;
+  /** Last time residents' work was counted. */
+  workAt: number;
 }

@@ -7,9 +7,12 @@ import { seedFrom } from '../../shared/src/rng.js';
 import type { WorldState } from '../../shared/src/state.js';
 import { STATE_VERSION } from '../../shared/src/state.js';
 import { ContentIndex, Game, newWorld } from './engine/index.js';
+import { refreshHero } from './engine/hero.js';
 import { buildView } from './engine/view.js';
+import { DEFAULT_LEGACY, extractLegacy, isPartOneWorld, legacyFlags } from './legacy.js';
 import { migrateState, type Migration } from './migrations.js';
 import type { Storage } from './storage.js';
+import type { Legacy } from '../../shared/src/state.js';
 
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
@@ -39,6 +42,8 @@ export interface GameServerOptions {
   log?: (msg: string) => void;
   /** Override the migration registry (tests). */
   migrations?: Record<number, Migration>;
+  /** A part-one world (raw JSON) to carry over into a new world. */
+  legacy?: unknown;
 }
 
 const ERR_TEXT: Record<ErrCode, string> = {
@@ -78,7 +83,15 @@ export class GameServer {
     this.inviteCode = code;
 
     const now = this.clock();
-    const stored = st.loadWorld();
+    let stored = st.loadWorld();
+    let legacyRaw: unknown = opts.legacy;
+    if (stored && isPartOneWorld(JSON.parse(stored.json))) {
+      // the database still holds part one: keep it aside and begin part two from it
+      st.archiveWorld(Number(JSON.parse(stored.json).version ?? 0), stored.json, 'part one', now);
+      legacyRaw = JSON.parse(stored.json);
+      stored = null;
+      this.logFn('Part one found: starting part two from it');
+    }
     if (stored) {
       const raw = JSON.parse(stored.json);
       const { state, from, migrated } = migrateState(raw, opts.content, now, opts.migrations);
@@ -91,8 +104,33 @@ export class GameServer {
     } else {
       const seed = opts.seed ?? seedFrom(randomBytes(4).toString('hex'));
       this.state = newWorld(opts.content, seed, now);
+      this.inherit(legacyRaw === undefined ? null : extractLegacy(legacyRaw));
       this.save();
       this.logFn('New world created');
+    }
+  }
+
+  /** Part one's heroes and ending come along (or a middle way when there is nothing to read). */
+  private inherit(l: Legacy | null): void {
+    const legacy = l ?? DEFAULT_LEGACY;
+    this.state.legacy = legacy;
+    Object.assign(this.state.flags, legacyFlags(legacy));
+    if (!l) {
+      delete this.state.flags.legacy;
+      return;
+    }
+    const g = this.game();
+    for (const lp of legacy.players) {
+      const p = this.state.players[lp.pid];
+      if (!lp.role) continue;
+      p.joined = true;
+      p.name = lp.name;
+      p.gender = lp.gender;
+      p.role = lp.role;
+      p.stats = { ...this.opts.content.hero.base[lp.role] };
+      for (const [k, v] of Object.entries(lp.flags)) p.flags[k] = v;
+      refreshHero(g, lp.pid);
+      p.hp = p.hpMax;
     }
   }
 
@@ -120,6 +158,7 @@ export class GameServer {
   tick(): void {
     const g = this.game();
     if (g.tick()) {
+      this.keepCheckpoints(g);
       this.dirty = true;
       this.broadcast();
     }
@@ -157,6 +196,29 @@ export class GameServer {
     items.sort((a, b) => b.n - a.n);
     const msg: ServerMsg = { t: 'delta', by, together, items };
     for (const conn of this.conns) if (conn.pid) conn.send(msg);
+  }
+
+  /** What went into (or out of) the actor's own bag: shown only to them. */
+  private sendBagDelta(_c: Conn, pid: PlayerId, before: Record<string, number>): void {
+    const after = this.state.players[pid].bag;
+    const items: DeltaItem[] = [];
+    for (const id of new Set([...Object.keys(before), ...Object.keys(after)])) {
+      const n = (after[id] ?? 0) - (before[id] ?? 0);
+      if (!n) continue;
+      const def = this.opts.content.resources.find((r) => r.id === id);
+      if (!def || def.hidden) continue;
+      items.push({ id, name: def.name, n });
+    }
+    if (!items.length) return;
+    const msg: ServerMsg = { t: 'delta', by: pid, together: false, items };
+    for (const conn of this.conns) if (conn.pid === pid) conn.send(msg);
+  }
+
+  private keepCheckpoints(g: Game): void {
+    for (const label of g.checkpoints.splice(0)) {
+      this.opts.storage.archiveWorld(this.state.version, JSON.stringify(this.state), `checkpoint ${label}`, this.clock());
+      this.logFn(`Checkpoint ${label}`);
+    }
   }
 
   private sendView(c: Conn): void {
@@ -300,11 +362,15 @@ export class GameServer {
         const cmd = validCommand(msg.cmd);
         if (!cmd) return;
         const before = { ...this.state.res };
+        const bagBefore = { ...this.state.players[c.pid].bag };
         const inScene = !!this.state.scene || cmd.c === 'accept';
-        const r = this.game().command(c.pid, cmd);
+        const g = this.game();
+        const r = g.command(c.pid, cmd);
+        this.keepCheckpoints(g);
         if (r.ok) {
           this.changed();
           this.sendDelta(c.pid, before, inScene || !!this.state.scene);
+          if (cmd.c !== 'pack' && cmd.c !== 'drop') this.sendBagDelta(c, c.pid, bagBefore);
         }
         c.send({ t: 'ack', seq: msg.seq, ok: r.ok, text: r.err, rev: this.rev });
         return;
@@ -340,6 +406,39 @@ function validCommand(cmd: unknown): Command | null {
     case 'ack': {
       const what = (cmd as { what?: unknown }).what;
       return what === 'welcome' || what === 'summary' ? { c: 'ack', what } : null;
+    }
+    case 'go': {
+      const to = (cmd as { to?: unknown }).to;
+      return typeof to === 'string' && to.length < 64 ? { c: 'go', to } : null;
+    }
+    case 'equip': {
+      const x = cmd as { slot?: unknown; id?: unknown };
+      if (typeof x.slot !== 'string' || x.slot.length > 16) return null;
+      if (x.id !== null && (typeof x.id !== 'string' || x.id.length > 64)) return null;
+      return { c: 'equip', slot: x.slot, id: x.id as string | null };
+    }
+    case 'outfit': {
+      const x = cmd as { name?: unknown; save?: unknown };
+      return typeof x.name === 'string' && x.name.length < 16 ? { c: 'outfit', name: x.name, save: x.save === true } : null;
+    }
+    case 'pack':
+    case 'drop': {
+      const x = cmd as { id?: unknown; n?: unknown };
+      if (typeof x.id !== 'string' || x.id.length > 64 || typeof x.n !== 'number' || !Number.isInteger(x.n) || Math.abs(x.n) > 999) return null;
+      return { c: c.c, id: x.id, n: x.n } as Command;
+    }
+    case 'use':
+    case 'stat':
+    case 'perk':
+    case 'fight':
+      return typeof c.id === 'string' && c.id.length < 64 ? ({ c: c.c, id: c.id } as Command) : null;
+    case 'help':
+      return { c: 'help' };
+    case 'job': {
+      const x = cmd as { who?: unknown; id?: unknown };
+      if (typeof x.who !== 'string' || x.who.length > 64) return null;
+      if (x.id !== null && (typeof x.id !== 'string' || x.id.length > 64)) return null;
+      return { c: 'job', who: x.who, id: x.id as string | null };
     }
     default:
       return null;

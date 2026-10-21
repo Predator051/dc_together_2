@@ -12,7 +12,28 @@ export type Command =
   /** Close a one-time panel: the return summary or the end-of-act summary. */
   | { c: 'ack'; what: 'welcome' | 'summary' }
   /** A hand sign to the partner during a scene. */
-  | { c: 'sign'; id: string };
+  | { c: 'sign'; id: string }
+  /** Walk to a neighbouring place. */
+  | { c: 'go'; to: string }
+  /** Put on (id) or take off (null) something; at home only. */
+  | { c: 'equip'; slot: string; id: string | null }
+  /** Save the current outfit under a name, or put a saved one on. */
+  | { c: 'outfit'; name: string; save: boolean }
+  /** Take things from the home store into the bag (n > 0) or put them back (n < 0). */
+  | { c: 'pack'; id: string; n: number }
+  /** Throw things out of the bag. */
+  | { c: 'drop'; id: string; n: number }
+  /** Use a consumable outside a fight (eat, bandage). */
+  | { c: 'use'; id: string }
+  /** Spend a stat point / pick a perk. */
+  | { c: 'stat'; id: string }
+  | { c: 'perk'; id: string }
+  /** A move in a fight: hit:<uid>, shoot:<uid>, guard, cover, free, lift, use:<item>, flee. */
+  | { c: 'fight'; id: string }
+  /** Join a fight going on where you stand. */
+  | { c: 'help' }
+  /** Set a resident to work (action id) or let them rest (null). */
+  | { c: 'job'; who: string; id: string | null };
 
 export type ClientMsg =
   | { t: 'hello'; token: string }
@@ -69,7 +90,7 @@ export interface GainView {
 
 export interface EntryView {
   id: string;
-  kind: 'act' | 'scene' | 'pool';
+  kind: 'act' | 'scene' | 'pool' | 'go';
   label: string;
   enabled: boolean;
   hint?: string;
@@ -157,7 +178,7 @@ export interface SceneView {
   paused: boolean;
   pausedText?: string;
   blocks: SceneBlock[];
-  kind: 'text' | 'choice' | 'combat' | 'delve' | 'stealth' | 'operation';
+  kind: 'text' | 'choice' | 'combat' | 'delve' | 'stealth' | 'operation' | 'fight';
   mode?: 'joint' | 'each' | 'any';
   button?: string;
   options?: OptionView[];
@@ -273,7 +294,138 @@ export interface ResView {
   name: string;
   n: number;
   cap?: number;
-  kind: 'res' | 'tool' | 'people';
+  kind: 'res' | 'tool' | 'people' | 'gear' | 'use' | 'food';
+  weight?: number;
+  /** One line about it (gear stats, what a consumable does). */
+  note?: string;
+}
+
+export interface StatView {
+  id: string;
+  name: string;
+  value: number;
+  /** What it does, short. */
+  text: string;
+}
+
+export interface SkillView {
+  id: string;
+  name: string;
+  level: number;
+  /** Progress to the next level 0..1. */
+  p: number;
+}
+
+export interface SlotView {
+  slot: string;
+  name: string;
+  item: { id: string; name: string; note: string } | null;
+  /** What could go here from the home store. */
+  options: Array<{ id: string; name: string; note: string; n: number }>;
+}
+
+export interface HeroView {
+  level: number;
+  xp: number;
+  xpPrev: number;
+  xpNext: number;
+  points: number;
+  stats: StatView[];
+  skills: SkillView[];
+  perks: Array<{ id: string; name: string; text: string }>;
+  perkChoice: Array<{ id: string; name: string; text: string }> | null;
+  derived: { hpMax: number; armor: number; dodge: number; hit: number; dmg: [number, number]; carry: number; resist: string[]; tools: string[] };
+  slots: SlotView[];
+  outfits: Array<{ name: string; items: string[] }>;
+  /** Gear can be changed only at home. */
+  canChange: boolean;
+}
+
+export interface BagView {
+  items: Array<{ id: string; name: string; n: number; weight: number; kind: string; usable: boolean; note?: string }>;
+  load: number;
+  cap: number;
+}
+
+export interface MapNodeView {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  /** Explored (can be entered alone). */
+  known: boolean;
+  here: boolean;
+  partner: boolean;
+  home: boolean;
+  danger: number;
+  /** Known foes of the place. */
+  foes: string[];
+  /** Can walk there from here now, and how long it takes. */
+  go?: { time: number; enabled: boolean; reason?: string };
+  /** A joint scouting scene to propose from here. */
+  scout?: { id: string; label: string; enabled: boolean; reason?: string };
+  desc?: string;
+}
+
+export interface MapView {
+  nodes: MapNodeView[];
+  links: Array<[string, string]>;
+  travel: { to: string; name: string; since: number; until: number } | null;
+}
+
+export interface FoeView {
+  uid: number;
+  name: string;
+  hp: number;
+  hpMax: number;
+  fear?: number;
+  morale?: number;
+  out: null | 'dead' | 'fled' | 'down';
+  level: number;
+  intent?: string;
+  /** What it does next round (the hunter reads beasts). */
+  next?: string;
+  traits: string[];
+  /** The maker sees where the armour gives. */
+  weak?: string;
+  holds?: string;
+  calling?: number;
+}
+
+export interface FightView {
+  id: number;
+  round: number;
+  scene: boolean;
+  foes: FoeView[];
+  party: Array<{ pid: PlayerId; name: string; hp: number; hpMax: number; down: boolean; held: boolean; poison: number; picked: boolean; me: boolean }>;
+  dog?: string;
+  moves: Array<{ id: string; label: string; enabled: boolean; reason?: string; group: 'hit' | 'self' | 'help' | 'item' | 'out' }>;
+  myPick?: string;
+  waiting: boolean;
+  lines: string[];
+  /** The partner is fighting here and you could join. */
+  canHelp?: boolean;
+}
+
+export interface ResidentView {
+  id: string;
+  name: string;
+  desc: string;
+  traits: Array<{ name: string; text: string }>;
+  job: string | null;
+  jobLabel?: string;
+  jobs: Array<{ id: string; label: string; place: string; rate: number }>;
+  hurt: boolean;
+  hungry: boolean;
+}
+
+export interface BeastView {
+  id: string;
+  name: string;
+  level: number;
+  desc: string;
+  traits: Array<{ name: string; text: string }>;
+  beaten: number;
 }
 
 export interface LogView {
@@ -371,6 +523,17 @@ export interface PlayerView {
   summary: SummaryView | null;
   /** Server time when the current day began: evening falls as it gets long. */
   dayAt: number;
+  hero: HeroView;
+  bag: BagView;
+  map: MapView;
+  fight: FightView | null;
+  /** A fight of the partner where you stand (you may join). */
+  nearFight: { id: number; text: string } | null;
+  residents: ResidentView[];
+  bestiary: BeastView[];
+  /** Panels opened so far (the interface grows with the game). */
+  tabs: string[];
+  atHome: boolean;
   /** Busy state of this player: all routine actions wait until then. */
   busyUntil: number;
   busyFrom: number;

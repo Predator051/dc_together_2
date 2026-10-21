@@ -18,7 +18,7 @@ import type {
 export interface Report {
   errors: string[];
   warnings: string[];
-  reachable: { scenes: Set<string>; actions: Set<string>; locations: Set<string>; clues: Set<string>; flags: Set<string> };
+  reachable: { scenes: Set<string>; actions: Set<string>; locations: Set<string>; clues: Set<string>; flags: Set<string>; areas: Set<string> };
 }
 
 // ---------- traversal helpers ----------
@@ -67,11 +67,13 @@ function nodeTargets(n: SceneNode): Array<string | null | undefined> {
   if (n.type === 'combat') return [n.win, n.lose];
   if (n.type === 'stealth') return [n.win, n.lose];
   if (n.type === 'operation') return [n.win.next, n.lose, n.fail];
+  if (n.type === 'fight') return [n.win, n.lose];
   if (n.type === 'delve') {
     const beats = Object.values(MAPS.get(n.map)?.rooms ?? {}).flatMap((r) => (r.enter ?? []).map((e) => e.next));
     return [n.out, n.dark, ...beats];
   }
-  return [n.next, ...(n.goto ?? []).map((g) => g.next)];
+  const t = n as Extract<SceneNode, { goto?: unknown }>;
+  return [t.next, ...(t.goto ?? []).map((g) => g.next)];
 }
 
 function nodeEffects(n: SceneNode): Effect[] {
@@ -127,6 +129,19 @@ export function validateContent(c: Content): Report {
   c.mysteries.forEach((x) => reg('mystery', x.id));
   c.goals.forEach((x) => reg('goal', x.id));
   c.npcs.forEach((x) => reg('npc', x.id));
+  (c.enemies ?? []).forEach((x) => reg('enemy', x.id));
+  (c.residents ?? []).forEach((x) => reg('resident', x.id));
+  const areaIds = new Set<string>();
+  for (const a of c.areas) {
+    if (areaIds.has(a.id)) err(`Duplicate area ${a.id}`);
+    areaIds.add(a.id);
+  }
+  const enemies = new Map((c.enemies ?? []).map((e) => [e.id, e]));
+  const residentIds = new Set((c.residents ?? []).map((r) => r.id));
+  const traitIds = new Set(Object.keys(c.traits ?? {}));
+  /** Tool kinds some piece of gear provides. */
+  const toolKinds = new Set<string>();
+  for (const r of c.resources) for (const t of r.gear?.tools ?? []) toolKinds.add(t);
 
   const res = new Set(c.resources.map((r) => r.id));
   const locs = new Set(c.locations.map((l) => l.id));
@@ -159,8 +174,8 @@ export function validateContent(c: Content): Report {
     }
   };
 
-  // Flags written anywhere.
-  const written = new Set<string>();
+  // Flags written anywhere (the engine itself writes a few).
+  const written = new Set<string>(['bag_full']);
   const pwritten = new Set<string>();
   const collectWrites = (effs: Effect[]) => {
     for (const e of effs) {
@@ -192,10 +207,12 @@ export function validateContent(c: Content): Report {
     }
   }
 
+  // flags of the legacy are written by the server when part one is carried over
+  const isWritten = (f: string) => written.has(f) || f.startsWith('legacy');
   const checkCond = (where: string, cond: Cond | undefined) => {
     for (const x of condsOf(cond)) {
-      if ('flag' in x && !written.has(x.flag)) err(`${where}: reads flag "${x.flag}" that is never set`);
-      if ('noFlag' in x && !written.has(x.noFlag)) err(`${where}: reads flag "${x.noFlag}" that is never set`);
+      if ('flag' in x && !isWritten(x.flag)) err(`${where}: reads flag "${x.flag}" that is never set`);
+      if ('noFlag' in x && !isWritten(x.noFlag)) err(`${where}: reads flag "${x.noFlag}" that is never set`);
       if ('pflag' in x && !pwritten.has(x.pflag)) err(`${where}: reads personal flag "${x.pflag}" that is never set`);
       if ('noPflag' in x && !pwritten.has(x.noPflag)) err(`${where}: reads personal flag "${x.noPflag}" that is never set`);
       if ('partnerPflag' in x && !pwritten.has(x.partnerPflag)) err(`${where}: reads personal flag "${x.partnerPflag}" that is never set`);
@@ -204,6 +221,10 @@ export function validateContent(c: Content): Report {
       if (('clue' in x && !clues.has(x.clue)) || ('anyClue' in x && !clues.has(x.anyClue))) err(`${where}: unknown clue`);
       if ('rel' in x && !npcs.has(x.rel)) err(`${where}: unknown npc ${x.rel}`);
       if (('at' in x && !areas.has(x.at)) || ('partnerAt' in x && !areas.has(x.partnerAt))) err(`${where}: unknown area`);
+      if ('owns' in x && !res.has(x.owns)) err(`${where}: unknown item ${x.owns}`);
+      if ('tool' in x && !toolKinds.has(x.tool)) err(`${where}: no gear provides tool ${x.tool}`);
+      if ('trait' in x && !traitIds.has(x.trait)) err(`${where}: unknown trait ${x.trait}`);
+      if ('met' in x && !enemies.has(x.met)) err(`${where}: unknown enemy ${x.met}`);
     }
   };
   const checkEffects = (where: string, effs: Effect[], inScene: boolean) => {
@@ -224,6 +245,10 @@ export function validateContent(c: Content): Report {
         logConds(e.log, cs);
         cs.forEach((x) => checkCond(where, x));
       }
+      if ('resident' in e && !residentIds.has(e.resident)) err(`${where}: unknown resident ${e.resident}`);
+      if ('give' in e) checkRes(where, e.give);
+      if ('wear' in e && !res.has(e.wear)) err(`${where}: unknown item ${e.wear}`);
+      if ('fight' in e) for (const f of e.fight) if (!enemies.has(f.enemy)) err(`${where}: unknown enemy ${f.enemy}`);
     }
   };
 
@@ -270,7 +295,79 @@ export function validateContent(c: Content): Report {
     (a.beats ?? []).forEach((b) => logConds(b.log, cs));
     cs.forEach((x) => checkCond(w, x));
     if (!a.log && !(a.beats && a.beats.length)) warnings.push(`${w}: no log text`);
+    if (a.tool && !toolKinds.has(a.tool)) err(`${w}: no gear provides tool ${a.tool}`);
+    if (a.job && (!a.yield || a.cost)) err(`${w}: a job must yield and cost nothing`);
+    for (const id of Object.keys(a.yield ?? {})) {
+      const def = c.resources.find((r) => r.id === id);
+      if (def?.kind === 'gear' && a.kind !== 'craft') warnings.push(`${w}: yields gear but is not a craft`);
+    }
   }
+
+  // Map
+  for (const a of c.areas) {
+    const w = `area ${a.id}`;
+    for (const l of a.links ?? []) {
+      if (!areaIds.has(l.to)) err(`${w}: link to unknown area ${l.to}`);
+      if (!(l.time > 0)) err(`${w}: link time must be positive`);
+    }
+    if (a.scout && !scenes.has(a.scout)) err(`${w}: unknown scout scene ${a.scout}`);
+    if (a.scout && a.home) err(`${w}: home needs no scouting`);
+    for (const f of a.foes ?? []) {
+      if (!enemies.has(f.enemy)) err(`${w}: unknown enemy ${f.enemy}`);
+      checkCond(w, f.if);
+    }
+    for (const cnd of a.cond ?? []) {
+      if (!toolKinds.has(cnd.need) && !['venom', 'salt', 'cold'].includes(cnd.need)) err(`${w}: need ${cnd.need} is neither a tool nor a resist`);
+    }
+    checkCond(w, a.visible);
+    if (a.foes?.length && !a.ambush) warnings.push(`${w}: has foes but no ambush chance`);
+  }
+  if (c.areas.filter((a) => a.home).length > 1) err('map: only one home');
+  // every place is linked to the map
+  if (c.areas.some((a) => a.pos)) {
+    const seenA = new Set<string>([c.areas[0]!.id]);
+    const st = [c.areas[0]!.id];
+    while (st.length) {
+      const id = st.pop()!;
+      for (const b of c.areas) {
+        const linked = (b.links ?? []).some((l) => l.to === id) || (c.areas.find((x) => x.id === id)?.links ?? []).some((l) => l.to === b.id);
+        if (linked && !seenA.has(b.id)) (seenA.add(b.id), st.push(b.id));
+      }
+    }
+    for (const a of c.areas) if (a.pos && !seenA.has(a.id)) err(`area ${a.id}: not linked to home`);
+  }
+
+  // Enemies
+  for (const e of c.enemies ?? []) {
+    const w = `enemy ${e.id}`;
+    if (!e.ai.length) err(`${w}: no moves`);
+    if (e.hp <= 0 || e.dmg[0] > e.dmg[1]) err(`${w}: bad numbers`);
+    for (const t of [...e.traits, ...(e.hidden ?? [])]) if (!traitIds.has(t)) err(`${w}: unknown trait ${t}`);
+    checkRes(w, e.loot);
+    if (e.rare) checkRes(w, e.rare.loot);
+    if (e.calls && !enemies.has(e.calls)) err(`${w}: calls unknown enemy ${e.calls}`);
+    if (e.ai.some((m) => m.move === 'call') && !e.calls) err(`${w}: calls nobody`);
+    for (const ph of e.phases ?? []) for (const x of ph.add ?? []) if (!enemies.has(x.enemy)) err(`${w}: phase adds unknown ${x.enemy}`);
+  }
+
+  // Gear and consumables
+  for (const r of c.resources) {
+    const w = `resource ${r.id}`;
+    if (r.gear && r.kind !== 'gear') err(`${w}: gear must be of kind gear`);
+    if (r.kind === 'gear' && !r.gear) err(`${w}: kind gear without gear stats`);
+    if (r.gear?.ammo && !res.has(r.gear.ammo)) err(`${w}: unknown ammo ${r.gear.ammo}`);
+    if (r.use && r.kind !== 'use' && r.kind !== 'food') err(`${w}: a consumable must be of kind use or food`);
+  }
+
+  // Residents
+  for (const r of c.residents ?? []) {
+    for (const t of r.traits) {
+      for (const k of Object.keys(t.mult ?? {})) if (!k.startsWith('skill:') && !c.actions.some((a) => a.id === k)) err(`resident ${r.id}: unknown action ${k}`);
+      for (const k of t.avoid ?? []) if (!c.actions.some((a) => a.id === k)) err(`resident ${r.id}: unknown action ${k}`);
+    }
+  }
+  if (c.food && !res.has(c.food)) err(`content: unknown food ${c.food}`);
+  for (const role of ['hunter', 'maker'] as const) if (!c.hero?.base?.[role]) err(`hero: no base stats for ${role}`);
 
   // Pools
   for (const p of c.pools) {
@@ -309,7 +406,7 @@ export function validateContent(c: Content): Report {
       }
       for (const t of nodeTargets(n)) {
         if (t === null || t === undefined) {
-          if (n.type !== 'combat') canEnd = true;
+          if (n.type !== 'combat' && n.type !== 'fight') canEnd = true;
           continue;
         }
         if (!s.nodes[t]) err(`${w}.${id}: link to missing node ${t}`);
@@ -342,6 +439,7 @@ export function validateContent(c: Content): Report {
         if (n.mode === 'joint' && n.options.every((o) => o.visible || o.enabled)) warnings.push(`${nw}: every option is conditional`);
       }
       if (n.type === 'combat' && !encs.has(n.enc)) err(`${nw}: unknown encounter ${n.enc}`);
+      if (n.type === 'fight') for (const f of n.foes) if (!enemies.has(f.enemy)) err(`${nw}: unknown enemy ${f.enemy}`);
     }
     checkEffects(`${w}.onEnd`, effectsOf(s.onEnd), true);
   }
@@ -498,7 +596,7 @@ export function validateContent(c: Content): Report {
   // Unique items (tools, people) are exempt: they are given by the story and never spent at will.
   // Hidden reservoirs (a cellar, a scrap heap) are finite on purpose; what they hold must be
   // renewable elsewhere, and that is checked for the visible resource itself.
-  const renew = renewable(c, reachable.actions);
+  const renew = renewable(c, reachable.actions, reachable.areas);
   for (const [r, where] of required) {
     const def = c.resources.find((x) => x.id === r);
     if (!def || def.kind === 'tool' || def.kind === 'people' || def.hidden) continue;
@@ -510,10 +608,17 @@ export function validateContent(c: Content): Report {
 
 /** Optimistic fixpoint: what can ever become available. */
 /** Resources that can be produced again and again by reachable, repeatable actions. */
-export function renewable(c: Content, reachableActions: Set<string>): Set<string> {
+export function renewable(c: Content, reachableActions: Set<string>, reachableAreas?: Set<string>): Set<string> {
   const out = new Set<string>();
   const kindOf = new Map(c.resources.map((r) => [r.id, r.kind]));
   const usable = (k: string) => out.has(k) || kindOf.get(k) === 'tool' || kindOf.get(k) === 'people';
+  // beasts keep coming where they live: their loot is renewable
+  const enemies = new Map((c.enemies ?? []).map((e) => [e.id, e]));
+  for (const a of c.areas) {
+    if (reachableAreas && !reachableAreas.has(a.id)) continue;
+    if (!a.ambush) continue;
+    for (const f of a.foes ?? []) for (const [k, [, z]] of Object.entries(enemies.get(f.enemy)?.loot ?? {})) if (z > 0) out.add(k);
+  }
   let changed = true;
   while (changed) {
     changed = false;
@@ -535,13 +640,18 @@ export function renewable(c: Content, reachableActions: Set<string>): Set<string
 }
 
 function simulate(c: Content) {
-  const flags = new Set<string>(['built:none']);
+  const flags = new Set<string>(['built:none', 'bag_full']);
   const pflags = new Set<string>();
   const have = new Set<string>(Object.entries(c.start.resources).filter(([, n]) => n > 0).map(([k]) => k));
   const gotClues = new Set<string>();
   const scenes = new Set<string>();
   const actions = new Set<string>();
   const locations = new Set<string>();
+  const areas = new Set<string>();
+  const met = new Set<string>();
+  const enemies = new Map((c.enemies ?? []).map((e) => [e.id, e]));
+  const toolOf = (t: string) => c.resources.some((r) => r.gear?.tools?.includes(t) && have.has(r.id));
+  const homeArea = c.areas.find((a) => a.home)?.id ?? c.areas[0]?.id;
 
   const ok = (cond: Cond | undefined): boolean => {
     if (!cond) return true;
@@ -555,6 +665,10 @@ function simulate(c: Content) {
     if ('clue' in cond) return gotClues.has(cond.clue);
     if ('anyClue' in cond) return gotClues.has(cond.anyClue);
     if ('stove' in cond) return cond.stove === 'never' || flags.has('stove');
+    if ('owns' in cond) return have.has(cond.owns);
+    if ('tool' in cond) return toolOf(cond.tool);
+    if ('met' in cond) return met.has(cond.met);
+    if ('trait' in cond) return [...met].some((id) => [...(enemies.get(id)?.traits ?? []), ...(enemies.get(id)?.hidden ?? [])].includes(cond.trait as never));
     return true;
   };
   const canPay = (cost: Record<string, number> | undefined) => Object.keys(cost ?? {}).every((k) => have.has(k));
@@ -571,11 +685,31 @@ function simulate(c: Content) {
       if ('inc' in e) add(flags, e.inc);
       if ('pset' in e) add(pflags, e.pset);
       if ('add' in e) for (const [k, n] of Object.entries(e.add)) if (n > 0) add(have, k);
+      if ('give' in e) for (const [k, n] of Object.entries(e.give)) if (n > 0) add(have, k);
+      if ('wear' in e) add(have, e.wear);
       if ('clue' in e) add(gotClues, e.clue);
       if ('stove' in e) add(flags, 'stove');
       if ('actDone' in e) add(flags, `act:${e.actDone}`);
+      if ('fight' in e) for (const f of e.fight) changed = meetEnemy(f.enemy) || changed;
     }
     return changed;
+  };
+  const meetEnemy = (id: string): boolean => {
+    let changed = false;
+    if (!met.has(id)) {
+      met.add(id);
+      changed = true;
+    }
+    const e = enemies.get(id);
+    for (const [k, [, z]] of Object.entries(e?.loot ?? {})) if (z > 0 && !have.has(k)) (have.add(k), (changed = true));
+    for (const k of Object.keys(e?.rare?.loot ?? {})) if (!have.has(k)) (have.add(k), (changed = true));
+    if (e?.calls && !met.has(e.calls)) changed = meetEnemy(e.calls) || changed;
+    for (const ph of e?.phases ?? []) for (const x of ph.add ?? []) if (!met.has(x.enemy)) changed = meetEnemy(x.enemy) || changed;
+    return changed;
+  };
+  const areaOf = (group: string | undefined): string | undefined => {
+    if (!group) return homeArea;
+    return c.locations.find((l) => l.id === group)?.area ?? homeArea;
   };
 
   let changed = true;
@@ -587,9 +721,16 @@ function simulate(c: Content) {
         changed = true;
       }
     };
-    for (const l of c.locations) if (ok(l.visible)) mark(locations, l.id);
+    for (const a of c.areas) {
+      const open = a.home || (a.scout ? flags.has(`done:${a.scout}`) : ok(a.visible));
+      if (!open || areas.has(a.id)) continue;
+      mark(areas, a.id);
+      if (a.ambush) for (const f of a.foes ?? []) if (ok(f.if)) changed = meetEnemy(f.enemy) || changed;
+    }
+    for (const l of c.locations) if (ok(l.visible) && areas.has(l.area ?? homeArea!)) mark(locations, l.id);
     for (const a of c.actions) {
       if (!locations.has(a.group) || !ok(a.visible) || !ok(a.enabled) || !canPay(a.cost)) continue;
+      if (a.tool && !toolOf(a.tool)) continue;
       mark(actions, a.id);
       for (const [k] of Object.entries(a.yield ?? {})) mark(have, k);
       for (const ch of a.chance ?? []) for (const [k, n] of Object.entries(ch.add ?? {})) if (n > 0) mark(have, k);
@@ -600,26 +741,37 @@ function simulate(c: Content) {
     const poolOpen = new Set<string>();
     for (const p of c.pools) if (locations.has(p.group) && ok(p.visible) && ok(p.enabled) && canPay(p.cost)) poolOpen.add(p.pool);
     for (const s of c.scenes) {
+      // a scouting scene is proposed from a place next to the unknown one
+      const scouted = c.areas.find((a) => a.scout === s.id);
+      const scoutOk = scouted
+        ? c.areas.some((b) => areas.has(b.id) && ((b.links ?? []).some((l) => l.to === scouted.id) || (scouted.links ?? []).some((l) => l.to === b.id)))
+        : true;
       const startable =
         scenes.has(s.id) ||
         (s.pool
           ? poolOpen.has(s.pool) && ok(s.visible)
           : s.group
-            ? locations.has(s.group) && ok(s.visible) && ok(s.enabled) && canPay(s.cost)
-            : false);
+            ? locations.has(s.group) && ok(s.visible) && ok(s.enabled) && canPay(s.cost) && scoutOk
+            : scouted
+              ? scoutOk && ok(s.visible) && ok(s.enabled) && canPay(s.cost)
+              : false);
       if (!startable) continue;
       mark(scenes, s.id);
       if (absorb(sceneEffects(s))) changed = true;
       mark(flags, `done:${s.id}`);
       mark(flags, `count:${s.id}`);
       if (s.explores) mark(flags, `seen:${s.explores}`);
-      for (const n of Object.values(s.nodes)) if (n.type === 'combat') {
-        mark(flags, `${n.enc}:killed`);
-        mark(flags, `${n.enc}:fled`);
+      for (const n of Object.values(s.nodes)) {
+        if (n.type === 'combat') {
+          mark(flags, `${n.enc}:killed`);
+          mark(flags, `${n.enc}:fled`);
+        }
+        if (n.type === 'fight') for (const f of n.foes) if (meetEnemy(f.enemy)) changed = true;
       }
       // Scenes chained by effects become reachable too.
       for (const e of sceneEffects(s)) if ('scene' in e && scenes.has(e.scene) === false && c.scenes.some((x) => x.id === e.scene)) mark(scenes, e.scene);
     }
+    void areaOf;
   }
-  return { scenes, actions, locations, clues: gotClues, flags };
+  return { scenes, actions, locations, clues: gotClues, flags, areas };
 }

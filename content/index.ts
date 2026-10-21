@@ -1,83 +1,44 @@
+// Part two of the game: everything the engine runs. Act one is in ./a1.
 import type { Content } from '../shared/src/content.js';
-import { actions, pools } from './act1/actions.js';
-import { encounters } from './act1/combat.js';
-import { clues, goals, mysteries, npcs } from './act1/journal.js';
-import { locations } from './act1/places.js';
-import { resources, startResources } from './act1/resources.js';
-import { nightScenes } from './act1/scenes/night.js';
-import { panasScenes } from './act1/scenes/panas.js';
-import { supperScenes } from './act1/scenes/supper.js';
-import { villageScenes } from './act1/scenes/village.js';
-import { actions2, pools2 } from './act2/actions.js';
-import { encounters2 } from './act2/combat.js';
-import { clues2, goals2, mysteries2, npcs2 } from './act2/journal.js';
-import { locations2 } from './act2/places.js';
-import { resources2 } from './act2/resources.js';
-import { ferryScenes } from './act2/scenes/ferry.js';
-import { roadScenes } from './act2/scenes/road.js';
-import { supperScenes2 } from './act2/scenes/supper.js';
-import { actions3, pools3 } from './act3/actions.js';
-import { encounters3 } from './act3/combat.js';
-import { clues3, goals3, npcs3 } from './act3/journal.js';
-import { locations3 } from './act3/places.js';
-import { resources3 } from './act3/resources.js';
-import { hallScenes } from './act3/scenes/halls.js';
-import { homeScenes3 } from './act3/scenes/home.js';
-import { supperScenes3 } from './act3/scenes/supper.js';
-import { actions4 } from './act4/actions.js';
-import { encounters4 } from './act4/combat.js';
-import { clues4, goals4, npcs4 } from './act4/journal.js';
-import { maps } from './act4/maps.js';
-import { locations4 } from './act4/places.js';
-import { resources4 } from './act4/resources.js';
-import { scenes4 } from './act4/scenes.js';
-import { actions5 } from './act5/actions.js';
-import { encounters5 } from './act5/combat.js';
-import { clues5, goals5 } from './act5/journal.js';
-import { locations5 } from './act5/places.js';
-import { resources5 } from './act5/resources.js';
-import { scenes5 } from './act5/scenes.js';
+import { actions, pools } from './a1/actions.js';
+import { actions2 } from './a1/actions2.js';
+import { residents } from './a1/residents.js';
+import { scenes2 } from './a1/scenes2.js';
+import { enemies } from './a1/enemies.js';
+import { A, R } from './a1/ids.js';
+import { clues, goalFallback, goals1, mysteries, npcs } from './a1/journal.js';
+import { areas, locations } from './a1/places.js';
+import { resources } from './a1/resources.js';
+import { scenes1 } from './a1/scenes.js';
 import { ambient } from './ambient.js';
+import { hero, perks, roleTitles, traits } from './core.js';
 import { ui } from './ui.js';
 
 export const content: Content = {
-  areas: [
-    { id: 'yas', name: 'Ясенець', where: 'у Ясенці' },
-    { id: 'tower', name: 'Стара Сторожа', where: 'біля Старої Сторожі' },
-    { id: 'kruchi', name: 'Лук\'янова печера', where: 'під Кручами' },
-  ],
-  resources: [...resources, ...resources2, ...resources3, ...resources4, ...resources5],
-  actions: [...actions, ...actions2, ...actions3, ...actions4, ...actions5],
-  pools: [...pools, ...pools2, ...pools3],
-  locations: [...locations, ...locations2, ...locations3, ...locations4, ...locations5],
-  scenes: [...villageScenes, ...panasScenes, ...nightScenes, ...supperScenes, ...roadScenes, ...ferryScenes, ...supperScenes2, ...hallScenes, ...homeScenes3, ...supperScenes3, ...scenes4, ...scenes5],
-  encounters: [...encounters, ...encounters2, ...encounters3, ...encounters4, ...encounters5],
-  clues: [...clues, ...clues2, ...clues3, ...clues4, ...clues5],
-  mysteries: [...mysteries, ...mysteries2],
-  // Later acts first: the first goal whose condition holds is shown.
-  goals: [...goals5, ...goals4, ...goals3, ...goals2, ...goals],
-  npcs: [...npcs, ...npcs2, ...npcs3, ...npcs4],
-  stove: { perWood: 4 * 60 * 1000, maxWood: 6, coldPenalty: 1.5, low: 3 * 60 * 1000 },
+  areas,
+  resources,
+  actions: [...actions, ...actions2],
+  pools,
+  locations,
+  scenes: [...scenes1, ...scenes2],
+  encounters: [],
+  clues,
+  mysteries,
+  goals: [...goals1, goalFallback],
+  npcs,
+  enemies,
+  residents,
+  perks,
+  traits,
+  hero,
+  dog: { flag: 'p2_dog_back', name: 'Сірко' },
+  food: R.food,
+  stove: { perWood: 4 * 60 * 1000, maxWood: 8, coldPenalty: 1.3, low: 60 * 1000 },
   ambient,
-  maps,
-  start: { resources: startResources, hp: 10 },
-  daily: [
-    { res: 'res_01', per: 'res_32', add: 2 },
-    { res: 'res_03', per: 'res_33', add: 2 },
-    { res: 'res_02', per: 'res_34', add: 2 },
-    { flag: 'alarm', add: -1, min: 0 },
-  ],
-  storyFlags: ['done:', 'seen:', 'a1_', 'a2_done', 'a2_ferry_ok', 'a2_talk_', 'a3_', 'a4_door', 'a4_savka', 'a4_guards', 'a4_book', 'a4_done', 'a4_myroslava', 'a4_hammer', 'a4_weavers', 'a5_started', 'a5_myroslava', 'a5_savka', 'a5_master', 'a5_final', 'a5_hunter', 'a5_done', 'a5_panas', 'ending_', 'rescued', 'recovered', 'bell_fixed', 'night_warned', 'panas_ready', 'panas_gift'],
-  actEnd: {
-    1: 'Кінець першої дії. Дорога на схід відкриється згодом, а поки Ясенець чекає на вас: можна й далі господарювати.',
-    2: 'Кінець другої дії. Що далі — відкриється згодом. А поки Сторожа й Ясенець чекають на вас: можна господарювати й ходити між ними.',
-    3: 'Кінець третьої дії. Що далі — відкриється згодом. А поки лікуйте врятованих і готуйтеся: найдовша ніч наближається.',
-    5: 'Кінець. Найдовша ніч минула. Ясенець лишається вашим — живіть у ньому, скільки захочете.',
-    4: 'Кінець четвертої дії. Що далі — відкриється згодом. А поки розчищайте Вітряний колодязь, лікуйте врятованих і запасайтеся світлом: найдовша ніч уже близько.',
-  },
-  roleTitles: {
-    hunter: { m: 'ловець', f: 'ловчиня' },
-    maker: { m: 'майстер', f: 'майстриня' },
-  },
+  maps: [],
+  start: { resources: {}, hp: 22, area: A.shore },
+  storyFlags: ['p2_', 'done:s_', 'legacy'],
+  actEnd: { 1: 'Кінець першої дії. Варниця ваша — працюйте, ходіть плавнями, готуйтеся. Далі буде.' },
+  roleTitles,
   ui,
 };

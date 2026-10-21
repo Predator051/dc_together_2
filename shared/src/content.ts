@@ -25,6 +25,17 @@ export type Cond =
   /** Viewer / partner is in this area. */
   | { at: string }
   | { partnerAt: string }
+  /** Hero level of the viewer (or the higher of the two without a viewer). */
+  | { level: number }
+  /** The viewer has a tool of this kind on (in any slot). */
+  | { tool: string }
+  /** Some hero is wearing / owns (storage + worn + bags) this item. */
+  | { owns: string; gte?: number }
+  /** An enemy trait has been seen (bestiary) / an enemy met. */
+  | { trait: string }
+  | { met: string }
+  /** It is evening now (the day grows long). */
+  | { evening: boolean }
   | { all: Cond[] }
   | { any: Cond[] }
   | { not: Cond };
@@ -74,12 +85,24 @@ export type Effect =
   | { meet: string }
   | { scene: string }
   | { advanceDay: true }
-  | { heal: number | 'full' }
+  | { heal: number | 'full'; who?: EffectTarget }
   | { stove: number }
   | { actDone: number }
   | { startAct: number }
   /** Move players to another area (travel). */
   | { moveTo: string; who?: EffectTarget }
+  /** Hero experience for the target(s). */
+  | { xp: number; who?: EffectTarget }
+  /** A resident joins the household. */
+  | { resident: string }
+  /** Ask the server to keep a snapshot of the world (a checkpoint). */
+  | { checkpoint: string }
+  /** Put things into the bag(s) of the target(s) instead of the home store. */
+  | { give: Record<string, number>; who?: EffectTarget }
+  /** Put a piece of gear straight on the target (or into the store if the slot is taken). */
+  | { wear: string; who?: EffectTarget }
+  /** Start a fight in the actor's area (outside scenes). */
+  | { fight: Array<{ enemy: string; n?: number }> }
   | { if: Cond; then: Effect[]; else?: Effect[] };
 
 export interface ResourceDef {
@@ -90,9 +113,76 @@ export interface ResourceDef {
   capBonus?: Array<{ if: Cond; add: number }>;
   /** Hidden counters are never shown to players (reservoirs, internal stock). */
   hidden?: boolean;
-  kind?: 'res' | 'tool' | 'people';
+  /**
+   * res: material; tool: a unique thing; people: counters of folk; gear: something to wear or wield;
+   * use: a consumable that can be taken along and used (also in fights); food: eaten.
+   */
+  kind?: 'res' | 'tool' | 'people' | 'gear' | 'use' | 'food';
   desc?: Text;
   order: number;
+  /** Weight in a bag (default 1). */
+  weight?: number;
+  gear?: GearDef;
+  use?: UseDef;
+}
+
+export type Slot = 'head' | 'body' | 'hands' | 'legs' | 'weapon' | 'offhand' | 'belt';
+export const SLOTS: readonly Slot[] = ['weapon', 'offhand', 'head', 'body', 'hands', 'legs', 'belt'];
+export type StatId = 'str' | 'agi' | 'end' | 'per' | 'wil';
+export const STATS: readonly StatId[] = ['str', 'agi', 'end', 'per', 'wil'];
+export type SkillId = 'melee' | 'ranged' | 'gather' | 'craft' | 'trail';
+export const SKILLS: readonly SkillId[] = ['melee', 'ranged', 'gather', 'craft', 'trail'];
+export type ResistId = 'venom' | 'salt' | 'cold';
+export type GearTag = 'pierce' | 'reach' | 'fire' | 'ranged' | 'heavy' | 'noise' | 'blunt' | 'cleave';
+export type TraitId =
+  | 'pack'
+  | 'fast'
+  | 'armored'
+  | 'charge'
+  | 'venom'
+  | 'grab'
+  | 'thief'
+  | 'caller'
+  | 'night'
+  | 'fearFire'
+  | 'fearNoise'
+  | 'drag'
+  | 'leech'
+  | 'shield';
+
+export interface GearDef {
+  slot: Slot;
+  armor?: number;
+  hp?: number;
+  /** Hit chance bonus (0.05 = +5%). */
+  acc?: number;
+  dmg?: [number, number];
+  dodge?: number;
+  carry?: number;
+  resist?: ResistId[];
+  tags?: GearTag[];
+  /** Tool kinds it serves as: blade, axe, pick, gloves, light, net… */
+  tools?: string[];
+  /** Ranged weapons spend this per shot (taken from the bag). */
+  ammo?: string;
+  /** Faster gathering of actions that need one of its tools (0.25 = 25% faster). */
+  speed?: number;
+}
+
+/** A consumable: what using it does (in a fight, or anywhere for heal). */
+export interface UseDef {
+  heal?: number;
+  cure?: Array<'poison' | 'leech' | 'grab'>;
+  /** Scares beasts with this trait (adds fear to all of them), or stuns callers. */
+  scare?: { trait: TraitId; fear: number };
+  /** Damage to one foe (thrown). */
+  dmg?: [number, number];
+  /** Usable outside fights too (eat, bandage). */
+  anywhere?: boolean;
+  /** Not used up (a rattle, a horn). */
+  reusable?: boolean;
+  label: Text;
+  log: LogText;
 }
 
 export interface ChanceDef {
@@ -141,7 +231,25 @@ export interface ActionDef {
   /** Extra "what you get" line for results the engine cannot describe (unlocks, upgrades). */
   gives?: Text;
   hint?: Text;
-  kind?: 'gather' | 'craft' | 'build' | 'home';
+  kind?: 'gather' | 'craft' | 'build' | 'home' | 'train';
+  /** Why this recipe exists (the need it answers), shown with it. */
+  why?: Text;
+  /** Hide when this many of the yielded gear exist (stored + worn + carried). Default for gear: 2. */
+  limit?: number;
+  /** Needs a tool of this kind on (shown disabled with the reason otherwise). */
+  tool?: string;
+  /** A tool of this kind (not required) makes it faster. */
+  boost?: string;
+  /** Skill that grows with it and speeds it up. */
+  skill?: SkillId;
+  /** Chance of being attacked while doing it (overrides the area's). */
+  ambush?: number;
+  /** Residents can be set to do it: yield units per hour of real time. */
+  job?: { rate: number };
+  /** Skill experience instead of things (training). */
+  train?: { skill: SkillId; xp: number };
+  /** The role does it this much better (time ×1/x, default 1). */
+  knack?: { role: Role; x: number };
 }
 
 /** A together action that starts a scene picked from a pool (e.g. supper). */
@@ -176,6 +284,98 @@ export interface AreaDef {
   id: string;
   name: string;
   where: string;
+  /** Map position (grid units). */
+  pos?: [number, number];
+  /** Ways to neighbouring places: base travel time, ms. */
+  links?: Array<{ to: string; time: number }>;
+  /** Recommended hero level. */
+  danger?: number;
+  /** Who may jump at you here (weighted). */
+  foes?: FoeEntry[];
+  /** Chance of an attack per action / arrival. */
+  ambush?: number;
+  /** Home: the store is here, the bag is emptied on arrival. */
+  home?: boolean;
+  /** The place is on the map at all (as '?') while this holds. */
+  visible?: Cond;
+  /** Scene that explores it (both together); until done the place cannot be entered alone. */
+  scout?: string;
+  desc?: Text;
+  /** Hardships of the place: without the resist/tool, each action here hurts. */
+  cond?: Array<{ need: string; hp: number; text: Text }>;
+}
+
+export interface FoeEntry {
+  enemy: string;
+  n?: [number, number];
+  w: number;
+  /** Only in the evening. */
+  night?: boolean;
+  if?: Cond;
+}
+
+export type EnemyMoveKind = 'attack' | 'charge' | 'grab' | 'steal' | 'call' | 'venom' | 'leech' | 'guard' | 'drag';
+
+export interface EnemyMove {
+  move: EnemyMoveKind;
+  w?: number;
+  /** Every n rounds (from round `from`, default 1). */
+  every?: number;
+  from?: number;
+  once?: boolean;
+}
+
+export interface EnemyDef {
+  id: string;
+  /** Nominative, accusative, genitive (sg). */
+  name: string;
+  acc: string;
+  gen: string;
+  level: number;
+  hp: number;
+  dmg: [number, number];
+  armor?: number;
+  /** Harder to hit (−5% per point). */
+  evade?: number;
+  /** Fear it can take before fleeing; undefined = never flees. */
+  morale?: number;
+  traits: TraitId[];
+  /** Traits not obvious at first sight (the hunter notices them). */
+  hidden?: TraitId[];
+  ai: EnemyMove[];
+  loot?: Record<string, [number, number]>;
+  rare?: { p: number; loot: Record<string, number> };
+  /** People are knocked down, never killed. */
+  humane?: boolean;
+  desc: Text;
+  /** Phases by remaining health (fraction): new moves, armor, help arriving. */
+  phases?: Array<{ below: number; text: Text; ai?: EnemyMove[]; armor?: number; add?: Array<{ enemy: string; n?: number }> }>;
+  /** Who comes when it calls. */
+  calls?: string;
+  /** Flavour of its attack (3rd person present, e.g. «кусає»). */
+  verb: string;
+}
+
+export interface ResidentTraitDef {
+  name: string;
+  text: Text;
+  /** Job output multiplier by action id or by `skill:<id>`. */
+  mult?: Record<string, number>;
+  /** Will not work these actions. */
+  avoid?: string[];
+}
+
+export interface ResidentDef {
+  id: string;
+  name: Text;
+  desc: Text;
+  traits: ResidentTraitDef[];
+}
+
+export interface PerkDef {
+  id: string;
+  name: string;
+  text: string;
 }
 
 export interface OptionDef {
@@ -323,7 +523,15 @@ export interface OperationNode extends NodeBase {
   fail: string;
 }
 
-export type SceneNode = TextNode | ChoiceNode | CombatNode | DelveNode | StealthNode | OperationNode;
+/** A fight inside a scene: the scene waits for its end. Losing returns to `lose` (retry later). */
+export interface FightNode extends NodeBase {
+  type: 'fight';
+  foes: Array<{ enemy: string; n?: number }>;
+  win: string;
+  lose: string;
+}
+
+export type SceneNode = TextNode | ChoiceNode | CombatNode | DelveNode | StealthNode | OperationNode | FightNode;
 
 export interface DelveExitDef {
   to: string;
@@ -489,7 +697,7 @@ export interface StoveDef {
 }
 
 /** Backdrop of the place a player is in. */
-export type AmbientKind = 'cellar' | 'candle' | 'snow' | 'river' | 'cave';
+export type AmbientKind = 'cellar' | 'candle' | 'snow' | 'river' | 'cave' | 'marsh' | 'salt' | 'grove' | 'hill' | 'fog';
 /** What an action looks and sounds like while it runs (each kind has its own sound). */
 export type FxKind =
   | 'fire' // stoking a fire
@@ -555,7 +763,22 @@ export interface Content {
   start: {
     resources: Record<string, number>;
     hp: number;
+    /** Where the heroes are when the game begins (default: home). */
+    area?: string;
   };
+  enemies: EnemyDef[];
+  residents: ResidentDef[];
+  perks: PerkDef[];
+  traits: Record<TraitId, { name: string; text: string }>;
+  hero: {
+    base: Record<Role, Record<StatId, number>>;
+    /** Perk ids offered at each perk level (by level). */
+    perkLevels: number[];
+  };
+  /** What residents eat (one an hour each). */
+  food?: string;
+  /** The dog that follows the hunter (once this flag is set). */
+  dog?: { flag: string; name: string };
   /** Flag prefixes / names that mark story progress (solo play must never change them). */
   storyFlags: string[];
   actEnd: Record<number, string>;

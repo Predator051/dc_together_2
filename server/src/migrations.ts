@@ -13,27 +13,8 @@ import { normalizeWorld } from './engine/index.js';
 export type Migration = (s: any) => any;
 
 export const migrations: Record<number, Migration> = {
-  // v1 -> v2 (act 2): players get a location; everyone was in Ясенець.
-  1: (s) => {
-    for (const pid of ['p1', 'p2']) if (s.players?.[pid] && !s.players[pid].at) s.players[pid].at = 'yas';
-    s.version = 2;
-    return s;
-  },
-  // v2 -> v3: return summaries, end-of-act summaries, evenings. Counting starts now;
-  // the summary of an act that is already over is still shown once.
-  2: (s) => {
-    for (const pid of ['p1', 'p2']) {
-      const p = s.players?.[pid];
-      if (!p) continue;
-      p.away ??= null;
-      p.welcome ??= null;
-      p.seenSummary ??= 0;
-    }
-    s.stats ??= { gathered: {}, actions: { p1: 0, p2: 0 }, crafted: 0, trips: 0, suppers: 0 };
-    s.meta.dayAt ??= s.meta.lastTick ?? s.meta.createdAt ?? 0;
-    s.version = 3;
-    return s;
-  },
+  // Part two starts at version 10. Part-one worlds (≤ 3) are never migrated: they are read once
+  // as the legacy (see legacy.ts) and a new world begins. Add 10 -> 11 here when the state changes.
 };
 
 export class MigrationError extends Error {}
@@ -57,6 +38,7 @@ export function migrateState(
     if (Number(s.version) !== v + 1) throw new MigrationError(`Migration ${v} did not bump version`);
   }
   const state = sanitize(s as WorldState, content);
+  state.part ??= 2;
   return { state: normalizeWorld(content, state, now), from, migrated: from !== target };
 }
 

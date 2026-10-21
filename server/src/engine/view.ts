@@ -20,6 +20,12 @@ import type {
 } from '../../../shared/src/protocol.js';
 import type { Game } from './index.js';
 import { resolveParas } from './text.js';
+import { SKILLS, SLOTS, STATS } from '../../../shared/src/content.js';
+import type { BagView, BeastView, FightView, HeroView, MapView, ResidentView } from '../../../shared/src/protocol.js';
+import { skillLevel, skillXpFor, xpForLevel } from '../../../shared/src/rules.js';
+import { bagCap, bagLoad, gearNote, heroOf, ownsCount, useNote } from './hero.js';
+import { activeFoes, enemyOf, fightMoves, fightOf, holder } from './fight.js';
+import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, residentJobs, travelTime } from './travel.js';
 
 const LOG_SEND = 120;
 
@@ -29,10 +35,10 @@ function shownReason(g: Game, reason: string | null): string | undefined {
   return reason;
 }
 
-function costView(g: Game, cost: Record<string, number> | undefined): CostView[] | undefined {
+function costView(g: Game, cost: Record<string, number> | undefined, pid?: PlayerId): CostView[] | undefined {
   if (!cost) return undefined;
   return Object.entries(cost).map(([id, n]) => {
-    const have = g.s.res[id] ?? 0;
+    const have = pid ? g.stockOf(pid, id) : g.stockAll(id);
     const def = g.ix.res.get(id);
     return { id, name: def?.name ?? id, n, have, ok: have >= n, stock: !!def?.hidden };
   });
@@ -146,11 +152,11 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         label: g.render(a.label, pid),
         enabled: reason === null,
         reason: shownReason(g, reason),
-        hint: a.hint ? g.render(a.hint, pid) : undefined,
-        cost: costView(g, a.cost),
+        hint: a.why ? g.render(a.why, pid) : a.hint ? g.render(a.hint, pid) : undefined,
+        cost: costView(g, a.cost, pid),
         gain: actionGains(g, a, pid),
         readyAt: cd > g.now ? cd : undefined,
-        cooldown: Math.round(a.cooldown * g.cooldownMult(g.ix.areaOf(a.group))),
+        cooldown: g.actionTime(a, pid),
       });
     }
     const partner = mateEntries(g, pid, loc.id);
@@ -166,6 +172,45 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
       ...(partner.length ? { partner } : {}),
       ...(progress ? { progress } : {}),
     });
+  }
+  const paths = pathEntries(g, pid);
+  if (paths.length) out.push({ id: 'paths', name: g.ix.ui('paths'), desc: '', base: false, entries: paths });
+  return out;
+}
+
+/** Ways from here: walk to known places, propose scouting unknown ones. */
+function pathEntries(g: Game, pid: PlayerId): EntryView[] {
+  const p = g.p(pid);
+  if (p.travel) return [];
+  const out: EntryView[] = [];
+  for (const a of g.ix.c.areas) {
+    if (a.id === p.at || !a.pos || !areaOnMap(g, a.id) || linkTime(g, p.at, a.id) === null) continue;
+    if (areaKnown(g, a.id)) {
+      const block = goBlock(g, pid, a.id);
+      out.push({
+        id: `go:${a.id}`,
+        kind: 'go',
+        label: `${g.ix.ui('go_to')} ${a.name}`,
+        enabled: block === null,
+        ...(block && block !== g.ix.ui('err_busy') ? { reason: block } : {}),
+        cooldown: travelTime(g, pid, p.at, a.id),
+        ...(a.danger ? { hint: `${g.ix.ui('danger')} ${a.danger}` } : {}),
+      });
+    } else if (a.scout) {
+      const sc = g.ix.scenes.get(a.scout);
+      if (!sc || !g.sceneOrPoolVisible(sc, pid)) continue;
+      const reason = g.proposalBlock(sc, pid);
+      out.push({
+        id: sc.id,
+        kind: 'scene',
+        label: sc.label ? g.render(sc.label, pid) : sc.title,
+        enabled: reason === null,
+        reason: shownReason(g, reason),
+        cost: costView(g, sc.cost),
+        gain: sceneGains(g, sc, pid),
+        together: true,
+      });
+    }
   }
   return out;
 }
@@ -198,7 +243,7 @@ function mateEntries(g: Game, pid: PlayerId, locId: string): MateEntryView[] {
       label: g.render(a.label, other),
       ready: o.online && !away && block === null,
       ...(reason ? { reason } : {}),
-      cost: costView(g, a.cost),
+      cost: costView(g, a.cost, other),
       gain: actionGains(g, a, other),
     });
   }
@@ -249,8 +294,18 @@ function sceneView(g: Game, pid: PlayerId): SceneView | null {
     paused: sc.paused,
     pausedText: sc.paused ? g.render(g.ix.ui('scene_paused'), pid) : undefined,
     blocks,
-    kind: n.type === 'choice' || n.type === 'combat' || n.type === 'delve' || n.type === 'stealth' || n.type === 'operation' ? n.type : 'text',
-    mood: n.type === 'combat' ? 'fight' : n.type === 'delve' || n.type === 'stealth' || n.type === 'operation' ? 'deep' : def.pool ? 'hearth' : 'story',
+    kind:
+      n.type === 'choice' || n.type === 'combat' || n.type === 'delve' || n.type === 'stealth' || n.type === 'operation' || n.type === 'fight'
+        ? n.type
+        : 'text',
+    mood:
+      n.type === 'combat' || n.type === 'fight'
+        ? 'fight'
+        : n.type === 'delve' || n.type === 'stealth' || n.type === 'operation'
+          ? 'deep'
+          : def.pool
+            ? 'hearth'
+            : 'story',
     partnerPicked: false,
     waiting: false,
   };
@@ -340,7 +395,7 @@ function sceneView(g: Game, pid: PlayerId): SceneView | null {
           ...(block ? { reason: block } : {}),
           delta: eff.delta,
           ...(eff.transfer ? { transfer: eff.transfer } : {}),
-          cost: costView(g, m.cost),
+          cost: costView(g, m.cost, undefined),
         };
       }),
       ...(op.picks[pid] ? { myPick: op.picks[pid] } : {}),
@@ -349,6 +404,8 @@ function sceneView(g: Game, pid: PlayerId): SceneView | null {
     };
     view.myPick = op.picks[pid];
     view.partnerPicked = !!op.picks[other];
+  } else if (n.type === 'fight') {
+    // the fight itself is shown by the fight panel
   } else {
     view.button = n.type !== 'combat' && 'button' in n && n.button ? g.render(n.button, pid) : undefined;
     if (sc.ready[pid]) {
@@ -475,6 +532,282 @@ function stealthView(g: Game, pid: PlayerId, n: StealthNode): StealthView {
   return view;
 }
 
+
+// ----- part two panels ---------------------------------------------------------
+
+function heroView(g: Game, pid: PlayerId): HeroView {
+  const p = g.p(pid);
+  const d = heroOf(g, pid);
+  const ui = (k: string) => g.ix.ui(k);
+  const perk = (id: string) => {
+    const def = g.ix.c.perks.find((x) => x.id === id);
+    return { id, name: def?.name ?? id, text: def?.text ?? '' };
+  };
+  const atHome = g.atHome(pid);
+  const slots = SLOTS.map((slot) => {
+    const id = p.equip[slot];
+    const options: HeroView['slots'][number]['options'] = [];
+    if (atHome) {
+      for (const r of g.ix.c.resources) {
+        if (r.gear?.slot !== slot || (g.s.res[r.id] ?? 0) <= 0 || r.id === id) continue;
+        options.push({ id: r.id, name: r.name, note: gearNote(g, r.id), n: g.s.res[r.id] ?? 0 });
+      }
+    }
+    return {
+      slot,
+      name: ui(`slot_${slot}`),
+      item: id ? { id, name: g.ix.res.get(id)?.name ?? id, note: gearNote(g, id) } : null,
+      options,
+    };
+  });
+  return {
+    level: p.level,
+    xp: p.xp,
+    xpPrev: xpForLevel(p.level),
+    xpNext: xpForLevel(p.level + 1),
+    points: p.points,
+    stats: STATS.map((id) => ({ id, name: ui(`stat_${id}`), value: p.stats[id], text: ui(`stat_${id}_text`) })),
+    skills: SKILLS.map((id) => {
+      const xp = p.skills[id] ?? 0;
+      const lv = skillLevel(xp);
+      const a = skillXpFor(lv);
+      const b = skillXpFor(lv + 1);
+      return { id, name: ui(`skill_${id}`), level: lv, p: Math.max(0, Math.min(1, (xp - a) / Math.max(1, b - a))) };
+    }),
+    perks: p.perks.map(perk),
+    perkChoice: p.perkChoice ? p.perkChoice.map(perk) : null,
+    derived: {
+      hpMax: d.hpMax,
+      armor: d.armor,
+      dodge: Math.round(d.dodge * 100),
+      hit: Math.round(Math.min(0.97, d.hit) * 100),
+      dmg: d.dmg,
+      carry: d.carry,
+      resist: [...d.resist].map((r) => ui(`resist_${r}`)),
+      tools: [...d.tools].map((t) => ui(`tool_${t}`)),
+    },
+    slots,
+    outfits: ['fight', 'work'].map((name) => ({
+      name,
+      items: Object.values(p.sets[name] ?? {}).map((id) => g.ix.res.get(id!)?.name ?? id!),
+    })),
+    canChange: atHome && p.fight === null,
+  };
+}
+
+function bagView(g: Game, pid: PlayerId): BagView {
+  const p = g.p(pid);
+  const items = Object.entries(p.bag)
+    .filter(([, n]) => n > 0)
+    .map(([id, n]) => {
+      const def = g.ix.res.get(id);
+      const note = def?.use ? useNote(g, id) : def?.gear ? gearNote(g, id) : undefined;
+      return {
+        id,
+        name: def?.name ?? id,
+        n,
+        weight: def?.weight ?? 1,
+        kind: def?.kind ?? 'res',
+        usable: !!def?.use?.anywhere,
+        ...(note ? { note } : {}),
+      };
+    });
+  return { items, load: bagLoad(g, pid), cap: bagCap(g, pid) };
+}
+
+function mapView(g: Game, pid: PlayerId): MapView {
+  const p = g.p(pid);
+  const o = g.p(g.other(pid));
+  const nodes: MapView['nodes'] = [];
+  const links: MapView['links'] = [];
+  for (const a of g.ix.c.areas) {
+    if (!areaOnMap(g, a.id) || !a.pos) continue;
+    const known = areaKnown(g, a.id);
+    const node: MapView['nodes'][number] = {
+      id: a.id,
+      name: known ? a.name : '?',
+      x: a.pos[0],
+      y: a.pos[1],
+      known,
+      here: p.at === a.id && !p.travel,
+      partner: o.joined && o.at === a.id && !o.travel,
+      home: !!a.home,
+      danger: known ? (a.danger ?? 0) : 0,
+      foes: known
+        ? [...new Set((a.foes ?? []).filter((f) => (g.s.bestiary[f.enemy]?.seen ?? 0) > 0).map((f) => enemyOf(g, f.enemy).name))]
+        : [],
+      ...(known && a.desc ? { desc: g.render(a.desc, pid) } : {}),
+    };
+    if (a.id !== p.at && linkTime(g, p.at, a.id) !== null) {
+      if (known) {
+        const block = goBlock(g, pid, a.id);
+        node.go = { time: travelTime(g, pid, p.at, a.id), enabled: block === null, ...(block ? { reason: block } : {}) };
+      } else if (a.scout) {
+        const sc = g.ix.scenes.get(a.scout);
+        if (sc && g.sceneOrPoolVisible(sc, pid)) {
+          const block = g.proposalBlock(sc, pid);
+          node.scout = {
+            id: sc.id,
+            label: sc.label ? g.render(sc.label, pid) : sc.title,
+            enabled: block === null,
+            ...(block ? { reason: block } : {}),
+          };
+        }
+      }
+    }
+    nodes.push(node);
+    for (const l of a.links ?? []) {
+      if (areaOnMap(g, l.to) && (known || areaKnown(g, l.to))) links.push([a.id, l.to]);
+    }
+  }
+  const tr = p.travel;
+  return {
+    nodes,
+    links,
+    travel: tr ? { to: tr.to, name: areaDef(g, tr.to)?.name ?? tr.to, since: tr.since, until: tr.until } : null,
+  };
+}
+
+function intentText(g: Game, f: NonNullable<ReturnType<typeof fightOf>>, it: { move: string; target?: PlayerId } | null, viewer: PlayerId): string | undefined {
+  if (!it) return undefined;
+  const who = it.target ? (it.target === viewer ? g.ix.ui('intent_you') : g.p(it.target).name) : '';
+  const t = g.ix.c.ui[`intent_${it.move}`];
+  if (!t) return undefined;
+  return t.replace('{who}', who);
+}
+
+function fightView(g: Game, pid: PlayerId): FightView | null {
+  const f = fightOf(g, pid);
+  if (!f) return null;
+  const role = g.p(pid).role;
+  const foes = f.foes
+    .filter((x) => !x.out || f.round - x.joined < 99)
+    .map((foe) => {
+      const def = enemyOf(g, foe.enemy);
+      const known = g.s.bestiary[foe.enemy]?.known ?? [];
+      const beast = def.morale !== undefined && !def.humane;
+      const same = f.foes.filter((x) => x.enemy === foe.enemy);
+      const v: FightView['foes'][number] = {
+        uid: foe.uid,
+        name: `${def.name}${same.length > 1 ? ` ·${same.indexOf(foe) + 1}` : ''}`,
+        hp: Math.max(0, foe.hp),
+        hpMax: foe.hpMax,
+        out: foe.out,
+        level: def.level,
+        traits: known.map((t) => g.ix.c.traits[t as keyof typeof g.ix.c.traits]?.name ?? t),
+      };
+      if (def.morale !== undefined) {
+        v.fear = Math.min(foe.fear, def.morale);
+        v.morale = def.morale;
+      }
+      if (!foe.out) {
+        const it = intentText(g, f, foe.intent, pid);
+        if (it) v.intent = it;
+        // the hunter reads a beast's next move
+        if (role === 'hunter' && beast) {
+          const nx = intentText(g, f, foe.next, pid);
+          if (nx) v.next = nx;
+        }
+        if (role === 'maker' && (def.armor ?? 0) > 0) v.weak = g.ix.ui('fight_weak');
+        if (foe.holds) v.holds = foe.holds === pid ? g.ix.ui('intent_you') : g.p(foe.holds).name;
+        if (foe.calling > 0) v.calling = foe.calling;
+      }
+      return v;
+    });
+  const party = f.party.map((x) => {
+    const p = g.p(x);
+    return {
+      pid: x,
+      name: x === pid ? g.ix.ui('you') : p.name,
+      hp: p.hp,
+      hpMax: p.hpMax,
+      down: f.down.includes(x) || f.fled.includes(x),
+      held: !!holder(f, x),
+      poison: p.poison,
+      picked: !!f.picks[x],
+      me: x === pid,
+    };
+  });
+  const moves = fightMoves(g, f, pid).map((m) => ({ ...m }));
+  const myPick = f.picks[pid];
+  const others = f.party.filter((x) => x !== pid && g.p(x).online && !f.down.includes(x) && !f.fled.includes(x));
+  return {
+    id: f.id,
+    round: f.round,
+    scene: f.scene,
+    foes,
+    party,
+    ...(f.dog && g.ix.c.dog ? { dog: g.ix.c.dog.name } : {}),
+    moves,
+    ...(myPick ? { myPick } : {}),
+    waiting: !!myPick && others.some((x) => !f.picks[x]),
+    lines: f.lines[pid] ?? [],
+  };
+}
+
+function nearFight(g: Game, pid: PlayerId): PlayerView['nearFight'] {
+  const p = g.p(pid);
+  if (p.fight !== null || p.travel) return null;
+  const o = g.p(g.other(pid));
+  if (o.fight === null) return null;
+  const f = g.s.fights.find((x) => x.id === o.fight);
+  if (!f || f.scene || f.area !== p.at) return null;
+  const names = activeFoes(f).map((x) => enemyOf(g, x.enemy).name);
+  return { id: f.id, text: `${g.render(g.ix.ui('near_fight'), pid)} ${[...new Set(names)].join(', ')}` };
+}
+
+function residentsView(g: Game, pid: PlayerId): ResidentView[] {
+  return g.ix.c.residents
+    .filter((r) => g.s.residents[r.id])
+    .map((r) => {
+      const st = g.s.residents[r.id]!;
+      const jobs = residentJobs(g, r.id).map((j) => {
+        const a = g.ix.actions.get(j.id)!;
+        return { id: j.id, label: g.render(a.label, pid), place: areaDef(g, j.area)?.name ?? j.area, rate: a.job!.rate };
+      });
+      const cur = st.job ? g.ix.actions.get(st.job) : undefined;
+      return {
+        id: r.id,
+        name: g.render(r.name, pid),
+        desc: g.render(r.desc, pid),
+        traits: r.traits.map((t) => ({ name: t.name, text: g.render(t.text, pid) })),
+        job: st.job,
+        ...(cur ? { jobLabel: g.render(cur.label, pid) } : {}),
+        jobs,
+        hurt: st.hurtUntil > g.now,
+        hungry: st.hungry,
+      };
+    });
+}
+
+function bestiaryView(g: Game, pid: PlayerId): BeastView[] {
+  return (g.ix.c.enemies ?? [])
+    .filter((e) => (g.s.bestiary[e.id]?.seen ?? 0) > 0)
+    .map((e) => {
+      const b = g.s.bestiary[e.id]!;
+      return {
+        id: e.id,
+        name: e.name,
+        level: e.level,
+        desc: g.render(e.desc, pid),
+        traits: b.known.map((t) => {
+          const tr = g.ix.c.traits[t as keyof typeof g.ix.c.traits];
+          return { name: tr?.name ?? t, text: tr?.text ?? '' };
+        }),
+        beaten: b.beaten,
+      };
+    });
+}
+
+/** Panels open as the game opens up. */
+function tabsOf(g: Game, pid: PlayerId): string[] {
+  const t = ['here'];
+  if (g.ix.c.areas.some((a) => !a.home && areaOnMap(g, a.id) && a.pos)) t.push('map');
+  const p = g.p(pid);
+  if (p.level > 1 || Object.keys(p.equip).length > 0 || g.ix.c.resources.some((r) => r.gear && (g.s.res[r.id] ?? 0) > 0)) t.push('hero');
+  return t;
+}
+
 export function buildView(g: Game, pid: PlayerId): PlayerView {
   const me = g.p(pid);
   const other = g.other(pid);
@@ -486,12 +819,15 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     .sort((a, b) => a.order - b.order)
     .map((r) => {
       const cap = g.cap(r.id);
+      const note = r.gear ? gearNote(g, r.id) : r.use ? useNote(g, r.id) : '';
       return {
         id: r.id,
         name: r.name,
         n: g.s.res[r.id] ?? 0,
-        cap: Number.isFinite(cap) && r.kind !== 'tool' ? cap : undefined,
+        cap: Number.isFinite(cap) && r.kind !== 'tool' && r.kind !== 'gear' ? cap : undefined,
         kind: r.kind ?? 'res',
+        ...(r.weight !== undefined ? { weight: r.weight } : {}),
+        ...(note ? { note } : {}),
       };
     });
 
@@ -525,12 +861,19 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
   };
 
   let partnerBusy: { text: string; from: number; until: number } | null = null;
-  if (o.busy && o.busy.until > g.now) {
+  if (o.fight !== null) {
+    partnerBusy = { text: g.render(ui('partner_fighting'), pid, other), from: g.now, until: g.now };
+  } else if (o.travel) {
+    const to = areaDef(g, o.travel.to);
+    partnerBusy = { text: `${g.render(ui('partner_walks'), pid, other)} ${to?.name ?? ''}`.trim(), from: o.travel.since, until: o.travel.until };
+  } else if (o.busy && o.busy.until > g.now) {
     const a = g.ix.actions.get(o.busy.action);
     if (a?.busy) {
-      const dur = Math.round(a.cooldown * g.cooldownMult(g.ix.areaOf(a.group)));
+      const dur = g.actionTime(a, other);
       const text = g.render(a.busy, pid, other);
       partnerBusy = { text: text.charAt(0).toLowerCase() + text.slice(1), from: o.busy.until - dur, until: o.busy.until };
+    } else if (o.busy.action.startsWith('rest:')) {
+      partnerBusy = { text: g.render(ui('partner_resting'), pid, other), from: o.busy.until - 60_000, until: o.busy.until };
     }
   }
 
@@ -626,16 +969,31 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     journal: { clues, questions, people },
     actDone,
     busyUntil: me.busy && me.busy.until > g.now ? me.busy.until : 0,
-    busyFrom:
-      me.busy && me.busy.until > g.now
-        ? me.busy.until -
-          Math.round((g.ix.actions.get(me.busy.action)?.cooldown ?? 0) * g.cooldownMult(g.ix.areaOf(g.ix.actions.get(me.busy.action)?.group)))
-        : 0,
+    busyFrom: busyFrom(g, pid),
     busyAction: me.busy && me.busy.until > g.now ? me.busy.action : null,
+    hero: heroView(g, pid),
+    bag: bagView(g, pid),
+    map: mapView(g, pid),
+    fight: fightView(g, pid),
+    nearFight: nearFight(g, pid),
+    residents: residentsView(g, pid),
+    bestiary: bestiaryView(g, pid),
+    tabs: tabsOf(g, pid),
+    atHome: g.atHome(pid),
     welcome: welcomeView(g, pid),
     summary: summaryView(g, pid),
     dayAt: g.s.meta.dayAt,
   };
+}
+
+function busyFrom(g: Game, pid: PlayerId): number {
+  const me = g.p(pid);
+  if (!me.busy || me.busy.until <= g.now) return 0;
+  if (me.travel) return me.travel.since;
+  const a = g.ix.actions.get(me.busy.action);
+  if (a) return me.busy.until - g.actionTime(a, pid);
+  if (me.busy.action.startsWith('rest:')) return me.busy.until - 60_000;
+  return g.now;
 }
 
 function visibleDelta(g: Game, before: Record<string, number>, after: Record<string, number>): DeltaItem[] {

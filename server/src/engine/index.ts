@@ -11,6 +11,8 @@ import type {
   DelveNode,
   Effect,
   EncounterDef,
+  EnemyDef,
+  FightNode,
   Gender,
   LogLine,
   LogText,
@@ -30,7 +32,26 @@ import { PLAYER_IDS } from '../../../shared/src/content.js';
 import type { Command } from '../../../shared/src/protocol.js';
 import { Rng } from '../../../shared/src/rng.js';
 import type { LogEntry, PlayerState, WorldState } from '../../../shared/src/state.js';
-import { STATE_VERSION } from '../../../shared/src/state.js';
+import { PART, STATE_VERSION } from '../../../shared/src/state.js';
+import { gatherMult } from '../../../shared/src/rules.js';
+import {
+  addBag,
+  blankHero,
+  drop,
+  equip,
+  gainSkill,
+  gainXp,
+  heroOf,
+  outfit,
+  ownsCount,
+  pack,
+  pickPerk,
+  refreshHero,
+  skillOf,
+  spendPoint,
+} from './hero.js';
+import { activeFoes, dropFight, fightChoose, fightOf, help, maybeResolve, startFight } from './fight.js';
+import { ambush, areaDef, areaKnown, go, linkTime, setJob, settleTravel, settleWork } from './travel.js';
 
 /** How long a player must have been gone to get a summary on return. */
 export const WELCOME_AFTER = 3 * 60 * 1000;
@@ -62,8 +83,13 @@ export class ContentIndex {
   readonly goals = new Map<string, Content['goals'][number]>();
   readonly npcs = new Map<string, Content['npcs'][number]>();
   readonly maps = new Map<string, DelveMapDef>();
+  readonly enemies = new Map<string, EnemyDef>();
+  /** Scouting scene → the place it explores. */
+  readonly scoutOf = new Map<string, string>();
 
   constructor(readonly c: Content) {
+    for (const e of c.enemies ?? []) this.enemies.set(e.id, e);
+    for (const a of c.areas) if (a.scout) this.scoutOf.set(a.scout, a.id);
     for (const r of c.resources) this.res.set(r.id, r);
     for (const a of c.actions) this.actions.set(a.id, a);
     for (const p of c.pools) this.pools.set(p.id, p);
@@ -92,7 +118,7 @@ export class ContentIndex {
   }
 
   get homeArea(): string {
-    return this.c.areas[0]?.id ?? 'home';
+    return this.c.areas.find((a) => a.home)?.id ?? this.c.areas[0]?.id ?? 'home';
   }
 
   /** Area of a location / group id. */
@@ -121,6 +147,8 @@ export class Game {
   readonly rng: Rng;
   /** Scenes queued by effects; started when the current scene ends. */
   private chain: string[] = [];
+  /** Checkpoints asked for by effects; the server saves snapshots after the operation. */
+  readonly checkpoints: string[] = [];
 
   constructor(
     readonly ix: ContentIndex,
@@ -185,6 +213,23 @@ export class Game {
     return PLAYER_IDS.filter((pid) => this.p(pid).joined);
   }
 
+  atHome(pid: PlayerId): boolean {
+    const p = this.p(pid);
+    return !p.travel && p.at === this.ix.homeArea;
+  }
+
+  /** The day grows long: evening after 25 minutes of play since the last supper. */
+  isEvening(): boolean {
+    return this.now - this.s.meta.dayAt > 25 * 60 * 1000;
+  }
+
+  /** Walks end, residents work. Call before anything else in an operation. */
+  settle(): boolean {
+    const a = settleTravel(this);
+    const b = settleWork(this);
+    return a || b;
+  }
+
   // ----- conditions ----------------------------------------------------------
 
   flag(name: string): number {
@@ -231,6 +276,15 @@ export class Game {
       if (c.lt !== undefined && v >= c.lt) return false;
       return true;
     }
+    if ('level' in c) {
+      const lv = pid ? this.p(pid).level : Math.max(...this.joinedIds().map((x) => this.p(x).level), 1);
+      return lv >= c.level;
+    }
+    if ('tool' in c) return pid ? heroOf(this, pid).tools.has(c.tool) : false;
+    if ('owns' in c) return ownsCount(this, c.owns) >= (c.gte ?? 1);
+    if ('trait' in c) return Object.values(this.s.bestiary).some((b) => b.known.includes(c.trait));
+    if ('met' in c) return (this.s.bestiary[c.met]?.seen ?? 0) > 0;
+    if ('evening' in c) return this.isEvening() === c.evening;
     return false;
   }
 
@@ -321,6 +375,52 @@ export class Game {
   payCost(cost: Record<string, number> | undefined): void {
     if (!cost) return;
     for (const [r, n] of Object.entries(cost)) this.s.res[r] = (this.s.res[r] ?? 0) - n;
+  }
+
+  /** What this hero can spend: the home store at home, the bag elsewhere. */
+  stockOf(pid: PlayerId, id: string): number {
+    return this.atHome(pid) ? (this.s.res[id] ?? 0) : (this.p(pid).bag[id] ?? 0);
+  }
+
+  hasCostFor(pid: PlayerId, cost: Record<string, number> | undefined): boolean {
+    if (!cost) return true;
+    return Object.entries(cost).every(([r, n]) => this.stockOf(pid, r) >= n);
+  }
+
+  payCostFor(pid: PlayerId, cost: Record<string, number> | undefined): void {
+    if (!cost) return;
+    for (const [r, n] of Object.entries(cost)) {
+      if (this.atHome(pid)) this.s.res[r] = (this.s.res[r] ?? 0) - n;
+      else addBag(this, pid, r, -n);
+    }
+  }
+
+  /** Together: the home store and both bags. */
+  stockAll(id: string): number {
+    let n = this.s.res[id] ?? 0;
+    for (const pid of this.joinedIds()) n += this.p(pid).bag[id] ?? 0;
+    return n;
+  }
+
+  hasCostAll(cost: Record<string, number> | undefined): boolean {
+    if (!cost) return true;
+    return Object.entries(cost).every(([r, n]) => this.stockAll(r) >= n);
+  }
+
+  payCostAll(cost: Record<string, number> | undefined): void {
+    if (!cost) return;
+    for (const [r, n] of Object.entries(cost)) {
+      let left = n;
+      const fromStore = Math.min(left, this.s.res[r] ?? 0);
+      this.s.res[r] = (this.s.res[r] ?? 0) - fromStore;
+      left -= fromStore;
+      for (const pid of this.joinedIds()) {
+        if (left <= 0) break;
+        const k = Math.min(left, this.p(pid).bag[r] ?? 0);
+        if (k > 0) addBag(this, pid, r, -k);
+        left -= k;
+      }
+    }
   }
 
   // ----- stove ---------------------------------------------------------------
@@ -422,7 +522,7 @@ export class Game {
       return;
     }
     if ('heal' in e) {
-      for (const pid of this.joinedIds()) {
+      for (const pid of this.targets(e.who ?? 'both', actor)) {
         const p = this.p(pid);
         p.hp = e.heal === 'full' ? p.hpMax : Math.min(p.hpMax, p.hp + e.heal);
       }
@@ -444,9 +544,62 @@ export class Game {
       return;
     }
     if ('moveTo' in e) {
-      for (const pid of this.targets(e.who ?? 'actor', actor)) this.p(pid).at = e.moveTo;
+      for (const pid of this.targets(e.who ?? 'actor', actor)) {
+        const p = this.p(pid);
+        p.at = e.moveTo;
+        p.travel = null;
+        if (areaDef(this, e.moveTo)?.home) this.unloadQuiet(pid);
+      }
       this.s.proposal = null;
       return;
+    }
+    if ('xp' in e) {
+      for (const pid of this.targets(e.who ?? 'both', actor)) gainXp(this, pid, e.xp);
+      return;
+    }
+    if ('resident' in e) {
+      if (!this.s.residents[e.resident]) this.s.residents[e.resident] = { job: null, acc: {}, hurtUntil: 0, hungry: false, since: this.now };
+      this.s.workAt = Math.min(this.s.workAt, this.now);
+      return;
+    }
+    if ('checkpoint' in e) {
+      this.checkpoints.push(e.checkpoint);
+      return;
+    }
+    if ('wear' in e) {
+      const slot = this.ix.res.get(e.wear)?.gear?.slot;
+      for (const pid of this.targets(e.who ?? 'actor', actor)) {
+        const p = this.p(pid);
+        if (slot && !p.equip[slot]) p.equip[slot] = e.wear;
+        else this.addRes(e.wear, 1);
+        refreshHero(this, pid);
+      }
+      return;
+    }
+    if ('give' in e) {
+      for (const pid of this.targets(e.who ?? 'actor', actor)) {
+        for (const [r, n] of Object.entries(e.give)) {
+          if (this.atHome(pid)) this.addRes(r, n);
+          else addBag(this, pid, r, n);
+        }
+      }
+      return;
+    }
+    if ('fight' in e) {
+      const pid = actor ?? this.joinedIds()[0];
+      if (pid) startFight(this, this.p(pid).at, e.fight);
+      return;
+    }
+  }
+
+  private unloadQuiet(pid: PlayerId): void {
+    const p = this.p(pid);
+    for (const [id, n] of Object.entries(p.bag)) {
+      if (this.ix.res.get(id)?.kind === 'use') continue;
+      const got = this.addRes(id, n);
+      const left = n - Math.max(0, got);
+      if (left > 0) p.bag[id] = left;
+      else delete p.bag[id];
     }
   }
 
@@ -499,14 +652,45 @@ export class Game {
     if (a.once && this.flag(`built:${a.id}`)) return false;
     if (a.oncePerPlayer && this.p(pid).flags[`built:${a.id}`]) return false;
     if (a.visible && !this.test(a.visible, pid)) return false;
+    if (this.atLimit(a)) return false;
     return true;
+  }
+
+  /** A recipe for gear that both heroes already have is not shown any more. */
+  atLimit(a: ActionDef): boolean {
+    for (const id of Object.keys(a.yield ?? {})) {
+      const def = this.ix.res.get(id);
+      const limit = a.limit ?? (def?.kind === 'gear' ? 2 : undefined);
+      if (limit !== undefined && ownsCount(this, id) >= limit) return true;
+    }
+    return false;
+  }
+
+  /** How long the action keeps this hero busy. */
+  actionTime(a: ActionDef, pid: PlayerId): number {
+    let t = a.cooldown * this.cooldownMult(this.ix.areaOf(a.group));
+    if (a.skill) {
+      const h = heroOf(this, pid);
+      const knack = a.knack && a.knack.role === this.p(pid).role ? a.knack.x : 1;
+      const tk = a.tool ?? a.boost;
+      t *= gatherMult({ skill: skillOf(this, pid, a.skill), toolSpeed: tk ? (h.toolSpeed.get(tk) ?? 0) : 0, heavy: h.heavy, knack });
+    } else if (a.knack && a.knack.role === this.p(pid).role) {
+      t /= a.knack.x;
+    }
+    return Math.round(t);
   }
 
   /** Why the action can't be done right now (null = can). Cooldown is reported separately. */
   actionBlock(a: ActionDef, pid: PlayerId): string | null {
     if (this.sceneBlocksRoutine()) return this.ix.ui('err_in_scene');
+    if (this.p(pid).fight !== null) return this.ix.ui('err_in_fight');
+    if (a.tool && !heroOf(this, pid).tools.has(a.tool)) return `${this.ix.ui('err_need_tool')} ${this.ix.ui(`tool_${a.tool}`)}`;
     if (a.enabled && !this.test(a.enabled, pid)) return a.disabledHint ? this.render(a.disabledHint, pid) : this.ix.ui('err_not_now');
-    if (!this.hasCost(a.cost)) return this.ix.ui('err_cost');
+    if (!this.hasCostFor(pid, a.cost)) return this.ix.ui('err_cost');
+    if (!this.atHome(pid) && a.yield && !a.effects && !a.chance) {
+      const fits = Object.keys(a.yield).some((r) => (this.ix.res.get(r)?.weight ?? 1) <= heroOf(this, pid).carry - this.bagLoadOf(pid) + 1e-9);
+      if (!fits) return this.ix.ui('err_bag_full');
+    }
     if (a.yield && !a.effects && !a.chance) {
       const allFull = Object.keys(a.yield).every((r) => (this.s.res[r] ?? 0) >= this.cap(r));
       if (allFull) return this.ix.ui('err_full');
@@ -527,13 +711,18 @@ export class Game {
     const readyAt = p.cooldowns[a.id] ?? 0;
     if (readyAt > this.now) return this.fail('err_cooldown');
 
-    this.payCost(a.cost);
+    if (p.travel) return this.fail('err_busy');
+    this.payCostFor(pid, a.cost);
+    const home = this.atHome(pid);
+    const put = (r: string, n: number): number => (home ? this.addRes(r, n) : addBag(this, pid, r, n));
     const rolls = a.rollsPer ? Math.max(1, this.s.res[a.rollsPer] ?? 0) : 1;
     const gained: Record<string, number> = {};
+    const lucky = p.perks.includes('hands') && a.kind === 'gather' && this.rng.chance(0.25);
     for (let i = 0; i < rolls; i++) {
       for (const [r, y] of Object.entries(a.yield ?? {})) {
-        const n = Array.isArray(y) ? this.rng.int(y[0], y[1]) : y;
-        if (n) gained[r] = (gained[r] ?? 0) + this.addRes(r, n);
+        let n = Array.isArray(y) ? this.rng.int(y[0], y[1]) : y;
+        if (lucky && i === 0) n += 1;
+        if (n) gained[r] = (gained[r] ?? 0) + put(r, n);
       }
     }
     // Main log (or a one-time vignette) first, chance logs after it.
@@ -552,7 +741,7 @@ export class Game {
       for (const ch of a.chance ?? []) {
         if (ch.if && !this.test(ch.if, pid)) continue;
         if (!this.rng.chance(ch.p)) continue;
-        for (const [r, n] of Object.entries(ch.add ?? {})) gained[r] = (gained[r] ?? 0) + this.addRes(r, n);
+        for (const [r, n] of Object.entries(ch.add ?? {})) gained[r] = (gained[r] ?? 0) + put(r, n);
         if (ch.log) this.log(ch.log, pid);
         this.apply(ch.effects, pid);
       }
@@ -567,10 +756,33 @@ export class Game {
 
     if (a.once) this.s.flags[`built:${a.id}`] = 1;
     if (a.oncePerPlayer) p.flags[`built:${a.id}`] = 1;
-    const cd = Math.round(a.cooldown * this.cooldownMult(this.ix.areaOf(a.group)));
+    const cd = this.actionTime(a, pid);
     if (a.recharge) p.cooldowns[a.id] = this.now + a.recharge;
     p.busy = { action: a.id, until: this.now + cd };
+    if (a.skill) gainSkill(this, pid, a.skill);
+    if (a.train) gainSkill(this, pid, a.train.skill, a.train.xp);
+    if ((a.kind === 'craft' || a.kind === 'build') && !this.flag(`made:${a.id}`)) {
+      this.s.flags[`made:${a.id}`] = 1;
+      gainXp(this, pid, a.kind === 'build' ? 6 : 3);
+    }
+    // hardships of the place
+    const area = areaDef(this, this.ix.areaOf(a.group));
+    if (area?.cond) {
+      const h = heroOf(this, pid);
+      for (const c of area.cond) {
+        if (h.resist.has(c.need as never) || h.tools.has(c.need)) continue;
+        p.hp = Math.max(1, p.hp - c.hp);
+        this.log({ self: c.text, kind: 'warn' }, pid);
+      }
+    }
+    if (area && !area.home) ambush(this, pid, area.id, a.ambush ?? area.ambush ?? 0);
     return OK;
+  }
+
+  bagLoadOf(pid: PlayerId): number {
+    let w = 0;
+    for (const [id, n] of Object.entries(this.p(pid).bag)) w += n * (this.ix.res.get(id)?.weight ?? 1);
+    return w;
   }
 
   /** Append "Дрова +2" to the actor's line of this action (or log it separately). */
@@ -591,8 +803,18 @@ export class Game {
 
   // ----- proposals & scenes --------------------------------------------------
 
+  /** Where a proposal for this scene/pool must be made (and accepted). */
+  proposalArea(def: SceneDef | PoolActionDef, pid: PlayerId): string {
+    if ('start' in def && this.ix.scoutOf.has(def.id)) return this.p(pid).at;
+    return this.ix.areaOf(def.group);
+  }
+
   sceneOrPoolVisible(def: SceneDef | PoolActionDef, pid: PlayerId): boolean {
-    if (def.group && this.ix.areaOf(def.group) !== this.p(pid).at) return false;
+    const scouted = 'start' in def ? this.ix.scoutOf.get(def.id) : undefined;
+    if (scouted) {
+      if (areaKnown(this, scouted)) return false;
+      if (linkTime(this, this.p(pid).at, scouted) === null) return false;
+    } else if (def.group && this.ix.areaOf(def.group) !== this.p(pid).at) return false;
     if ('start' in def) {
       if (def.once !== false && this.flag(`done:${def.id}`)) return false;
     } else if (!this.pickFromPool(def.pool, true)) {
@@ -605,12 +827,14 @@ export class Game {
   proposalBlock(def: SceneDef | PoolActionDef, pid: PlayerId): string | null {
     const o = this.p(this.other(pid));
     if (!o.joined || !o.online) return this.ix.ui('err_need_both');
-    const area = this.ix.areaOf(def.group);
+    const area = this.proposalArea(def, pid);
+    if (o.travel) return `${this.render(this.ix.ui('partner_on_way'), pid)}`;
     if (o.at !== area) return `${this.render(this.ix.ui('partner_now'), pid)} ${this.ix.areaWhere(o.at)}.`;
+    if (this.p(pid).fight !== null || o.fight !== null) return this.ix.ui('err_in_fight');
     if (this.s.scene) return this.s.scene.paused ? this.ix.ui('err_scene_paused') : this.ix.ui('err_in_scene');
     if (this.s.proposal) return this.ix.ui('err_proposal_pending');
     if (def.enabled && !this.test(def.enabled, pid)) return def.disabledHint ? this.render(def.disabledHint, pid) : this.ix.ui('err_not_now');
-    if (!this.hasCost(def.cost)) return this.ix.ui('err_cost');
+    if (!this.hasCostAll(def.cost)) return this.ix.ui('err_cost');
     return null;
   }
 
@@ -651,17 +875,22 @@ export class Game {
     if (!pr || pr.by === pid) return this.fail('err_not_now');
     if (!this.bothOnline()) return this.fail('err_need_both');
     const via = this.ix.entry(pr.via);
-    const area = this.ix.areaOf(via && via.kind !== 'act' ? via.def.group : undefined);
+    const area = via && via.kind !== 'act' ? this.proposalArea(via.def, pr.by) : this.ix.homeArea;
     if (this.p(pid).at !== area || this.p(pr.by).at !== area) {
       this.s.proposal = null;
       return this.fail('err_not_now');
     }
     const cost = via && via.kind !== 'act' ? via.def.cost : undefined;
-    if (!this.hasCost(cost)) {
+    if (!this.hasCostAll(cost)) {
       this.s.proposal = null;
       return this.fail('err_cost');
     }
-    this.payCost(cost);
+    if (this.p(pid).fight !== null || this.p(pr.by).fight !== null || this.p(pid).travel || this.p(pr.by).travel) {
+      this.s.proposal = null;
+      return this.fail('err_not_now');
+    }
+    this.payCostAll(cost);
+    for (const x of this.joinedIds()) this.p(x).busy = null;
     this.s.proposal = null;
     this.startScene(pr.scene);
     return OK;
@@ -722,6 +951,11 @@ export class Game {
       sc.combat = null;
     }
     if (n.type === 'delve') this.enterDelve(id, n);
+    if (n.type === 'fight') {
+      const fn = n as FightNode;
+      const area = this.p(this.joinedIds()[0] ?? 'p1').at;
+      startFight(this, area, fn.foes, { scene: true, party: this.joinedIds() });
+    }
     sc.stealth = n.type === 'stealth' ? { pos: 0, turn: 0, time: 0, alarm: 0, picks: {}, lines: { p1: [], p2: [] } } : null;
     if (n.type === 'operation') {
       const tracks: Record<string, number> = {};
@@ -738,7 +972,7 @@ export class Game {
 
   operationBlock(m: OperationMoveDef, pid: PlayerId): string | null {
     if (m.enabled && !this.test(m.enabled, pid)) return m.disabledHint ? this.render(m.disabledHint, pid) : this.ix.ui('err_not_now');
-    if (!this.hasCost(m.cost)) return this.ix.ui('err_cost');
+    if (!this.hasCostAll(m.cost)) return this.ix.ui('err_cost');
     return null;
   }
 
@@ -777,7 +1011,7 @@ export class Game {
     };
     for (const x of ids) {
       const mv = this.operationMoves(n, x).find((y) => y.id === op.picks[x])!;
-      this.payCost(mv.cost);
+      this.payCostAll(mv.cost);
       const eff = this.operationEffect(mv, x);
       for (const [k, v] of Object.entries(eff.delta)) {
         op.tracks[k] = (op.tracks[k] ?? 0) + v;
@@ -861,7 +1095,7 @@ export class Game {
     const d = this.s.scene?.delve;
     if (a.role && this.p(pid).role !== a.role) return this.ix.ui('err_wrong_role');
     if (a.enabled && !this.test(a.enabled, pid)) return a.disabledHint ? this.render(a.disabledHint, pid) : this.ix.ui('err_not_now');
-    if (!this.hasCost(a.cost)) return this.ix.ui('err_cost');
+    if (!this.hasCostAll(a.cost)) return this.ix.ui('err_cost');
     if (d && (a.light ?? 0) > 0 && d.light < (a.light ?? 0)) return this.ix.ui('delve_no_light');
     return null;
   }
@@ -892,7 +1126,7 @@ export class Game {
       const block = this.delveActBlock(a, pid);
       if (block) return { ok: false, err: block };
       d.lines = { p1: [], p2: [] };
-      this.payCost(a.cost);
+      this.payCostAll(a.cost);
       const light = a.light ?? 0;
       d.light -= light;
       if (d.light > d.lightMax) d.lightMax = d.light;
@@ -1026,12 +1260,23 @@ export class Game {
     if (next) this.startScene(next);
   }
 
+  /** A scene fight ended: the story goes on. */
+  fightOver(won: boolean): void {
+    const sc = this.s.scene;
+    if (!sc) return;
+    const def = this.ix.scenes.get(sc.id)!;
+    const n = this.node(def, sc.node);
+    if (n.type !== 'fight') return;
+    this.goTo(won ? n.win : n.lose);
+  }
+
   next(pid: PlayerId): Result {
     const sc = this.s.scene;
     if (!sc || sc.paused) return this.fail('err_not_now');
     const def = this.ix.scenes.get(sc.id)!;
     const n = this.node(def, sc.node);
-    if (n.type === 'choice' || n.type === 'combat' || n.type === 'delve' || n.type === 'stealth' || n.type === 'operation') return this.fail('err_not_now');
+    if (n.type === 'choice' || n.type === 'combat' || n.type === 'delve' || n.type === 'stealth' || n.type === 'operation' || n.type === 'fight')
+      return this.fail('err_not_now');
     sc.ready[pid] = true;
     if (!this.joinedIds().every((x) => sc.ready[x])) return OK;
     const tn = n as TextNode;
@@ -1118,7 +1363,7 @@ export class Game {
     const opt = opts.find((o) => o.id === optId);
     if (!opt) return this.fail('err_not_now');
     if (opt.role && this.p(pid).role !== opt.role) return this.fail('err_wrong_role');
-    if (!this.hasCost(opt.cost)) return this.fail('err_cost');
+    if (!this.hasCostAll(opt.cost)) return this.fail('err_cost');
     if (cb.picks[pid]) return this.fail('err_already_chosen');
     cb.picks[pid] = opt.id;
     if (!this.joinedIds().every((x) => cb.picks[x])) return OK;
@@ -1139,7 +1384,7 @@ export class Game {
 
     for (const pid of this.joinedIds()) {
       const opt = this.combatOptions(enc, pid).find((o) => o.id === cb.picks[pid]) ?? enc.downOption;
-      this.payCost(opt.cost);
+      this.payCostAll(opt.cost);
       const me = this.p(pid);
       if (opt.heal) me.hp = Math.min(me.hpMax, me.hp + opt.heal);
       let hit = true;
@@ -1193,14 +1438,64 @@ export class Game {
     cb.lastRound = lines;
   }
 
+  /** Eat or bandage outside a fight. */
+  useItem(pid: PlayerId, id: string): Result {
+    const p = this.p(pid);
+    const def = this.ix.res.get(id);
+    const u = def?.use;
+    if (!def || !u || !u.anywhere) return this.fail('err_not_now');
+    if (p.fight !== null) return this.fail('err_in_fight');
+    if (this.stockOf(pid, id) <= 0) return this.fail('err_cost');
+    if (u.heal && p.hp >= p.hpMax && !(u.cure ?? []).length) return this.fail('err_full_hp');
+    this.payCostFor(pid, { [id]: 1 });
+    if (u.heal) p.hp = Math.min(p.hpMax, p.hp + u.heal);
+    if (u.cure?.includes('poison')) p.poison = 0;
+    this.log(u.log, pid);
+    return OK;
+  }
+
   // ----- dispatch ------------------------------------------------------------
 
   command(pid: PlayerId, cmd: Command): Result {
     const p = this.p(pid);
     if (!p.joined) return this.fail('err_not_now');
     p.lastSeen = this.now;
+    this.settle();
     let r: Result;
     switch (cmd.c) {
+      case 'go':
+        r = go(this, pid, cmd.to);
+        break;
+      case 'equip':
+        r = equip(this, pid, cmd.slot, cmd.id);
+        break;
+      case 'outfit':
+        r = outfit(this, pid, cmd.name, cmd.save);
+        break;
+      case 'pack':
+        r = pack(this, pid, cmd.id, cmd.n);
+        break;
+      case 'drop':
+        r = drop(this, pid, cmd.id, cmd.n);
+        break;
+      case 'use':
+        r = this.useItem(pid, cmd.id);
+        break;
+      case 'stat':
+        r = spendPoint(this, pid, cmd.id);
+        break;
+      case 'perk':
+        r = pickPerk(this, pid, cmd.id);
+        break;
+      case 'fight':
+        r = fightChoose(this, pid, cmd.id);
+        break;
+      case 'help':
+        r = help(this, pid);
+        break;
+      case 'job':
+        r = setJob(this, cmd.who, cmd.id);
+        break;
       case 'act': {
         const e = this.ix.entry(cmd.id);
         if (!e) r = this.fail('err_not_now');
@@ -1258,16 +1553,20 @@ export class Game {
     } else if (this.s.scene && this.bothOnline()) {
       this.s.scene.paused = false;
     }
+    // a routine fight goes on for whoever stays (the one who left guards)
+    for (const f of [...this.s.fights]) if (!f.scene && f.party.includes(pid)) maybeResolve(this, f);
     this.commit();
   }
 
   /** Advance real-time systems. Returns true if something visible changed. */
   tick(): boolean {
+    const settled = this.settle();
+    if (settled) this.commit();
     const st = this.s.stove;
     const dt = Math.max(0, this.now - this.s.meta.lastTick);
     this.s.meta.lastTick = this.now;
     const anyoneHome = PLAYER_IDS.some((pid) => this.p(pid).online && this.p(pid).at === this.ix.homeArea);
-    if (!anyoneHome || !st.lit || st.fuel <= 0) return false;
+    if (!anyoneHome || !st.lit || st.fuel <= 0) return settled;
     const before = this.stoveState();
     st.fuel = Math.max(0, st.fuel - dt);
     const after = this.stoveState();
@@ -1277,7 +1576,7 @@ export class Game {
       this.commit();
       return true;
     }
-    return false;
+    return settled;
   }
 
   // ----- joining -------------------------------------------------------------
@@ -1291,6 +1590,8 @@ export class Game {
     p.name = name;
     p.gender = gender;
     p.role = role;
+    p.stats = { ...this.ix.c.hero.base[role] };
+    refreshHero(this, free);
     p.hp = p.hpMax;
     p.lastSeen = this.now;
     this.commit();
@@ -1320,6 +1621,7 @@ function blankPlayer(id: PlayerId, hp: number, now: number, at = 'yas'): PlayerS
     away: null,
     welcome: null,
     seenSummary: 0,
+    ...blankHero(),
   };
 }
 
@@ -1331,11 +1633,18 @@ export function newWorld(content: Content, seed: number, now: number): WorldStat
   for (const [k, v] of Object.entries(res)) if (v > 0) seenRes[k] = 1;
   return {
     version: STATE_VERSION,
+    part: PART,
+    fights: [],
+    nextFightId: 1,
+    bestiary: {},
+    residents: {},
+    legacy: null,
+    workAt: now,
     meta: { seed, rng: seed >>> 0, createdAt: now, lastTick: now, day: 1, act: 1, nextLogId: 1, actDone: 0, dayAt: now },
     stats: { gathered: {}, actions: { p1: 0, p2: 0 }, crafted: 0, trips: 0, suppers: 0 },
     players: {
-      p1: blankPlayer('p1', content.start.hp, now, content.areas[0]!.id),
-      p2: blankPlayer('p2', content.start.hp, now, content.areas[0]!.id),
+      p1: blankPlayer('p1', content.start.hp, now, content.start.area ?? content.areas[0]!.id),
+      p2: blankPlayer('p2', content.start.hp, now, content.start.area ?? content.areas[0]!.id),
     },
     res,
     seenRes,
@@ -1355,10 +1664,29 @@ export function newWorld(content: Content, seed: number, now: number): WorldStat
 export function normalizeWorld(content: Content, s: WorldState, now: number): WorldState {
   for (const r of content.resources) if (s.res[r.id] === undefined) s.res[r.id] = 0;
   const areas = new Set(content.areas.map((a) => a.id));
+  const hero = blankHero();
   for (const pid of PLAYER_IDS) {
-    s.players[pid].online = false;
-    s.players[pid].busy = null;
-    if (!areas.has(s.players[pid].at)) s.players[pid].at = content.areas[0]!.id;
+    const p = s.players[pid] as PlayerState & Record<string, unknown>;
+    for (const [k, v] of Object.entries(hero)) if (p[k] === undefined) (p as Record<string, unknown>)[k] = structuredClone(v);
+    p.online = false;
+    // a walk in progress is finished by the next settle; a lying hero keeps lying
+    if (p.busy && !p.busy.action.startsWith('rest:') && !p.busy.action.startsWith('go:')) p.busy = null;
+    if (!areas.has(p.at)) p.at = content.areas[0]!.id;
+  }
+  s.fights ??= [];
+  s.nextFightId ??= 1;
+  s.bestiary ??= {};
+  s.residents ??= {};
+  s.legacy ??= null;
+  s.workAt ??= now;
+  s.part ??= PART;
+  // fights whose foes are no longer known are dropped; nobody stays stuck in a fight
+  const enemyIds = new Set((content.enemies ?? []).map((e) => e.id));
+  s.fights = s.fights.filter((f) => f.foes.every((x) => enemyIds.has(x.enemy)));
+  const fightIds = new Set(s.fights.map((f) => f.id));
+  for (const pid of PLAYER_IDS) {
+    const p = s.players[pid];
+    if (p.fight !== null && !fightIds.has(p.fight)) p.fight = null;
   }
   if (s.scene) s.scene.paused = true;
   s.proposal = null;

@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { content } from '../../content/index.js';
 import { startServer } from './main.js';
@@ -8,6 +9,8 @@ const dbPath = join(dataDir, 'world.db');
 const port = Number(process.env.PORT ?? 8080);
 const clientDir = resolve(process.env.CLIENT_DIR ?? './client/dist');
 const inviteCode = process.env.INVITE_CODE?.trim() || undefined;
+// Part one's world, if given: its heroes and ending come along into a new world.
+const legacyPath = process.env.LEGACY_DB?.trim() || join(dataDir, 'part1.db');
 
 function log(msg: string): void {
   console.log(`[${new Date().toISOString()}] ${msg}`);
@@ -26,7 +29,20 @@ try {
   log(`Startup backup failed: ${(e as Error).message}`);
 }
 
-const running = await startServer({ content, dbPath, port, clientDir, inviteCode, log });
+let legacy: unknown;
+if (existsSync(legacyPath)) {
+  try {
+    const old = new Storage(legacyPath);
+    const w = old.loadWorld();
+    old.close();
+    if (w) legacy = JSON.parse(w.json);
+    log(`Part one world found at ${legacyPath}`);
+  } catch (e) {
+    log(`Could not read part one world: ${(e as Error).message}`);
+  }
+}
+
+const running = await startServer({ content, dbPath, port, clientDir, inviteCode, log, legacy });
 log(`Server listening on port ${running.port}`);
 log(`Invite code: ${running.game.formattedCode}`);
 
