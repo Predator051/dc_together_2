@@ -48,6 +48,50 @@ export function useSeenClues(ids: string[]): [Set<string>, (fresh: string[]) => 
   return [seen, mark];
 }
 
+const HELP_KEY = 'bezgomin.notesHelp';
+
+/** Four steps of understanding a question; the reached ones are filled. */
+function Track({ level }: { level: number }) {
+  return (
+    <span class="lvl-track" aria-hidden="true">
+      {[1, 2, 3, 4].map((i) => (
+        <i class={i <= level ? 'on' : ''} />
+      ))}
+    </span>
+  );
+}
+
+function NotesHelp({ onClose }: { onClose: () => void }) {
+  const steps: Array<[number, string, string]> = [
+    [1, T.lvl1, T.lvl1Text],
+    [2, T.lvl2, T.lvl2Text],
+    [3, T.lvl3, T.lvl3Text],
+    [4, T.lvl4, T.lvl4Text],
+  ];
+  return (
+    <section class="notes-help">
+      <h3>{T.notesHelp}</h3>
+      <p>{T.notesHelpQ}</p>
+      <p>{T.notesHelpLevel}</p>
+      <ul class="help-steps">
+        {steps.map(([n, name, text]) => (
+          <li class={`level l${n}`}>
+            <Track level={n} />
+            <b>{name}</b>
+            <span>— {text}</span>
+          </li>
+        ))}
+      </ul>
+      <p>{T.notesHelpGrow}</p>
+      <p>{T.notesHelpMine}</p>
+      <p>{T.notesHelpNew}</p>
+      <button type="button" class="btn small" onClick={onClose}>
+        {T.notesHelpClose}
+      </button>
+    </section>
+  );
+}
+
 function plural(n: number): string {
   const a = n % 10;
   const b = n % 100;
@@ -106,6 +150,12 @@ export function Notes({
   const [filter, setFilter] = useState<Filter>('all');
   const [open, setOpen] = useState<Set<string>>(() => new Set(loadList(OPEN_KEY) ?? []));
   const [glow, setGlow] = useState<Set<string>>(new Set());
+  // how to read the notes: open by itself once, then on the «?» button
+  const [help, setHelp] = useState(() => loadList(HELP_KEY) === null && j.questions.length > 0);
+  const closeHelp = () => {
+    storeList(HELP_KEY, ['seen']);
+    setHelp(false);
+  };
 
   const needle = norm(query.trim());
   const isNew = (c: ClueView) => !seen.has(c.id) || glow.has(c.id);
@@ -212,8 +262,20 @@ export function Notes({
               <span class="filter-n">{c.n}</span>
             </button>
           ))}
+          <button
+            type="button"
+            class={`help-btn ${help ? 'on' : ''}`}
+            aria-label={T.notesHelp}
+            title={T.notesHelp}
+            aria-expanded={help}
+            onClick={() => (help ? closeHelp() : setHelp(true))}
+          >
+            ?
+          </button>
         </div>
       </div>
+
+      {help && <NotesHelp onClose={closeHelp} />}
 
       {shown.length === 0 && people.length === 0 && beasts.length === 0 && <p class="empty">{T.nothingFound}</p>}
 
@@ -234,7 +296,12 @@ export function Notes({
                 <span class="topic-main">
                   <span class="topic-q">{hl(t.title, needle)}</span>
                   <span class="topic-sub">
-                    {t.levelText && <span class={`level l${t.level}`}>{t.levelText}</span>}
+                    {t.levelText && (
+                      <span class={`level l${t.level}`}>
+                        <Track level={t.level ?? 0} />
+                        {t.levelText}
+                      </span>
+                    )}
                     <span>{t.clues.length ? `${count} ${plural(count)}` : T.noCluesYet}</span>
                     {fresh > 0 && !opened && (
                       <span class="pill new">
@@ -282,7 +349,9 @@ export function Notes({
               <span class="topic-main">
                 <span class="topic-q">{T.people}</span>
                 <span class="topic-sub">
-                  <span>{people.length}</span>
+                  <span>
+                    {people.length} · {T.peopleSub}
+                  </span>
                 </span>
               </span>
               {!filtering && <IconDown class="topic-chev" />}
@@ -315,7 +384,9 @@ export function Notes({
               <span class="topic-main">
                 <span class="topic-q">{T.beasts}</span>
                 <span class="topic-sub">
-                  <span>{beasts.length}</span>
+                  <span>
+                    {beasts.length} · {T.beastsSub}
+                  </span>
                 </span>
               </span>
               {!filtering && <IconDown class="topic-chev" />}

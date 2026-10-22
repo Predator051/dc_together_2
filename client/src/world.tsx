@@ -119,7 +119,7 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
         </span>
       </div>
       {picked ? (
-        <section class="map-card">
+        <section class="map-card" key={picked.id}>
           <h3>{picked.name}</h3>
           {picked.desc && <p class="desc">{picked.desc}</p>}
           {!picked.known && <p class="desc">{T.mapUnknown}</p>}

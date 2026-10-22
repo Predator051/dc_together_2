@@ -148,6 +148,7 @@ function RunRing({ from, until, offset }: { from: number; until: number; offset:
 
 function SpotButton({
   s,
+  i,
   active,
   fresh,
   running,
@@ -157,6 +158,8 @@ function SpotButton({
   onPick,
 }: {
   s: Spot;
+  /** Its order: spots come up one after another. */
+  i: number;
   active: boolean;
   fresh: boolean;
   running: boolean;
@@ -177,7 +180,7 @@ function SpotButton({
     <button
       type="button"
       class={`spot ${active ? 'on' : ''} ${s.ready > 0 || s.id === 'paths' || s.id === 'store' || s.id === 'bag' || s.id === 'folk' ? 'live' : 'idle'} ${s.together ? 'pair' : ''} ${running ? 'running' : ''}`}
-      style={{ left: `${s.x}%`, top: `${s.y}%` }}
+      style={{ left: `${s.x}%`, top: `${s.y}%`, '--i': String(i) }}
       aria-label={label}
       aria-pressed={active}
       onClick={onPick}
@@ -185,7 +188,11 @@ function SpotButton({
       <span class="spot-medal">
         {picture(s.icon)}
         {running && <RunRing key={v.busyUntil} from={v.busyFrom} until={v.busyUntil} offset={offset} />}
-        {s.ready > 0 && <span class="spot-count">{s.ready}</span>}
+        {s.ready > 0 && (
+          <span key={s.ready} class="spot-count">
+            {s.ready}
+          </span>
+        )}
         {s.together && (
           <span class="spot-pair">
             <IconPair />
@@ -267,10 +274,11 @@ export function AreaPlan({
           </div>
           <div class="plan" role="group" aria-label={T.planTitle}>
             <Ground scene={scene} warm={v.stove.state === 'warm' || v.stove.state === 'low'} />
-            {spots.map((s) => (
+            {spots.map((s, i) => (
               <SpotButton
                 key={s.id}
                 s={s}
+                i={i}
                 active={!!shown && shown.id === s.id}
                 fresh={isFresh(s) && !(shown && shown.id === s.id)}
                 running={runsAt === s.id}
