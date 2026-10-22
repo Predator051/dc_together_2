@@ -227,6 +227,11 @@ export const T = {
   planNew: 'є нове',
   planClose: 'Закрити',
   planBack: 'До плану',
+  heroBack: 'До героя',
+  heroGrowth: 'Розвиток',
+  heroNow: 'Зараз',
+  heroCanWear: 'Можна вдягти',
+  heroNothing: 'На складі нема нічого для цього місця.',
   planAsList: 'Показати списком',
   planAsPlan: 'Показати планом',
 };

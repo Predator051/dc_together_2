@@ -6,6 +6,7 @@ import { PLAN_FIXED } from '../../shared/src/content.js';
 import type { GroupView, PlayerView } from '../../shared/src/protocol.js';
 import { IconPair } from './icons.js';
 import { Ground, picture } from './pictures.js';
+import { Sheet } from './sheet.js';
 import { T } from './strings.js';
 
 // ---------------------------------------------------------------------------- what was seen
@@ -205,22 +206,6 @@ function SpotButton({
   );
 }
 
-/** Close the open place with Escape; on a phone keep the page behind the sheet still. */
-function useSheetKeys(open: boolean, still: boolean, close: () => void): void {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close();
-    };
-    document.addEventListener('keydown', onKey);
-    if (still) document.body.classList.add('sheet-open');
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.classList.remove('sheet-open');
-    };
-  }, [open, still]);
-}
-
 export function AreaPlan({
   scene,
   spots,
@@ -255,7 +240,6 @@ export function AreaPlan({
   useEffect(() => {
     if (pick) store(`bezgomin.spot.${scene}`, pick);
   }, [pick]);
-  useSheetKeys(!!shown, !desktop, () => setSheet(false));
   // the chip of the open place is always in sight
   const chips = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -300,41 +284,33 @@ export function AreaPlan({
         </>
       )}
       {shown && (
-        <>
-          {!desktop && <div class="sheet-shade" onClick={() => setSheet(false)} />}
-          <section class={`station-sheet ${desktop ? 'docked' : ''}`} role="dialog" aria-label={shown.name}>
-            <header class="station-bar">
-              <div class="station-chips" role="tablist" ref={chips}>
-                {spots.map((s) => (
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={s.id === shown.id}
-                    class={`chip ${s.id === shown.id ? 'on' : ''} ${runsAt === s.id ? 'running' : ''}`}
-                    onClick={() => setPick(s.id)}
-                  >
-                    {picture(s.icon)}
-                    <span>{s.name}</span>
-                    {s.id !== shown.id && (isFresh(s) || s.together) && <span class="badge" />}
-                  </button>
-                ))}
-              </div>
-              {desktop ? (
-                <button type="button" class="btn small ghost station-back" onClick={() => setSheet(false)}>
-                  {picture('home')}
-                  {T.planBack}
+        <Sheet
+          desktop={desktop}
+          label={shown.name}
+          back={T.planBack}
+          backIcon={picture('home')}
+          bodyKey={shown.id}
+          onClose={() => setSheet(false)}
+          bar={
+            <div class="station-chips" role="tablist" ref={chips}>
+              {spots.map((s) => (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={s.id === shown.id}
+                  class={`chip ${s.id === shown.id ? 'on' : ''} ${runsAt === s.id ? 'running' : ''}`}
+                  onClick={() => setPick(s.id)}
+                >
+                  {picture(s.icon)}
+                  <span>{s.name}</span>
+                  {s.id !== shown.id && (isFresh(s) || s.together) && <span class="badge" />}
                 </button>
-              ) : (
-                <button type="button" class="station-close" aria-label={T.planClose} onClick={() => setSheet(false)}>
-                  ×
-                </button>
-              )}
-            </header>
-            <div class="station-body" key={shown.id}>
-              {shown.body()}
+              ))}
             </div>
-          </section>
-        </>
+          }
+        >
+          {shown.body()}
+        </Sheet>
       )}
     </div>
   );
