@@ -5,6 +5,8 @@ import type { NetState } from './net.js';
 import { net } from './net.js';
 import { Ambient } from './ambient.js';
 import { Notes, useSeenClues } from './notes.js';
+import { HomePlan, PlanBack, extraSpot, groupSpots } from './home.js';
+import type { Spot } from './home.js';
 import { notifier } from './notify.js';
 import { sound } from './sound.js';
 import { Scene } from './scene.js';
@@ -535,6 +537,8 @@ export function Game({ s }: { s: NetState }) {
   useEffect(() => store('bezgomin.side', side), [side]);
 
   useEffect(() => store('bezgomin.tab', tab), [tab]);
+  const [homeView, setHomeView] = useState<'plan' | 'list'>(load('bezgomin.homeView') === 'list' ? 'list' : 'plan');
+  useEffect(() => store('bezgomin.homeView', homeView), [homeView]);
 
   // The partner calls you: a knock.
   const calling = v.proposal && !v.proposal.mine ? v.proposal.label : null;
@@ -596,6 +600,36 @@ export function Game({ s }: { s: NetState }) {
   const midTabs = tabs.filter((t) => t.id === 'work' || t.id === 'map' || t.id === 'hero');
   const mid: Tab = desktop ? (view === 'map' || view === 'hero' ? view : 'work') : view;
 
+  // at home the work is laid out on a drawn plan of the yard (or, if preferred, as before: a list)
+  let plan: { spots: Spot[]; rest: GroupView[] } | null = null;
+  if (v.atHome && homeView === 'plan') {
+    const [spots, rest] = groupSpots(groups, (g) => <Group g={g} c={ctx} />);
+    if (spots.length > 0) {
+      const gate = spots.findIndex((x) => x.id === 'paths');
+      const extra: Spot[] = [];
+      if (v.residents.length > 0) {
+        const warn = v.residents.some((r) => r.hungry || r.hurt);
+        extra.push(extraSpot('folk', T.residents, () => <ResidentsPanel v={v} locked={locked} />, warn));
+      }
+      // on a phone the store, the bag and what to take along are one more place in the yard
+      if (!desktop) {
+        extra.push(
+          extraSpot('store', T.stock, () => (
+            <>
+              <BagPanel v={v} locked={locked} />
+              <PackList v={v} locked={locked} />
+              <Stock v={v} />
+            </>
+          )),
+        );
+      }
+      // the way out stays last
+      if (gate >= 0) spots.splice(gate, 0, ...extra);
+      else spots.push(...extra);
+      plan = { spots, rest };
+    }
+  }
+
   const work = (
     <div class="work">
       {v.actDone && (
@@ -617,16 +651,28 @@ export function Game({ s }: { s: NetState }) {
       )}
       <div class="only-mobile">
         {!v.atHome && <BagPanel v={v} locked={locked} />}
-        <Stock v={v} foldable />
+        {!plan && <Stock v={v} foldable />}
       </div>
-      {groups.map((g) => (
-        <Group key={g.id} g={g} c={ctx} />
-      ))}
-      {v.atHome && <ResidentsPanel v={v} locked={locked} />}
-      <div class="only-mobile">
-        {v.atHome && <BagPanel v={v} locked={locked} />}
-        <PackList v={v} locked={locked} />
-      </div>
+      {plan ? (
+        <>
+          <HomePlan spots={plan.spots} v={v} now={now} offset={s.offset} desktop={desktop} onList={() => setHomeView('list')} />
+          {plan.rest.map((g) => (
+            <Group key={g.id} g={g} c={ctx} />
+          ))}
+        </>
+      ) : (
+        <>
+          {v.atHome && <PlanBack onPlan={() => setHomeView('plan')} />}
+          {groups.map((g) => (
+            <Group key={g.id} g={g} c={ctx} />
+          ))}
+          {v.atHome && <ResidentsPanel v={v} locked={locked} />}
+          <div class="only-mobile">
+            {v.atHome && <BagPanel v={v} locked={locked} />}
+            <PackList v={v} locked={locked} />
+          </div>
+        </>
+      )}
     </div>
   );
 

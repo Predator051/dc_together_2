@@ -3236,3 +3236,475 @@ mark {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   Home as a plan of the yard: ink drawing, workplaces as seals to tap.
+   ========================================================================== */
+.home {
+  margin-bottom: 22px;
+}
+.plan-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin: -4px 0 4px;
+}
+.plan-tools .btn {
+  font-size: 0.8rem;
+  color: var(--pale);
+}
+.plan {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  aspect-ratio: 8 / 7;
+}
+.plan-ground {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.plan-ground .fence {
+  fill: none;
+  stroke: rgba(196, 154, 69, 0.32);
+  stroke-width: 2.4;
+  stroke-dasharray: 2 5 9 5;
+  stroke-linecap: round;
+}
+.plan-ground .fence.fallen {
+  stroke: rgba(196, 154, 69, 0.2);
+  stroke-dasharray: none;
+}
+.plan-ground .path {
+  fill: none;
+  stroke: rgba(230, 217, 188, 0.14);
+  stroke-width: 14;
+  stroke-linecap: round;
+}
+.plan-ground .hut-floor {
+  fill: rgba(42, 34, 25, 0.75);
+}
+.plan-ground .hut-glow {
+  animation: hut-glow 5s ease-in-out infinite;
+}
+@keyframes hut-glow {
+  50% {
+    opacity: 0.7;
+  }
+}
+.plan-ground .hut-wall {
+  fill: none;
+  stroke: rgba(230, 217, 188, 0.3);
+  stroke-width: 3;
+}
+.plan-ground .hut-thatch {
+  fill: none;
+  stroke: rgba(230, 217, 188, 0.16);
+  stroke-width: 1.5;
+}
+.plan-ground .reed path {
+  fill: none;
+  stroke: rgba(141, 176, 143, 0.32);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+
+/* a workplace: a round seal with its picture, its name under it */
+.spot {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 88px;
+  margin-left: -44px;
+  margin-top: -24px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.spot-medal {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1.5px solid var(--rule-2);
+  background: radial-gradient(circle at 50% 35%, var(--leaf-2), var(--leaf) 75%);
+  box-shadow:
+    0 3px 10px rgba(8, 5, 2, 0.55),
+    inset 0 0 0 3px rgba(34, 28, 21, 0.9),
+    inset 0 0 0 4px var(--rule);
+  color: var(--faded);
+  transition:
+    transform 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    background 0.15s;
+}
+.spot-pic {
+  width: 28px;
+  height: 28px;
+}
+.spot-name {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 88px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: rgba(34, 28, 21, 0.78);
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--ink-2);
+}
+.spot-name small {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ochre-ink);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.spot.live .spot-medal {
+  border-color: rgba(196, 154, 69, 0.55);
+  color: var(--ink);
+}
+.spot.idle .spot-medal {
+  opacity: 0.72;
+}
+.spot.idle .spot-name {
+  color: var(--faded);
+}
+.spot:hover .spot-medal {
+  transform: translateY(-2px);
+  border-color: var(--ochre);
+}
+.spot:focus-visible {
+  outline: none;
+}
+.spot:focus-visible .spot-medal {
+  outline: 2px solid var(--ochre-ink);
+  outline-offset: 3px;
+}
+.spot.on .spot-medal {
+  border-color: var(--ochre);
+  background: radial-gradient(circle at 50% 35%, rgba(221, 184, 103, 0.3), var(--leaf-2) 80%);
+  color: var(--ochre-ink);
+  opacity: 1;
+}
+.spot.on .spot-name {
+  color: var(--ink);
+  background: rgba(196, 154, 69, 0.22);
+}
+/* something to do together here: a slow breath of ochre */
+.spot.pair .spot-medal {
+  animation: spot-call 2.6s ease-in-out infinite;
+}
+@keyframes spot-call {
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(196, 154, 69, 0.16),
+      0 3px 10px rgba(8, 5, 2, 0.55),
+      inset 0 0 0 3px rgba(34, 28, 21, 0.9),
+      inset 0 0 0 4px var(--rule);
+  }
+}
+.spot.running .spot-medal {
+  color: var(--ochre-ink);
+}
+.spot.running .flame,
+.spot.running .steam,
+.spot.running .spark {
+  animation: spot-flick 1.4s ease-in-out infinite;
+}
+@keyframes spot-flick {
+  50% {
+    opacity: 0.45;
+  }
+}
+.spot-count {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--ochre);
+  color: #1d160e;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 19px;
+  text-align: center;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.spot-pair {
+  position: absolute;
+  top: -5px;
+  left: -7px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--leaf-2);
+  border: 1px solid var(--ochre);
+  color: var(--ochre-ink);
+}
+.spot-pair .ico {
+  width: 13px;
+  height: 13px;
+}
+.spot-dot {
+  position: absolute;
+  bottom: 1px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--cinnabar-ink);
+  box-shadow: 0 0 0 2px var(--page);
+}
+.spot-dot.warn {
+  background: var(--cinnabar);
+}
+.spot-run {
+  position: absolute;
+  inset: -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+.spot-run circle {
+  fill: none;
+  stroke: var(--ochre);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 100px;
+  animation-name: spot-run;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+@keyframes spot-run {
+  from {
+    stroke-dashoffset: calc((1 - var(--p0, 0)) * 100px);
+  }
+  to {
+    stroke-dashoffset: 0px;
+  }
+}
+.spot-progress {
+  display: block;
+  width: 44px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--rule-2);
+  overflow: hidden;
+}
+.spot-progress span {
+  display: block;
+  height: 100%;
+  background: var(--ochre);
+}
+
+/* on a phone it slides up from the bottom; chips switch between places without closing */
+.sheet-shade {
+  position: fixed;
+  inset: 0;
+  z-index: 13;
+  background: rgba(10, 7, 4, 0.5);
+  animation: shade 0.2s ease-out both;
+}
+@keyframes shade {
+  from {
+    opacity: 0;
+  }
+}
+.station-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
+  z-index: 14;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - var(--nav-h) - env(safe-area-inset-bottom) - 96px);
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgba(221, 184, 103, 0.06), transparent 65%),
+    var(--leaf);
+  border-top: 1px solid rgba(196, 154, 69, 0.45);
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.55);
+  animation: sheet 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.station-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 6px 6px 10px;
+  border-bottom: 1px solid var(--rule);
+}
+.station-chips {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+.station-chips::-webkit-scrollbar {
+  display: none;
+}
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  padding: 6px 10px 6px 7px;
+  border: 1px solid var(--rule-2);
+  border-radius: 18px;
+  background: transparent;
+  color: var(--faded);
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  scroll-snap-align: start;
+  -webkit-tap-highlight-color: transparent;
+}
+.chip .spot-pic {
+  width: 20px;
+  height: 20px;
+}
+.chip.on {
+  border-color: var(--ochre);
+  background: var(--ochre-wash);
+  color: var(--ink);
+}
+.chip .badge {
+  top: 3px;
+  right: 3px;
+}
+.station-close {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: none;
+  color: var(--faded);
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.station-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 16px 18px;
+  animation: shade 0.2s ease-out both;
+}
+.station-body .group:last-child,
+.station-body .stock:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+body.sheet-open {
+  overflow: hidden;
+}
+.chip.running {
+  color: var(--ochre-ink);
+}
+/* on a computer the open place stands where the plan was; the × goes back to the plan */
+.station-sheet.docked {
+  position: static;
+  max-height: none;
+  border: 1px solid var(--rule-2);
+  border-radius: 10px;
+  box-shadow: none;
+  animation: shade 0.2s ease-out both;
+}
+.station-sheet.docked .station-bar {
+  position: sticky;
+  top: 72px;
+  z-index: 2;
+  background: var(--leaf);
+  border-radius: 10px 10px 0 0;
+}
+.station-sheet.docked .station-chips {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+.station-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  align-self: flex-start;
+  white-space: nowrap;
+}
+.station-back .spot-pic {
+  width: 18px;
+  height: 18px;
+}
+.station-sheet.docked .station-body {
+  overflow: visible;
+  padding: 16px 18px 20px;
+}
+@media (max-width: 359px) {
+  .spot {
+    width: 76px;
+    margin-left: -38px;
+  }
+  .spot-medal {
+    width: 42px;
+    height: 42px;
+  }
+  .spot-pic {
+    width: 24px;
+    height: 24px;
+  }
+  .spot-name {
+    font-size: 0.72rem;
+  }
+}
+@media (min-width: 960px) {
+  .spot-medal {
+    width: 56px;
+    height: 56px;
+  }
+  .spot {
+    margin-top: -28px;
+    width: 100px;
+    margin-left: -50px;
+  }
+  .spot-pic {
+    width: 32px;
+    height: 32px;
+  }
+  .spot-name {
+    max-width: 100px;
+    font-size: 0.82rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spot.pair .spot-medal,
+  .spot.running .flame,
+  .spot.running .steam,
+  .spot.running .spark {
+    animation: none;
+  }
+}

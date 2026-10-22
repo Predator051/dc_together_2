@@ -277,7 +277,22 @@ export interface LocationDef {
   area?: string;
   /** A shared piece of work shown as a bar: the flag counts up to max. */
   progress?: { flag: string; max: number; label: string };
+  /** Spot on the drawn plan of home (per cent of its width and height) and the picture to draw. */
+  plan?: PlanSpot;
 }
+
+export interface PlanSpot {
+  x: number;
+  y: number;
+  icon: string;
+}
+
+/** Spots of the home plan the interface draws itself: the way out, the store, the people. */
+export const PLAN_FIXED: Readonly<Record<'gate' | 'store' | 'folk', PlanSpot>> = {
+  gate: { x: 50, y: 90, icon: 'gate' },
+  store: { x: 37, y: 66, icon: 'store' },
+  folk: { x: 63, y: 66, icon: 'folk' },
+};
 
 /** A place players can be in. `where` is the locative form for texts ("у Ясенці"). */
 export interface AreaDef {

@@ -222,6 +222,13 @@ export const T = {
   beasts: 'Звірі й люди',
   beaten: 'переможено',
   travelling: 'у дорозі',
+  planTitle: 'План двору',
+  planReady: 'можна зробити',
+  planNew: 'є нове',
+  planClose: 'Закрити',
+  planBack: 'До плану',
+  planAsList: 'Показати списком',
+  planAsPlan: 'Показати планом',
 };
 
 export type Strings = typeof T;

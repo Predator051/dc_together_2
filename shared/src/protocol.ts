@@ -114,6 +114,8 @@ export interface GroupView {
   progress?: { label: string; n: number; max: number };
   /** What only the partner's role can do here (read-only, so the two can plan together). */
   partner?: MateEntryView[];
+  /** Where it stands on the drawn plan of home. */
+  plan?: { x: number; y: number; icon: string };
 }
 
 export interface MateEntryView {

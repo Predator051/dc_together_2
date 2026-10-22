@@ -171,6 +171,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
       entries,
       ...(partner.length ? { partner } : {}),
       ...(progress ? { progress } : {}),
+      ...(loc.plan ? { plan: loc.plan } : {}),
     });
   }
   const paths = pathEntries(g, pid);

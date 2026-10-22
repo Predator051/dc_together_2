@@ -11,6 +11,17 @@ describe('content validator', () => {
     expect(r.errors).toEqual([]);
   });
 
+  it('every place at home has its own spot on the plan', () => {
+    const c = clone();
+    const home = c.areas.find((a) => a.home)!.id;
+    const [a, b] = c.locations.filter((l) => l.area === home);
+    delete a!.plan;
+    b!.plan = { x: 50, y: 88, icon: 'x' };
+    const errs = validateContent(c).errors;
+    expect(errs.some((e) => e.includes(`${a!.id}: a home place needs a plan spot`))).toBe(true);
+    expect(errs.some((e) => e.includes(`${b!.id}: plan spot too close to gate`))).toBe(true);
+  });
+
   it('detects duplicate ids', () => {
     const c = clone();
     c.actions.push({ ...c.actions[0]! });
