@@ -5,6 +5,7 @@ import type { NetState } from './net.js';
 import { net } from './net.js';
 import { Ambient } from './ambient.js';
 import { Notes, useSeenClues } from './notes.js';
+import { HeroPanel } from './hero.js';
 import { AreaPlan, PlanBack, extraSpot, groupSpots } from './plan.js';
 import type { Spot } from './plan.js';
 import { notifier } from './notify.js';
@@ -12,7 +13,7 @@ import { sound } from './sound.js';
 import { Scene } from './scene.js';
 import { IconBell, IconBellOff, IconDown, IconFlame, IconHero, IconLock, IconLog, IconMap, IconMute, IconNotes, IconPair, IconPin, IconSnow, IconSound, IconWork } from './icons.js';
 import { T } from './strings.js';
-import { BagPanel, FightPanel, HeroPanel, MapPanel, NearFight, PackList, ResidentsPanel } from './world.js';
+import { BagPanel, FightPanel, MapPanel, NearFight, PackList, ResidentsPanel } from './world.js';
 
 type Tab = 'work' | 'map' | 'hero' | 'notes' | 'log';
 
@@ -781,7 +782,7 @@ export function Game({ s }: { s: NetState }) {
           )}
           {mid === 'work' && work}
           {mid === 'map' && <MapPanel v={v} locked={locked} now={now} />}
-          {mid === 'hero' && <HeroPanel v={v} locked={locked} />}
+          {mid === 'hero' && <HeroPanel v={v} locked={locked} desktop={desktop} />}
           {mid === 'work' && (
             <div class="only-mobile mini-log">
               <Log v={{ ...v, log: v.log.slice(-4) }} />
