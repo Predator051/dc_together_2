@@ -44,12 +44,16 @@ export function travelTime(g: Game, pid: PlayerId, from: string, to: string): nu
   return Math.round(base * travelMult({ trail: skillOf(g, pid, 'trail'), load, heavy: h.heavy }));
 }
 
-export function goBlock(g: Game, pid: PlayerId, to: string): string | null {
+/**
+ * Why the hero cannot walk there. Views pass `forView`: a running action is not a reason there —
+ * it ends on its own and nothing is sent when it does, so the client checks the busy time itself.
+ */
+export function goBlock(g: Game, pid: PlayerId, to: string, forView = false): string | null {
   const p = g.p(pid);
   if (p.travel) return g.ix.ui('err_busy');
   if (p.fight !== null) return g.ix.ui('err_in_fight');
   if (g.sceneBlocksRoutine()) return g.ix.ui('err_in_scene');
-  if (p.busy && p.busy.until > g.now) return g.ix.ui('err_busy');
+  if (!forView && p.busy && p.busy.until > g.now) return g.ix.ui('err_busy');
   if (to === p.at) return g.ix.ui('err_not_now');
   if (!areaOnMap(g, to)) return g.ix.ui('err_not_now');
   if (linkTime(g, p.at, to) === null) return g.ix.ui('err_far');

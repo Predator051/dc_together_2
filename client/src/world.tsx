@@ -34,7 +34,9 @@ function useWidth(): [(el: HTMLDivElement | null) => void, number] {
   return [ref, w];
 }
 
-export function MapPanel({ v, locked }: { v: PlayerView; locked: boolean }) {
+export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; now: number }) {
+  // a running action ends on its own: the walk unlocks by the clock, without waiting for the server
+  const busy = v.busyUntil + 150 > now;
   const m = v.map;
   const here = m.nodes.find((n) => n.here);
   const [sel, setSel] = useState<string | null>(null);
@@ -130,7 +132,7 @@ export function MapPanel({ v, locked }: { v: PlayerView; locked: boolean }) {
           )}
           <div class="row">
             {picked.go && (
-              <button class="btn primary" disabled={locked || !picked.go.enabled} onClick={() => net.send({ c: 'go', to: picked.id })}>
+              <button class="btn primary" disabled={locked || busy || !picked.go.enabled} onClick={() => net.send({ c: 'go', to: picked.id })}>
                 {T.mapGo} · {secs(picked.go.time)}
               </button>
             )}

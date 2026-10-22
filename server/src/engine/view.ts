@@ -186,7 +186,7 @@ function pathEntries(g: Game, pid: PlayerId): EntryView[] {
   for (const a of g.ix.c.areas) {
     if (a.id === p.at || !a.pos || !areaOnMap(g, a.id) || linkTime(g, p.at, a.id) === null) continue;
     if (areaKnown(g, a.id)) {
-      const block = goBlock(g, pid, a.id);
+      const block = goBlock(g, pid, a.id, true);
       out.push({
         id: `go:${a.id}`,
         kind: 'go',
@@ -640,7 +640,7 @@ function mapView(g: Game, pid: PlayerId): MapView {
     };
     if (a.id !== p.at && linkTime(g, p.at, a.id) !== null) {
       if (known) {
-        const block = goBlock(g, pid, a.id);
+        const block = goBlock(g, pid, a.id, true);
         node.go = { time: travelTime(g, pid, p.at, a.id), enabled: block === null, ...(block ? { reason: block } : {}) };
       } else if (a.scout) {
         const sc = g.ix.scenes.get(a.scout);

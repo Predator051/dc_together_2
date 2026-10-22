@@ -170,6 +170,21 @@ describe('the map', () => {
     expect(w.state.players[h].at).toBe('a_02');
   });
 
+  it('a finished action does not keep the paths locked (nothing is sent when it ends)', () => {
+    const { w, h } = home();
+    calm(w);
+    const act = w.view(h).groups.flatMap((g) => g.entries).find((e) => e.enabled && e.kind === 'act')!;
+    expect(w.cmd(h, { c: 'act', id: act.id }).ok).toBe(true);
+    const v = w.view(h);
+    expect(v.busyUntil).toBeGreaterThan(w.now);
+    // the client sees the walk as open and waits out the busy time by its own clock
+    expect(v.map.nodes.find((n) => n.id === 'a_02')!.go!.enabled).toBe(true);
+    expect(v.groups.flatMap((g) => g.entries).find((e) => e.id === 'go:a_02')?.enabled).toBe(true);
+    expect(w.cmd(h, { c: 'go', to: 'a_02' }).ok).toBe(false);
+    w.now = v.busyUntil + 1;
+    expect(w.cmd(h, { c: 'go', to: 'a_02' }).ok).toBe(true);
+  });
+
   it('places bite back: without salt-proof boots the salt flat hurts', () => {
     const { w, m } = home();
     calm(w);

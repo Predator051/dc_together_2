@@ -688,7 +688,7 @@ export function Game({ s }: { s: NetState }) {
             </div>
           )}
           {mid === 'work' && work}
-          {mid === 'map' && <MapPanel v={v} locked={locked} />}
+          {mid === 'map' && <MapPanel v={v} locked={locked} now={now} />}
           {mid === 'hero' && <HeroPanel v={v} locked={locked} />}
           {mid === 'work' && (
             <div class="only-mobile mini-log">
