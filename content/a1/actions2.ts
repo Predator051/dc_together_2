@@ -10,6 +10,7 @@ export const actions2: ActionDef[] = [
   {
     id: 'x_59',
     group: L.dyke,
+    spot: 'stone',
     label: 'Виламувати камінь',
     visible: dyke,
     yield: { [R.stone]: 1 },
@@ -24,6 +25,7 @@ export const actions2: ActionDef[] = [
   {
     id: 'x_61',
     group: L.dyke,
+    spot: 'ruin',
     label: 'Шукати залізо в розвалі',
     visible: { all: [dyke, { not: { owns: G.pry } }] },
     chance: [{ p: 0.45, add: { [R.iron]: 1 } }],
@@ -39,6 +41,7 @@ export const actions2: ActionDef[] = [
   {
     id: 'x_60',
     group: L.dyke,
+    spot: 'ruin',
     label: 'Виривати залізо ломиком',
     tool: 'pry',
     visible: dyke,
@@ -57,6 +60,7 @@ export const actions2: ActionDef[] = [
   {
     id: 'x_62',
     group: L.grove,
+    spot: 'oak',
     label: 'Рубати морений дуб',
     tool: 'axe',
     visible: { flag: 'p2_hut' },

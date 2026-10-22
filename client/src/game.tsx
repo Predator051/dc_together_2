@@ -5,8 +5,8 @@ import type { NetState } from './net.js';
 import { net } from './net.js';
 import { Ambient } from './ambient.js';
 import { Notes, useSeenClues } from './notes.js';
-import { HomePlan, PlanBack, extraSpot, groupSpots } from './home.js';
-import type { Spot } from './home.js';
+import { AreaPlan, PlanBack, extraSpot, groupSpots } from './plan.js';
+import type { Spot } from './plan.js';
 import { notifier } from './notify.js';
 import { sound } from './sound.js';
 import { Scene } from './scene.js';
@@ -253,6 +253,26 @@ function Group({ g, c }: { g: GroupView; c: Ctx }) {
       </div>
       {g.partner && g.partner.length > 0 && <MateList items={g.partner} name={c.v.partner.name} />}
     </section>
+  );
+}
+
+/** Above the plan of a place away from home: what it looks like, and shared work under way. */
+function PlaceHead({ g }: { g: GroupView }) {
+  return (
+    <header class="place-head">
+      {g.desc && <p class="desc">{g.desc}</p>}
+      {g.progress && (
+        <div class={`progress ${g.progress.n >= g.progress.max ? 'done' : ''}`}>
+          <span class="progress-label">{g.progress.label}</span>
+          <span class="progress-bar" aria-hidden="true">
+            <span style={{ width: `${(g.progress.n / g.progress.max) * 100}%` }} />
+          </span>
+          <b>
+            {g.progress.n}/{g.progress.max}
+          </b>
+        </div>
+      )}
+    </header>
   );
 }
 
@@ -600,19 +620,31 @@ export function Game({ s }: { s: NetState }) {
   const midTabs = tabs.filter((t) => t.id === 'work' || t.id === 'map' || t.id === 'hero');
   const mid: Tab = desktop ? (view === 'map' || view === 'hero' ? view : 'work') : view;
 
-  // at home the work is laid out on a drawn plan of the yard (or, if preferred, as before: a list)
-  let plan: { spots: Spot[]; rest: GroupView[] } | null = null;
-  if (v.atHome && homeView === 'plan') {
+  // every place is laid out on a drawn plan (or, if preferred, as before: a list)
+  let plan: { scene: string; spots: Spot[]; rest: GroupView[] } | null = null;
+  if (v.ground && homeView === 'plan') {
     const [spots, rest] = groupSpots(groups, (g) => <Group g={g} c={ctx} />);
     if (spots.length > 0) {
       const gate = spots.findIndex((x) => x.id === 'paths');
       const extra: Spot[] = [];
-      if (v.residents.length > 0) {
+      if (v.atHome && v.residents.length > 0) {
         const warn = v.residents.some((r) => r.hungry || r.hurt);
         extra.push(extraSpot('folk', T.residents, () => <ResidentsPanel v={v} locked={locked} />, warn));
       }
-      // on a phone the store, the bag and what to take along are one more place in the yard
-      if (!desktop) {
+      // on a phone the store, the bag and what to take along are one more place in the yard;
+      // away from home the bag is (and the store, to look at)
+      if (!desktop && !v.atHome) {
+        extra.push(
+          extraSpot('bag', T.bag, () => (
+            <>
+              <BagPanel v={v} locked={locked} />
+              {!v.bag.items.length && <p class="empty-note">{T.bagEmpty}</p>}
+              <Stock v={v} />
+            </>
+          )),
+        );
+      }
+      if (!desktop && v.atHome) {
         extra.push(
           extraSpot('store', T.stock, () => (
             <>
@@ -626,7 +658,7 @@ export function Game({ s }: { s: NetState }) {
       // the way out stays last
       if (gate >= 0) spots.splice(gate, 0, ...extra);
       else spots.push(...extra);
-      plan = { spots, rest };
+      plan = { scene: v.ground, spots, rest };
     }
   }
 
@@ -650,19 +682,33 @@ export function Game({ s }: { s: NetState }) {
         </p>
       )}
       <div class="only-mobile">
-        {!v.atHome && <BagPanel v={v} locked={locked} />}
+        {!v.atHome && !plan && <BagPanel v={v} locked={locked} />}
         {!plan && <Stock v={v} foldable />}
       </div>
       {plan ? (
         <>
-          <HomePlan spots={plan.spots} v={v} now={now} offset={s.offset} desktop={desktop} onList={() => setHomeView('list')} />
+          {groups
+            .filter((g) => g.spots?.length && (g.desc || g.progress))
+            .map((g) => (
+              <PlaceHead key={g.id} g={g} />
+            ))}
+          <AreaPlan
+            key={plan.scene}
+            scene={plan.scene}
+            spots={plan.spots}
+            v={v}
+            now={now}
+            offset={s.offset}
+            desktop={desktop}
+            onList={() => setHomeView('list')}
+          />
           {plan.rest.map((g) => (
             <Group key={g.id} g={g} c={ctx} />
           ))}
         </>
       ) : (
         <>
-          {v.atHome && <PlanBack onPlan={() => setHomeView('plan')} />}
+          {v.ground && <PlanBack onPlan={() => setHomeView('plan')} />}
           {groups.map((g) => (
             <Group key={g.id} g={g} c={ctx} />
           ))}

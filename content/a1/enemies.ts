@@ -4,6 +4,7 @@ import { E, R } from './ids.js';
 export const enemies: EnemyDef[] = [
   {
     id: E.rat,
+    icon: 'rat',
     name: 'Пацюк',
     acc: 'пацюка',
     gen: 'пацюка',
@@ -21,6 +22,7 @@ export const enemies: EnemyDef[] = [
   },
   {
     id: E.viper,
+    icon: 'viper',
     name: 'Гадюка-солонячка',
     acc: 'гадюку',
     gen: 'гадюки',
@@ -38,6 +40,7 @@ export const enemies: EnemyDef[] = [
   },
   {
     id: E.oldviper,
+    icon: 'oldviper',
     name: 'Стара гадюка',
     acc: 'стару гадюку',
     gen: 'старої гадюки',
@@ -54,6 +57,7 @@ export const enemies: EnemyDef[] = [
   },
   {
     id: E.dog,
+    icon: 'dog',
     name: 'Здичавілий пес',
     acc: 'пса',
     gen: 'пса',
@@ -71,6 +75,7 @@ export const enemies: EnemyDef[] = [
   },
   {
     id: E.leech,
+    icon: 'leech',
     name: 'П\'явка',
     acc: 'п\'явку',
     gen: 'п\'явки',
@@ -84,6 +89,7 @@ export const enemies: EnemyDef[] = [
   },
   {
     id: E.boar,
+    icon: 'boar',
     name: 'Кабан',
     acc: 'кабана',
     gen: 'кабана',
@@ -101,6 +107,7 @@ export const enemies: EnemyDef[] = [
   },
   {
     id: E.greyboar,
+    icon: 'greyboar',
     name: 'Сивий кабан',
     acc: 'сивого кабана',
     gen: 'сивого кабана',
@@ -118,6 +125,7 @@ export const enemies: EnemyDef[] = [
   },
   {
     id: E.catfish,
+    icon: 'catfish',
     name: 'Сом',
     acc: 'сома',
     gen: 'сома',
@@ -133,6 +141,7 @@ export const enemies: EnemyDef[] = [
   },
   {
     id: E.hound,
+    icon: 'hound',
     name: 'Пес Білих',
     acc: 'пса Білих',
     gen: 'пса Білих',
@@ -150,6 +159,7 @@ export const enemies: EnemyDef[] = [
   },
   {
     id: E.white,
+    icon: 'cloak',
     name: 'Білий',
     acc: 'Білого',
     gen: 'Білого',
@@ -168,6 +178,7 @@ export const enemies: EnemyDef[] = [
   },
   {
     id: E.foka,
+    icon: 'chief',
     name: 'Фока',
     acc: 'Фоку',
     gen: 'Фоки',

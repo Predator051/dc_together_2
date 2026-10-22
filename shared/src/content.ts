@@ -6,6 +6,8 @@ export type Gender = 'm' | 'f';
 export type PlayerId = 'p1' | 'p2';
 export const PLAYER_IDS: readonly PlayerId[] = ['p1', 'p2'];
 
+import type { PortraitId, SceneId, SpotIcon } from './pictures.js';
+
 /** Condition evaluated against the world (and, where relevant, a viewing/acting player). */
 export type Cond =
   | { flag: string; gte?: number; lt?: number }
@@ -205,6 +207,8 @@ export interface ActionDef {
   label: Text;
   /** Location / group id where the button lives. */
   group: string;
+  /** Named spot of that location on its plan. */
+  spot?: string;
   role?: Role;
   /** Can be done only once in the whole world. */
   once?: boolean;
@@ -257,6 +261,7 @@ export interface PoolActionDef {
   id: string;
   label: Text;
   group: string;
+  spot?: string;
   pool: string;
   visible?: Cond;
   enabled?: Cond;
@@ -277,17 +282,31 @@ export interface LocationDef {
   area?: string;
   /** A shared piece of work shown as a bar: the flag counts up to max. */
   progress?: { flag: string; max: number; label: string };
-  /** Spot on the drawn plan of home (per cent of its width and height) and the picture to draw. */
+  /**
+   * The place on the drawn plan of its area (per cent of width and height) and its picture.
+   * A place has either one spot (`plan`) or several named ones (`spots`), or both: then whatever
+   * names no spot goes to `plan`.
+   */
   plan?: PlanSpot;
+  spots?: NamedSpot[];
 }
 
 export interface PlanSpot {
   x: number;
   y: number;
-  icon: string;
+  icon: SpotIcon;
 }
 
-/** Spots of the home plan the interface draws itself: the way out, the store, the people. */
+/** A named spot inside a place: actions, scenes and pools pick it with `spot`. */
+export interface NamedSpot extends PlanSpot {
+  id: string;
+  name: string;
+}
+
+/**
+ * Spots of every plan the interface draws itself: the way out, the store (the bag away from home)
+ * and the people. Places keep clear of them all.
+ */
 export const PLAN_FIXED: Readonly<Record<'gate' | 'store' | 'folk', PlanSpot>> = {
   gate: { x: 50, y: 90, icon: 'gate' },
   store: { x: 37, y: 66, icon: 'store' },
@@ -299,6 +318,8 @@ export interface AreaDef {
   id: string;
   name: string;
   where: string;
+  /** The ground its plan is drawn on. */
+  scene?: SceneId;
   /** Map position (grid units). */
   pos?: [number, number];
   /** Ways to neighbouring places: base travel time, ms. */
@@ -369,6 +390,8 @@ export interface EnemyDef {
   calls?: string;
   /** Flavour of its attack (3rd person present, e.g. «кусає»). */
   verb: string;
+  /** Its portrait. */
+  icon: PortraitId;
 }
 
 export interface ResidentTraitDef {
@@ -610,6 +633,7 @@ export interface SceneDef {
   title: string;
   /** Where the proposal button is shown (absent = can only be started by effects/pools). */
   group?: string;
+  spot?: string;
   label?: Text;
   visible?: Cond;
   enabled?: Cond;

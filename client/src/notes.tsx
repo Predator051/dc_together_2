@@ -2,6 +2,7 @@ import type { JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import type { ClueView, PlayerView } from '../../shared/src/protocol.js';
 import { IconClose, IconDown, IconSearch } from './icons.js';
+import { Portrait } from './portraits.js';
 import { T } from './strings.js';
 
 const SEEN_KEY = 'bezgomin.seen';
@@ -323,7 +324,10 @@ export function Notes({
               <div class="topic-body people">
                 {beasts.map((b) => (
                   <div class="person beast">
-                    <span class="avatar small">{b.level}</span>
+                    <span class="beast-face">
+                      <Portrait icon={b.icon} size="l" />
+                      <span class="beast-lvl">{b.level}</span>
+                    </span>
                     <div>
                       <b>{hl(b.name, needle)}</b>
                       {b.beaten > 0 && (

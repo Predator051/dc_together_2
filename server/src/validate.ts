@@ -16,6 +16,7 @@ import type {
   TextVariant,
 } from '../../shared/src/content.js';
 import { PLAN_FIXED } from '../../shared/src/content.js';
+import { PORTRAITS, SCENES, SPOT_ICONS } from '../../shared/src/pictures.js';
 
 export interface Report {
   errors: string[];
@@ -273,22 +274,49 @@ export function validateContent(c: Content): Report {
     textConds(l.desc, cs);
     cs.forEach((x) => checkCond(`location ${l.id} desc`, x));
   }
-  // Home is drawn as a plan: every place there needs its own spot, clear of the others.
-  const home = c.areas.find((a) => a.home)?.id ?? c.areas[0]?.id;
-  const spots: Array<[string, PlanSpot]> = Object.entries(PLAN_FIXED);
-  for (const l of c.locations) {
-    if ((l.area ?? c.areas[0]?.id) !== home) continue;
-    if (!l.plan) {
-      err(`location ${l.id}: a home place needs a plan spot`);
-      continue;
+  // Every area is drawn as a plan: each place there has its spot(s), clear of one another.
+  const firstArea = c.areas[0]?.id;
+  for (const a of c.areas) {
+    const here = c.locations.filter((l) => (l.area ?? firstArea) === a.id);
+    if (!here.length) continue;
+    if (!a.scene) err(`area ${a.id}: needs a scene to draw its plan on`);
+    else if (!(SCENES as readonly string[]).includes(a.scene)) err(`area ${a.id}: unknown scene ${a.scene}`);
+    const taken: Array<[string, PlanSpot]> = Object.entries(PLAN_FIXED);
+    const place = (who: string, at: PlanSpot) => {
+      const { x, y } = at;
+      if (!(SPOT_ICONS as readonly string[]).includes(at.icon)) err(`${who}: unknown icon ${at.icon}`);
+      if (!(x >= 6 && x <= 94 && y >= 8 && y <= 90)) err(`${who}: plan spot off the plan`);
+      for (const [other, o] of taken) {
+        if (Math.abs(o.x - x) < 24 && Math.abs(o.y - y) < 22) err(`${who}: plan spot too close to ${other}`);
+      }
+      taken.push([who, at]);
+    };
+    for (const l of here) {
+      if (!l.plan && !l.spots?.length) err(`location ${l.id}: a place needs a plan spot`);
+      if (l.plan) place(`location ${l.id}`, l.plan);
+      const ids = new Set<string>();
+      for (const sp of l.spots ?? []) {
+        if (ids.has(sp.id)) err(`location ${l.id}: spot ${sp.id} twice`);
+        ids.add(sp.id);
+        place(`location ${l.id} spot ${sp.id}`, sp);
+      }
     }
-    const { x, y } = l.plan;
-    if (!(x >= 6 && x <= 94 && y >= 8 && y <= 90)) err(`location ${l.id}: plan spot off the plan`);
-    for (const [other, o] of spots) {
-      if (Math.abs(o.x - x) < 24 && Math.abs(o.y - y) < 22) err(`location ${l.id}: plan spot too close to ${other}`);
-    }
-    spots.push([l.id, l.plan]);
   }
+  // what names a spot names one of its place; with no `plan` to fall back on, it must name one
+  const spotOf = (who: string, group: string | undefined, spot: string | undefined) => {
+    if (!group) {
+      if (spot) err(`${who}: a spot without a group`);
+      return;
+    }
+    const l = c.locations.find((x) => x.id === group);
+    if (!l) return;
+    if (spot && !(l.spots ?? []).some((x) => x.id === spot)) err(`${who}: unknown spot ${spot} in ${group}`);
+    if (!spot && !l.plan) err(`${who}: needs a spot in ${group}`);
+  };
+  for (const a of c.actions) spotOf(`action ${a.id}`, a.group, a.spot);
+  for (const p of c.pools) spotOf(`pool action ${p.id}`, p.group, p.spot);
+  for (const sc of c.scenes) if (sc.label !== undefined) spotOf(`scene ${sc.id}`, sc.group, sc.spot);
+  for (const e of c.enemies ?? []) if (!(PORTRAITS as readonly string[]).includes(e.icon)) err(`enemy ${e.id}: unknown icon ${e.icon}`);
 
   // Actions
   for (const a of c.actions) {
