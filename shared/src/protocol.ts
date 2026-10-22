@@ -102,6 +102,8 @@ export interface EntryView {
   cooldown?: number;
   together?: boolean;
   fresh?: boolean;
+  /** Named spot of its place on the plan. */
+  spot?: string;
 }
 
 export interface GroupView {
@@ -114,6 +116,10 @@ export interface GroupView {
   progress?: { label: string; n: number; max: number };
   /** What only the partner's role can do here (read-only, so the two can plan together). */
   partner?: MateEntryView[];
+  /** Where it stands on the drawn plan of its area. */
+  plan?: { x: number; y: number; icon: string };
+  /** Named spots inside it (entries pick one by `spot`). */
+  spots?: Array<{ id: string; name: string; x: number; y: number; icon: string }>;
 }
 
 export interface MateEntryView {
@@ -124,6 +130,7 @@ export interface MateEntryView {
   reason?: string;
   cost?: CostView[];
   gain?: GainView[];
+  spot?: string;
 }
 
 export interface PartnerView {
@@ -359,7 +366,7 @@ export interface MapNodeView {
   home: boolean;
   danger: number;
   /** Known foes of the place. */
-  foes: string[];
+  foes: Array<{ name: string; icon: string }>;
   /** Can walk there from here now, and how long it takes. */
   go?: { time: number; enabled: boolean; reason?: string };
   /** A joint scouting scene to propose from here. */
@@ -376,6 +383,7 @@ export interface MapView {
 export interface FoeView {
   uid: number;
   name: string;
+  icon: string;
   hp: number;
   hpMax: number;
   fear?: number;
@@ -422,6 +430,7 @@ export interface ResidentView {
 export interface BeastView {
   id: string;
   name: string;
+  icon: string;
   level: number;
   desc: string;
   traits: Array<{ name: string; text: string }>;
@@ -534,6 +543,8 @@ export interface PlayerView {
   /** Panels opened so far (the interface grows with the game). */
   tabs: string[];
   atHome: boolean;
+  /** The ground the plan of where I stand is drawn on. */
+  ground?: string;
   /** Busy state of this player: all routine actions wait until then. */
   busyUntil: number;
   busyFrom: number;

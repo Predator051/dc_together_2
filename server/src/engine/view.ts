@@ -123,6 +123,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         cost: costView(g, sc.cost),
         gain: sceneGains(g, sc, pid),
         together: true,
+        ...(sc.spot ? { spot: sc.spot } : {}),
       });
     }
     for (const pool of g.ix.c.pools) {
@@ -139,6 +140,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         cost: costView(g, pool.cost),
         gain: sceneGains(g, pool, pid),
         together: true,
+        ...(pool.spot ? { spot: pool.spot } : {}),
       });
     }
     for (const a of g.ix.c.actions) {
@@ -157,6 +159,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         gain: actionGains(g, a, pid),
         readyAt: cd > g.now ? cd : undefined,
         cooldown: g.actionTime(a, pid),
+        ...(a.spot ? { spot: a.spot } : {}),
       });
     }
     const partner = mateEntries(g, pid, loc.id);
@@ -171,6 +174,8 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
       entries,
       ...(partner.length ? { partner } : {}),
       ...(progress ? { progress } : {}),
+      ...(loc.plan ? { plan: loc.plan } : {}),
+      ...(loc.spots?.length ? { spots: loc.spots } : {}),
     });
   }
   const paths = pathEntries(g, pid);
@@ -245,6 +250,7 @@ function mateEntries(g: Game, pid: PlayerId, locId: string): MateEntryView[] {
       ...(reason ? { reason } : {}),
       cost: costView(g, a.cost, other),
       gain: actionGains(g, a, other),
+      ...(a.spot ? { spot: a.spot } : {}),
     });
   }
   return out;
@@ -634,7 +640,10 @@ function mapView(g: Game, pid: PlayerId): MapView {
       home: !!a.home,
       danger: known ? (a.danger ?? 0) : 0,
       foes: known
-        ? [...new Set((a.foes ?? []).filter((f) => (g.s.bestiary[f.enemy]?.seen ?? 0) > 0).map((f) => enemyOf(g, f.enemy).name))]
+        ? [...new Set((a.foes ?? []).filter((f) => (g.s.bestiary[f.enemy]?.seen ?? 0) > 0).map((f) => f.enemy))].map((id) => {
+            const e = enemyOf(g, id);
+            return { name: e.name, icon: e.icon };
+          })
         : [],
       ...(known && a.desc ? { desc: g.render(a.desc, pid) } : {}),
     };
@@ -689,6 +698,7 @@ function fightView(g: Game, pid: PlayerId): FightView | null {
       const same = f.foes.filter((x) => x.enemy === foe.enemy);
       const v: FightView['foes'][number] = {
         uid: foe.uid,
+        icon: def.icon,
         name: `${def.name}${same.length > 1 ? ` ·${same.indexOf(foe) + 1}` : ''}`,
         hp: Math.max(0, foe.hp),
         hpMax: foe.hpMax,
@@ -789,6 +799,13 @@ function residentsView(g: Game, pid: PlayerId): ResidentView[] {
     });
 }
 
+/** The ground of the plan where the player stands (none on the road). */
+function sceneOf(g: Game, pid: PlayerId): string | undefined {
+  const p = g.p(pid);
+  if (p.travel) return undefined;
+  return areaDef(g, p.at)?.scene;
+}
+
 function bestiaryView(g: Game, pid: PlayerId): BeastView[] {
   return (g.ix.c.enemies ?? [])
     .filter((e) => (g.s.bestiary[e.id]?.seen ?? 0) > 0)
@@ -797,6 +814,7 @@ function bestiaryView(g: Game, pid: PlayerId): BeastView[] {
       return {
         id: e.id,
         name: e.name,
+        icon: e.icon,
         level: e.level,
         desc: g.render(e.desc, pid),
         traits: b.known.map((t) => {
@@ -989,6 +1007,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     bestiary: bestiaryView(g, pid),
     tabs: tabsOf(g, pid),
     atHome: g.atHome(pid),
+    ...(sceneOf(g, pid) ? { ground: sceneOf(g, pid) } : {}),
     welcome: welcomeView(g, pid),
     summary: summaryView(g, pid),
     dayAt: g.s.meta.dayAt,

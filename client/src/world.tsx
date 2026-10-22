@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { FightView, MapNodeView, PlayerView } from '../../shared/src/protocol.js';
 import { net } from './net.js';
+import { Portrait } from './portraits.js';
 import { sound } from './sound.js';
 import { T } from './strings.js';
 
@@ -122,13 +123,17 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
           {picked.known && picked.danger > 0 && (
             <p class="meta">
               {T.mapDanger}: <b>{picked.danger}</b>
-              {picked.foes.length > 0 && (
-                <>
-                  {' '}
-                  · {T.mapFoes}: {picked.foes.join(', ')}
-                </>
-              )}
             </p>
+          )}
+          {picked.known && picked.foes.length > 0 && (
+            <ul class="map-foes" aria-label={T.mapFoes}>
+              {picked.foes.map((f) => (
+                <li>
+                  <Portrait icon={f.icon} size="s" />
+                  <span>{f.name}</span>
+                </li>
+              ))}
+            </ul>
           )}
           <div class="row">
             {picked.go && (
@@ -448,6 +453,8 @@ export function FightPanel({ f, v, locked }: { f: FightView; v: PlayerView; lock
         <ul class="foes">
           {f.foes.map((x) => (
             <li class={`foe ${x.out ? 'out' : ''}`}>
+              <Portrait icon={x.icon} size={x.out ? 's' : 'm'} out={!!x.out} />
+              <div class="foe-body">
               <div class="foe-top">
                 <b>{x.name}</b>
                 <span class="foe-lvl">{x.level}</span>
@@ -484,6 +491,7 @@ export function FightPanel({ f, v, locked }: { f: FightView; v: PlayerView; lock
                   )}
                 </>
               )}
+              </div>
             </li>
           ))}
         </ul>

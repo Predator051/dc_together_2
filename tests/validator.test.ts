@@ -11,6 +11,33 @@ describe('content validator', () => {
     expect(r.errors).toEqual([]);
   });
 
+  it('every place at home has its own spot on the plan', () => {
+    const c = clone();
+    const home = c.areas.find((a) => a.home)!.id;
+    const [a, b] = c.locations.filter((l) => l.area === home);
+    delete a!.plan;
+    b!.plan = { x: 50, y: 88, icon: 'home' };
+    const errs = validateContent(c).errors;
+    expect(errs.some((e) => e.includes(`${a!.id}: a place needs a plan spot`))).toBe(true);
+    expect(errs.some((e) => e.includes(`${b!.id}: plan spot too close to gate`))).toBe(true);
+  });
+
+  it('every action away from home stands on a known spot, every foe has a portrait', () => {
+    const c = clone();
+    const a = c.actions.find((x) => x.spot)!;
+    a.spot = 'nowhere';
+    const b = c.actions.find((x) => x.spot && x !== a)!;
+    delete b.spot;
+    (c.enemies![0] as { icon: string }).icon = 'nobody';
+    const area = c.areas.find((x) => x.scene && !x.home)!;
+    delete area.scene;
+    const errs = validateContent(c).errors;
+    expect(errs.some((e) => e.includes(`action ${a.id}: unknown spot nowhere`))).toBe(true);
+    expect(errs.some((e) => e.includes(`action ${b.id}: needs a spot`))).toBe(true);
+    expect(errs.some((e) => e.includes('unknown icon nobody'))).toBe(true);
+    expect(errs.some((e) => e.includes(`area ${area.id}: needs a scene`))).toBe(true);
+  });
+
   it('detects duplicate ids', () => {
     const c = clone();
     c.actions.push({ ...c.actions[0]! });

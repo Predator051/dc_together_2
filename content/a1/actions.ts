@@ -19,6 +19,7 @@ export const actions: ActionDef[] = [
   {
     id: 'x_01',
     group: L.shore,
+    spot: 'shore',
     label: 'Прийти до тями',
     oncePerPlayer: true,
     visible: { noFlag: 'p2_hut' },
@@ -43,6 +44,7 @@ export const actions: ActionDef[] = [
   {
     id: 'x_02',
     group: L.shore,
+    spot: 'drift',
     label: 'Збирати плавник',
     visible: { pflag: 'built:x_01' },
     yield: { [R.wood]: 2 },
@@ -63,6 +65,7 @@ export const actions: ActionDef[] = [
   {
     id: 'x_03',
     group: L.shore,
+    spot: 'water',
     label: 'Ловити раків',
     visible: hut,
     yield: { [R.food]: [1, 2] },
@@ -80,6 +83,7 @@ export const actions: ActionDef[] = [
   {
     id: 'x_04',
     group: L.shore,
+    spot: 'pebbles',
     label: 'Набрати камінців для пращі',
     visible: { owns: G.sling },
     yield: { [U.pebble]: 6 },
@@ -92,6 +96,7 @@ export const actions: ActionDef[] = [
   {
     id: 'x_05',
     group: L.shore,
+    spot: 'water',
     label: 'Бити рибу остенем',
     tool: 'fish',
     visible: hut,
@@ -111,6 +116,7 @@ export const actions: ActionDef[] = [
   {
     id: 'x_06',
     group: L.reeds,
+    spot: 'cut',
     label: 'Різати очерет',
     tool: 'blade',
     visible: hut,
@@ -129,6 +135,7 @@ export const actions: ActionDef[] = [
   {
     id: 'x_07',
     group: L.reeds,
+    spot: 'clay',
     label: 'Копати глину',
     visible: hut,
     yield: { [R.clay]: 1 },
@@ -144,6 +151,7 @@ export const actions: ActionDef[] = [
   {
     id: 'x_08',
     group: L.reeds,
+    spot: 'nests',
     label: 'Шукати яйця',
     visible: hut,
     yield: { [R.food]: 1 },
@@ -159,6 +167,7 @@ export const actions: ActionDef[] = [
   {
     id: 'x_09',
     group: L.reeds,
+    spot: 'burrows',
     label: 'Полювати на ондатр',
     role: 'hunter',
     visible: hut,
@@ -547,6 +556,7 @@ export const actions: ActionDef[] = [
   {
     id: 'x_33',
     group: L.flat,
+    spot: 'crust',
     label: 'Шкрябати сіль-сирець',
     visible: hut,
     boost: 'gloves',
@@ -566,6 +576,7 @@ export const actions: ActionDef[] = [
   {
     id: 'x_34',
     group: L.well,
+    spot: 'well',
     label: 'Черпати ропу',
     visible: hut,
     yield: { [R.brine]: 2 },
@@ -630,6 +641,7 @@ export const actions: ActionDef[] = [
   {
     id: 'x_37',
     group: L.grove,
+    spot: 'bark',
     label: 'Здирати кору',
     tool: 'blade',
     visible: hut,
@@ -643,6 +655,7 @@ export const actions: ActionDef[] = [
   {
     id: 'x_43',
     group: L.grove,
+    spot: 'brush',
     label: 'Ламати морений хмиз',
     visible: hut,
     yield: { [R.oak]: 1 },
@@ -656,6 +669,7 @@ export const actions: ActionDef[] = [
   {
     id: 'x_39',
     group: L.grove,
+    spot: 'resin',
     label: 'Збирати смолу',
     tool: 'blade',
     visible: hut,
@@ -669,6 +683,7 @@ export const actions: ActionDef[] = [
   {
     id: 'x_40',
     group: L.grove,
+    spot: 'moss',
     label: 'Збирати мох',
     visible: hut,
     yield: { [R.moss]: 2 },
