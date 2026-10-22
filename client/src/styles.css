@@ -1271,10 +1271,27 @@ b {
 }
 /* how far a question is understood: a word, coloured like a pigment */
 .level {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   flex: none;
   font-weight: 600;
   white-space: nowrap;
   color: var(--faded);
+}
+/* four steps of understanding: the reached ones are filled in the level's colour */
+.lvl-track {
+  display: inline-flex;
+  gap: 3px;
+}
+.lvl-track i {
+  width: 12px;
+  height: 5px;
+  border-radius: 2px;
+  background: rgba(230, 217, 188, 0.13);
+}
+.lvl-track i.on {
+  background: currentColor;
 }
 .level.l2 {
   color: var(--gall);
@@ -3997,6 +4014,7 @@ body.sheet-open {
   color: var(--ochre-ink);
 }
 .hero-tabs {
+  position: relative;
   display: flex;
   gap: 4px;
   margin: 16px 0 12px;
@@ -4007,6 +4025,8 @@ body.sheet-open {
 }
 .hero-tabs button {
   position: relative;
+  z-index: 1;
+  transition: color 0.2s;
   flex: 1;
   padding: 8px 10px;
   border: none;
@@ -4019,9 +4039,7 @@ body.sheet-open {
   cursor: pointer;
 }
 .hero-tabs button.on {
-  background: var(--leaf-2);
   color: var(--ink);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 .hero-tabs .badge {
   top: 8px;
@@ -4314,5 +4332,307 @@ body.sheet-open {
 @media (min-width: 960px) {
   .doll {
     max-width: 380px;
+  }
+}
+
+/* ==========================================================================
+   Motion: things arrive and leave softly. Short, one direction, never in the way.
+   ========================================================================== */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes fade-down {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+@keyframes seal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.85);
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+}
+@keyframes sheet-out {
+  to {
+    transform: translateY(105%);
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes bar-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 24px);
+  }
+}
+@keyframes nav-pop {
+  40% {
+    transform: translateY(-3px) scale(1.12);
+  }
+}
+
+/* a page shown by a tab */
+.work,
+.mapview,
+.hero,
+.col-right,
+.col-notes {
+  animation: fade-up 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.hero-page,
+.station-body,
+.map-card,
+.topic-body,
+.mate-items {
+  animation: fade-up 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.stock:not(.folded) .ledger {
+  animation: fade-down 0.22s ease-out backwards;
+}
+.bottom-nav button.on .nav-ico {
+  animation: nav-pop 0.35s ease-out;
+}
+.badge {
+  animation: pop 0.35s ease-out backwards;
+}
+
+/* spots of a plan and slots of the figure come up one after another */
+.spot,
+.slot-spot {
+  animation: seal-in 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 35ms);
+}
+.spot-count,
+.slot-more,
+.spot-pair,
+.spot-dot {
+  animation: pop 0.35s ease-out backwards;
+}
+.doll-figure .body {
+  animation: fade-up 0.5s ease-out backwards;
+}
+
+/* the sliding pill under the hero's tabs */
+.hero-tabs::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 6px);
+  border-radius: 7px;
+  background: var(--leaf-2);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.hero-tabs.at-growth::before {
+  transform: translateX(calc(100% + 4px));
+}
+
+/* a sheet leaves the way it came */
+.station-sheet.closing {
+  animation: sheet-out 0.2s ease-in both;
+}
+.station-sheet.docked.closing,
+.sheet-shade.closing {
+  animation: fade-out 0.2s ease-in both;
+}
+
+/* windows over the page */
+.sheet-wrap,
+.scene-wrap {
+  animation: shade 0.22s ease-out backwards;
+}
+.sheet {
+  animation: rise-in 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.proposal,
+.scene-mini {
+  animation: bar-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.toast {
+  animation: bar-in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.join-card {
+  animation: rise-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+/* the chronicle: a new line slides in */
+.log p {
+  animation: fade-up 0.3s ease-out backwards;
+}
+
+/* a fight: foes step in one after another */
+.foe {
+  animation: fade-up 0.3s ease-out backwards;
+}
+.foe:nth-child(2) {
+  animation-delay: 60ms;
+}
+.foe:nth-child(3) {
+  animation-delay: 120ms;
+}
+.foe:nth-child(n + 4) {
+  animation-delay: 180ms;
+}
+.fight-lines p {
+  animation: fade-up 0.3s ease-out backwards;
+}
+
+/* a press is felt */
+.tile,
+.btn,
+.chip,
+.opt {
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    transform 0.12s ease-out;
+}
+.tile:active:not(:disabled),
+.btn:active:not(:disabled),
+.chip:active,
+.opt:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.spot:active .spot-medal,
+.slot-spot:active .spot-medal {
+  transform: scale(0.94);
+}
+.stat-value,
+.skill-level,
+.hero-nums dd {
+  transition: color 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .work,
+  .mapview,
+  .hero,
+  .col-right,
+  .col-notes,
+  .hero-page,
+  .station-body,
+  .map-card,
+  .topic-body,
+  .mate-items,
+  .stock .ledger,
+  .bottom-nav button.on .nav-ico,
+  .badge,
+  .spot,
+  .slot-spot,
+  .spot-count,
+  .slot-more,
+  .spot-pair,
+  .spot-dot,
+  .doll-figure .body,
+  .station-sheet,
+  .sheet-shade,
+  .sheet-wrap,
+  .scene-wrap,
+  .sheet,
+  .proposal,
+  .scene-mini,
+  .toast,
+  .join-card,
+  .log p,
+  .foe,
+  .fight-lines p {
+    animation: none !important;
+  }
+  .hero-tabs::before {
+    transition: none;
+  }
+  .tile:active:not(:disabled),
+  .btn:active:not(:disabled),
+  .chip:active,
+  .opt:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* how to read the notes */
+.help-btn {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  margin-left: auto;
+  border: 1px solid var(--rule-2);
+  border-radius: 50%;
+  background: none;
+  color: var(--faded);
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  align-self: center;
+}
+.help-btn.on {
+  border-color: var(--ochre);
+  color: var(--ochre-ink);
+}
+.notes-help {
+  margin: 4px 0 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(196, 154, 69, 0.45);
+  border-radius: 10px;
+  background: var(--ochre-wash);
+  animation: fade-down 0.25s ease-out backwards;
+}
+.notes-help h3 {
+  color: var(--ochre-ink);
+}
+.notes-help p {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.help-steps {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 5px;
+}
+.help-steps li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  white-space: normal;
+  font-family: var(--sans);
+  font-size: 0.88rem;
+}
+.help-steps span {
+  font-weight: 400;
+  color: var(--faded);
+}
+@media (prefers-reduced-motion: reduce) {
+  .notes-help {
+    animation: none;
   }
 }

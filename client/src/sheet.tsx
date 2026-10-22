@@ -1,8 +1,19 @@
 // The panel that opens what was tapped: it slides up on a phone and takes the room in place on a computer.
 
 import type { ComponentChildren } from 'preact';
-import { useEffect } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { T } from './strings.js';
+
+/** How long the panel takes to go away (the CSS animation is as long). */
+const OUT_MS = 200;
+
+function calm(): boolean {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
 
 /** Close with Escape; on a phone keep the page behind the sheet still. */
 function useSheetKeys(still: boolean, close: () => void): void {
@@ -40,20 +51,30 @@ export function Sheet({
   onClose: () => void;
   children: ComponentChildren;
 }) {
-  useSheetKeys(!desktop, onClose);
+  // it slides away before it is gone
+  const [closing, setClosing] = useState(false);
+  const timer = useRef(0);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const close = () => {
+    if (closing) return;
+    if (calm()) return onClose();
+    setClosing(true);
+    timer.current = window.setTimeout(onClose, OUT_MS);
+  };
+  useSheetKeys(!desktop, close);
   return (
     <>
-      {!desktop && <div class="sheet-shade" onClick={onClose} />}
-      <section class={`station-sheet ${desktop ? 'docked' : ''}`} role="dialog" aria-label={label}>
+      {!desktop && <div class={`sheet-shade ${closing ? 'closing' : ''}`} onClick={close} />}
+      <section class={`station-sheet ${desktop ? 'docked' : ''} ${closing ? 'closing' : ''}`} role="dialog" aria-label={label}>
         <header class="station-bar">
           {bar}
           {desktop ? (
-            <button type="button" class="btn small ghost station-back" onClick={onClose}>
+            <button type="button" class="btn small ghost station-back" onClick={close}>
               {backIcon}
               {back}
             </button>
           ) : (
-            <button type="button" class="station-close" aria-label={T.planClose} onClick={onClose}>
+            <button type="button" class="station-close" aria-label={T.planClose} onClick={close}>
               ×
             </button>
           )}

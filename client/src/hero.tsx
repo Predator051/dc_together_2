@@ -349,7 +349,7 @@ function Gear({ v, locked, desktop }: { v: PlayerView; locked: boolean; desktop:
       {!(desktop && open) && (
         <div class="doll" role="group" aria-label={T.gear}>
           <Figure slots={h.slots} />
-          {h.slots.map((s) => {
+          {h.slots.map((s, i) => {
             const at = SLOT_AT[s.slot];
             if (!at) return null;
             const more = h.canChange && s.options.length > 0;
@@ -357,7 +357,7 @@ function Gear({ v, locked, desktop }: { v: PlayerView; locked: boolean; desktop:
               <button
                 type="button"
                 class={`slot-spot ${s.item ? 'filled' : 'bare'} ${open === s.slot ? 'on' : ''}`}
-                style={{ left: `${at.x}%`, top: `${at.y}%` }}
+                style={{ left: `${at.x}%`, top: `${at.y}%`, '--i': String(i) }}
                 aria-label={`${s.name}: ${s.item ? s.item.name : T.empty}`}
                 onClick={() => setPick(open === s.slot ? null : s.slot)}
               >
@@ -502,7 +502,7 @@ export function HeroPanel({ v, locked, desktop }: { v: PlayerView; locked: boole
   return (
     <div class="hero">
       <HeroCard v={v} onGrowth={() => setTab('growth')} />
-      <div class="hero-tabs" role="tablist">
+      <div class={`hero-tabs at-${tab}`} role="tablist">
         <button role="tab" aria-selected={tab === 'gear'} class={tab === 'gear' ? 'on' : ''} onClick={() => setTab('gear')}>
           {T.gear}
         </button>
@@ -511,7 +511,9 @@ export function HeroPanel({ v, locked, desktop }: { v: PlayerView; locked: boole
           {call && tab !== 'growth' && <span class="badge" />}
         </button>
       </div>
-      {tab === 'gear' ? <Gear v={v} locked={locked} desktop={desktop} /> : <Growth v={v} locked={locked} />}
+      <div class="hero-page" key={tab}>
+        {tab === 'gear' ? <Gear v={v} locked={locked} desktop={desktop} /> : <Growth v={v} locked={locked} />}
+      </div>
     </div>
   );
 }
