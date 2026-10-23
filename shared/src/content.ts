@@ -42,6 +42,8 @@ export type Cond =
   | { evening: boolean }
   /** The weather now is this one. */
   | { weather: string }
+  /** This resident lives in the household. */
+  | { resident: string }
   | { all: Cond[] }
   | { any: Cond[] }
   | { not: Cond };
@@ -796,6 +798,58 @@ export interface NeedsDef {
   campLight?: string;
 }
 
+/** One way an event can go (picked by weight when a choice has several). */
+export interface EventOutcome {
+  w?: number;
+  effects?: Effect[];
+  /** What happened, for the log (the one who chose; at home everyone sees it). */
+  log: Text;
+}
+
+export interface EventChoice {
+  label: Text;
+  /** Paid from the bag away from home, from the store at home. */
+  cost?: Record<string, number>;
+  /** Shown but locked while this does not hold (with `why`). */
+  if?: Cond;
+  why?: Text;
+  outcomes: EventOutcome[];
+}
+
+/**
+ * A small happening between the story's beats. Home ones come while someone is at home and are
+ * shared (either hero may answer); road ones on arriving somewhere, place ones after work there.
+ * Without choices it simply happens (a line in the log); with them, a card waits for an answer.
+ */
+export interface EventDef {
+  id: string;
+  where: 'home' | 'road' | 'place';
+  /** Only in these places (road / place). */
+  areas?: string[];
+  when?: Cond;
+  weight: number;
+  /** Once ever; otherwise not again for `again` ms (default two hours of play). */
+  once?: boolean;
+  again?: number;
+  text: Text;
+  /** Without choices: what it does at once, and the log line is `text`. */
+  effects?: Effect[];
+  /** good: a find; bad: a warning (colours the log line of a choice-less event). */
+  tone?: 'good' | 'bad';
+  choices?: EventChoice[];
+}
+
+export interface EventSetDef {
+  /** Events come from this moment on. */
+  from: Cond;
+  /** Time between two events for one hero (and for the home), ms. */
+  gap: [number, number];
+  /** Chance that a due event comes on arriving somewhere / after work away from home. */
+  road: number;
+  place: number;
+  kinds: EventDef[];
+}
+
 /** How the sky looks behind the page (client layer over the place's own backdrop). */
 export type SkyKind = 'rain' | 'storm' | 'wind' | 'frost' | 'heat' | 'fog';
 
@@ -912,6 +966,7 @@ export interface Content {
   /** Hunger, warmth and rest of the heroes. */
   needs?: NeedsDef;
   weather?: WeatherSetDef;
+  events?: EventSetDef;
   ambient?: AmbientDef;
   maps?: DelveMapDef[];
   /** Applied every time a new day starts (after a supper). */

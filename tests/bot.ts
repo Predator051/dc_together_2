@@ -55,6 +55,12 @@ export class Bot {
       return { c: 'stat', id };
     }
     if (v.proposal) return null; // mine: wait for the answer
+    // a small happening: answer it (a careless player at random, a careful one the first that can be done)
+    const ev = v.events[0];
+    if (ev) {
+      const ok = ev.choices.map((c, i) => ({ c, i })).filter((x) => x.c.enabled);
+      if (ok.length) return { c: 'event', uid: ev.uid, choice: (this.o.careless ? this.rng.pick(ok) : ok[0]!).i };
+    }
     if (v.busyUntil > v.now || v.map.travel) return null;
     if (v.nearFight) return { c: 'help' };
 

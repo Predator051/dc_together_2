@@ -17,6 +17,7 @@ import { BagPanel, FightPanel, MapPanel, NearFight, PackList, ResidentsPanel } f
 import { Thing } from './items.js';
 import { NeedsBar, NeedsSheet } from './needs.js';
 import { WeatherChip } from './weather.js';
+import { EventCards } from './events.js';
 
 type Tab = 'work' | 'map' | 'hero' | 'notes' | 'log';
 
@@ -632,7 +633,7 @@ export function Game({ s }: { s: NetState }) {
   const view: Tab = (tab === 'map' && !hasMap) || (tab === 'hero' && !hasHero) ? 'work' : tab;
 
   const tabs: Array<{ id: Tab; label: string; icon: JSX.Element; badge?: boolean }> = [
-    { id: 'work', label: T.tabHere, icon: <IconWork /> },
+    { id: 'work', label: T.tabHere, icon: <IconWork />, badge: v.events.length > 0 && view !== 'work' },
     ...(hasMap ? [{ id: 'map' as Tab, label: T.tabMap, icon: <IconMap /> }] : []),
     ...(hasHero ? [{ id: 'hero' as Tab, label: T.tabHero, icon: <IconHero />, badge: heroBadge && view !== 'hero' }] : []),
     ...(hasNotes ? [{ id: 'notes' as Tab, label: T.tabNotes, icon: <IconNotes />, badge: newNotes && view !== 'notes' }] : []),
@@ -697,6 +698,7 @@ export function Game({ s }: { s: NetState }) {
           <span class="goal-label">{T.goal}.</span> {v.goal}
         </p>
       )}
+      <EventCards v={v} locked={locked} />
       {v.needs && <NeedsBar v={v} offset={s.offset} open={needsShown} onOpen={() => setNeedsOpen(!needsOpen)} />}
       {needsShown && <NeedsSheet v={v} offset={s.offset} desktop={desktop} locked={locked} onClose={() => setNeedsOpen(false)} />}
       {v.stove.text && (

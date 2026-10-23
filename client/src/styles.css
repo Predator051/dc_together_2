@@ -622,6 +622,69 @@ b {
   color: var(--ink-2);
   white-space: nowrap;
 }
+/* a small happening: a card at the top of the place, waiting for an answer */
+.panel.event {
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--rule-2);
+  border-left: 3px solid var(--ochre);
+  border-radius: 8px;
+  background: var(--leaf);
+  animation: event-in 0.35s ease backwards;
+}
+.panel.event.home {
+  border-left-color: var(--verdigris);
+}
+@keyframes event-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.event-tag {
+  margin: 0 0 4px;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faded);
+}
+.event-text {
+  margin: 0 0 12px;
+  font-family: var(--serif);
+  font-size: 1.02rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.event-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.event-choice {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+}
+.event-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+}
+.event-meta .short {
+  color: var(--cinnabar-ink);
+}
+.event-meta .ico {
+  width: 12px;
+  height: 12px;
+  margin-right: 3px;
+  vertical-align: -1px;
+}
+
 /* the weather: a sign and a name in the top bar, a small card under it */
 .wx {
   position: relative;

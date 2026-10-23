@@ -31,6 +31,7 @@ import { activeFoes, enemyOf, fightMoves, fightOf, holder } from './fight.js';
 import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, residentJobs, routeLegs, routeTo, travelTime, walkOf } from './travel.js';
 import { byFire, campBlock, chillRate, comfortOf, dryOf, eatBlock, restBlock, restLength, tired } from './needs.js';
 import { outside, weatherNow } from './weather.js';
+import { eventsView } from './events.js';
 import { NEED, coldLevel, mealFading } from '../../../shared/src/rules.js';
 
 const LOG_SEND = 120;
@@ -1027,6 +1028,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     bag: bagView(g, pid),
     needs: needsView(g, pid),
     weather: weatherView(g, pid),
+    events: eventsView(g, pid, (c) => costView(g, c, pid)),
     map: mapView(g, pid),
     fight: fightView(g, pid),
     nearFight: nearFight(g, pid),

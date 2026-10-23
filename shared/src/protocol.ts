@@ -39,7 +39,9 @@ export type Command =
   /** Light a campfire where you stand (away from home). */
   | { c: 'camp' }
   /** Rest by a fire: at home or at a campfire. */
-  | { c: 'rest' };
+  | { c: 'rest' }
+  /** Answer a small happening (the card's uid and the choice's index). */
+  | { c: 'event'; uid: number; choice: number };
 
 export type ClientMsg =
   | { t: 'hello'; token: string }
@@ -572,6 +574,15 @@ export interface SummaryView {
   gathered: DeltaItem[];
 }
 
+/** A small happening waiting for an answer. */
+export interface EventView {
+  uid: number;
+  text: string[];
+  /** A home one: either hero at home may answer. */
+  home: boolean;
+  choices: Array<{ label: string; enabled: boolean; reason?: string; cost?: CostView[] }>;
+}
+
 /** The weather now and the forecast; effects count only outside. */
 export interface WeatherView {
   id: string;
@@ -612,6 +623,7 @@ export interface PlayerView {
   /** Hunger, warmth and rest (null until they begin). */
   needs: NeedsView | null;
   weather: WeatherView | null;
+  events: EventView[];
   map: MapView;
   fight: FightView | null;
   /** A fight of the partner where you stand (you may join). */

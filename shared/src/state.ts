@@ -274,6 +274,13 @@ export interface WorldState {
   seenRes: Record<string, number>;
   flags: Record<string, number>;
   stove: { fuel: number; lit: boolean };
+  /** Small happenings: when each hero (and the home) may get the next, when each was last, the open cards. */
+  events?: {
+    next: Record<string, number>;
+    last: Record<string, number>;
+    open: Array<{ uid: number; id: string; pid: PlayerId | null; area: string; at: number }>;
+    uid: number;
+  };
   /** The weather now, until when it holds, and what comes after it. */
   weather?: { id: string; until: number; next: string };
   /** Campfires burning away from home: area → when it goes out. */

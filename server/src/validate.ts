@@ -206,6 +206,10 @@ export function validateContent(c: Content): Report {
     written.add(`count:${s.id}`);
     if (s.explores) written.add(`seen:${s.explores}`);
   }
+  for (const ev of c.events?.kinds ?? []) {
+    collectWrites(ev.effects ?? []);
+    for (const ch of ev.choices ?? []) for (const o of ch.outcomes) collectWrites(o.effects ?? []);
+  }
   for (const e of c.encounters) {
     written.add(`${e.id}:killed`);
     written.add(`${e.id}:fled`);
@@ -238,6 +242,7 @@ export function validateContent(c: Content): Report {
       if ('trait' in x && !traitIds.has(x.trait)) err(`${where}: unknown trait ${x.trait}`);
       if ('met' in x && !enemies.has(x.met)) err(`${where}: unknown enemy ${x.met}`);
       if ('weather' in x && !c.weather?.kinds.some((k) => k.id === x.weather)) err(`${where}: unknown weather ${x.weather}`);
+      if ('resident' in x && !residentIds.has(x.resident)) err(`${where}: unknown resident ${x.resident}`);
     }
   };
   const checkEffects = (where: string, effs: Effect[], inScene: boolean) => {
@@ -361,6 +366,36 @@ export function validateContent(c: Content): Report {
   }
 
   // Actions
+  if (c.events) {
+    const ev = c.events;
+    checkCond('events', ev.from);
+    if (!(ev.gap[0] > 0 && ev.gap[1] >= ev.gap[0])) err('events: bad gap');
+    for (const p of [ev.road, ev.place]) if (!(p >= 0 && p <= 1)) err('events: chance out of range');
+    const ids = new Set<string>();
+    for (const e of ev.kinds) {
+      const w = `event ${e.id}`;
+      if (ids.has(e.id)) err(`${w}: duplicate id`);
+      ids.add(e.id);
+      if (!(e.weight > 0)) err(`${w}: weight must be positive`);
+      if (e.where === 'home' && e.areas) err(`${w}: a home event has no places`);
+      for (const a of e.areas ?? []) if (!areas.has(a)) err(`${w}: unknown area ${a}`);
+      checkCond(w, e.when);
+      const tc: Cond[] = [];
+      textConds(e.text, tc);
+      tc.forEach((x) => checkCond(w, x));
+      if (e.choices && e.effects) err(`${w}: effects of a card belong to its choices`);
+      checkEffects(w, e.effects ?? [], false);
+      for (const [i, ch] of (e.choices ?? []).entries()) {
+        const cw = `${w} choice ${i}`;
+        checkCond(cw, ch.if);
+        checkCost(cw, ch.cost);
+        if (!ch.outcomes.length) err(`${cw}: needs an outcome`);
+        for (const o of ch.outcomes) checkEffects(cw, o.effects ?? [], false);
+      }
+      if (e.choices && e.choices.length < 2) err(`${w}: a card needs at least two choices`);
+    }
+  }
+
   for (const a of c.actions) {
     const w = `action ${a.id}`;
     if (!locs.has(a.group)) err(`${w}: unknown group ${a.group}`);

@@ -57,6 +57,13 @@ npm run typecheck
   Действует только «надворі»: не дома и не в месте с `roof`; жители и засады — по месту.
   Клиент: значок в шапке с карточкой эффектов и прогнозом (`client/src/weather.tsx`), слой неба
   в `ambient.tsx`, звук дождя/грозы/ветра в `sound.ts`. Условие `{weather: id}`.
+- **События (`engine/events.ts`, `content/events.ts`)**: `EventDef {where: home|road|place, areas,
+  when, weight, once/again, text, effects | choices[{label, cost, if/why, outcomes[{w, effects, log}]}]}`.
+  Таймер на каждого героя и на дом (`events.gap`); домашнее приходит, когда кто-то дома, дорожное —
+  при приходе (шанс `road`), место — после работы (шанс `place`), если не было засады. Без выбора —
+  строка журнала и эффекты сразу; с выбором — карточка (`WorldState.events.open`), команда `event`.
+  Домашнюю карточку видят и решают оба, кто дома; чужую — только тот герой, пока он на месте.
+  Не в бою и не в общей сцене. Условие `{resident: id}`. `heal` с минусом не роняет ниже 1.
 - Новые эффекты: `xp`, `resident`, `checkpoint` (снимок мира в архив БД), `give` (в торбу),
   `wear` (надеть), `fight` (начать бой). Новые условия: `level`, `tool`, `owns`, `trait`, `met`,
   `evening`. Движок сам ставит флаг `bag_full`.
@@ -119,7 +126,7 @@ npm run typecheck
 
 Условия: `flag` (с `gte`/`lt`), `noFlag`, `pflag`, `noPflag`, `partnerPflag`, `res`, `day`,
 `role`, `clue` (у смотрящего), `anyClue`, `partnerJoined`, `partnerOnline`, `stove`, `rel`,
-`weather`, `all`/`any`/`not`.
+`weather`, `resident`, `all`/`any`/`not`.
 
 Эффекты: `set`, `unset`, `inc` (`by`, `max`), `pset` (`who: actor|both|hunter|maker`), `add`, `take`, `clue`,
 `log`, `mystery` (поднять уровень), `rel`, `meet`, `scene` (только из сцен — цепочка),

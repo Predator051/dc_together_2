@@ -25,6 +25,21 @@ describe('content validator', () => {
     expect(errs.some((e) => e.includes('unknown weather w_none'))).toBe(true);
   });
 
+  it('happenings are checked: places, choices, costs', () => {
+    const c = clone();
+    const ev = c.events!.kinds;
+    const card = ev.find((e) => e.choices)!;
+    card.choices = card.choices!.slice(0, 1);
+    const away = ev.find((e) => e.areas)!;
+    away.areas = ['a_99'];
+    const paid = ev.find((e) => e.choices?.some((ch) => ch.cost) && e !== card)!;
+    paid.choices!.find((ch) => ch.cost)!.cost = { r_nothing: 1 };
+    const errs = validateContent(c).errors;
+    expect(errs).toContain(`event ${card.id}: a card needs at least two choices`);
+    expect(errs).toContain(`event ${away.id}: unknown area a_99`);
+    expect(errs.some((e) => e.startsWith(`event ${paid.id} choice`) && e.includes('unknown resource r_nothing'))).toBe(true);
+  });
+
   it('every place at home has its own spot on the plan', () => {
     const c = clone();
     const home = c.areas.find((a) => a.home)!.id;

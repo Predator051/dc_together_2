@@ -4,6 +4,7 @@ import { travelMult } from '../../../shared/src/rules.js';
 import { bagCap, bagLoad, gainSkill, heroOf, skillOf, unloadBag } from './hero.js';
 import { startFight } from './fight.js';
 import { skyAt, weatherNow } from './weather.js';
+import { roadEvent } from './events.js';
 import type { Game, Result } from './index.js';
 import { paceOf, soakByPlace } from './needs.js';
 
@@ -159,7 +160,7 @@ function arrive(g: Game, pid: PlayerId): void {
     if (parts.length) g.logRaw('system', { [pid]: `${g.ix.ui('unloaded')} ${parts.join(', ')}.` }, pid);
   }
   g.log({ self: `${g.ix.ui('arrived_self')} ${a ? a.where : tr.to}.`, other: `{name} ${g.ix.ui('arrived_other')} ${a ? a.where : tr.to}.` }, pid);
-  ambush(g, pid, tr.to, a?.ambush ?? 0);
+  if (!ambush(g, pid, tr.to, a?.ambush ?? 0)) roadEvent(g, pid);
 }
 
 /** Maybe something jumps at the hero here. */

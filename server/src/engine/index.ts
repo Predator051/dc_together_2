@@ -35,6 +35,7 @@ import type { LogEntry, PlayerState, WorldState } from '../../../shared/src/stat
 import { PART, STATE_VERSION } from '../../../shared/src/state.js';
 import { gatherMult } from '../../../shared/src/rules.js';
 import { settleWeather, skyFor, turnWeather, weatherNow } from './weather.js';
+import { answerEvent, placeEvent, settleEvents } from './events.js';
 import {
   addBag,
   blankHero,
@@ -268,7 +269,8 @@ export class Game {
     const n = settleNeeds(this);
     const c = settleHealth(this);
     const w = settleWeather(this);
-    return a || b || c || n || w;
+    const e = settleEvents(this);
+    return a || b || c || n || w || e;
   }
 
   // ----- conditions ----------------------------------------------------------
@@ -328,6 +330,7 @@ export class Game {
     if ('met' in c) return (this.s.bestiary[c.met]?.seen ?? 0) > 0;
     if ('evening' in c) return this.isEvening() === c.evening;
     if ('weather' in c) return weatherNow(this)?.id === c.weather;
+    if ('resident' in c) return !!this.s.residents[c.resident];
     return false;
   }
 
@@ -575,7 +578,8 @@ export class Game {
     if ('heal' in e) {
       for (const pid of this.targets(e.who ?? 'both', actor)) {
         const p = this.p(pid);
-        p.hp = e.heal === 'full' ? p.hpMax : Math.min(p.hpMax, p.hp + e.heal);
+        // a scratch never knocks a hero down
+        p.hp = e.heal === 'full' ? p.hpMax : Math.max(Math.min(p.hp, 1), Math.min(p.hpMax, p.hp + e.heal));
       }
       return;
     }
@@ -844,7 +848,7 @@ export class Game {
         this.log({ self: c.text, kind: 'warn' }, pid);
       }
     }
-    if (area && !area.home) ambush(this, pid, area.id, a.ambush ?? area.ambush ?? 0);
+    if (area && !area.home && !ambush(this, pid, area.id, a.ambush ?? area.ambush ?? 0)) placeEvent(this, pid);
     return OK;
   }
 
@@ -1576,6 +1580,9 @@ export class Game {
         break;
       case 'rest':
         r = rest(this, pid);
+        break;
+      case 'event':
+        r = answerEvent(this, pid, cmd.uid, cmd.choice);
         break;
       case 'act': {
         const e = this.ix.entry(cmd.id);
