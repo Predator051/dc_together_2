@@ -42,7 +42,20 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
   const here = m.nodes.find((n) => n.here);
   const [sel, setSel] = useState<string | null>(null);
   const [box, width] = useWidth();
+  const boxEl = useRef<HTMLDivElement | null>(null);
   const picked = m.nodes.find((n) => n.id === sel) ?? null;
+  // a map wider than the screen opens on where you stand
+  const hereX = here ? here.x : null;
+  useEffect(() => {
+    const el = boxEl.current;
+    if (!el || hereX === null || el.scrollWidth <= el.clientWidth) return;
+    const node = el.querySelector('.map-node.here') as SVGGElement | null;
+    const svg = el.querySelector('svg');
+    if (!node || !svg) return;
+    const nr = node.getBoundingClientRect();
+    const br = el.getBoundingClientRect();
+    el.scrollLeft += nr.left + nr.width / 2 - (br.left + br.width / 2);
+  }, [hereX, width]);
   if (!m.nodes.length) return null;
   const xs = m.nodes.map((n) => n.x);
   const ys = m.nodes.map((n) => n.y);
@@ -65,7 +78,13 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
           {T.mapOnWay} <b>{m.travel.name}</b>
         </p>
       )}
-      <div class="map-box" ref={box}>
+      <div
+        class="map-box"
+        ref={(el) => {
+          box(el);
+          boxEl.current = el;
+        }}
+      >
       <svg class="map-svg" width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={T.tabMap}>
         {m.links.map(([a, b]) => {
           const na = byId.get(a);
@@ -207,7 +226,7 @@ export function BagPanel({ v, locked }: { v: PlayerView; locked: boolean }) {
 /** At home: things to take along (consumables and food) can go into the bag. */
 export function PackList({ v, locked }: { v: PlayerView; locked: boolean }) {
   if (!v.atHome) return null;
-  const list = v.res.filter((r) => (r.kind === 'use' || r.kind === 'food') && r.n > 0);
+  const list = v.res.filter((r) => (r.kind === 'use' || r.kind === 'food' || r.ware) && r.n > 0);
   if (!list.length) return null;
   return (
     <section class="stock packs">
@@ -219,7 +238,7 @@ export function PackList({ v, locked }: { v: PlayerView; locked: boolean }) {
               {r.name} <b>{r.n}</b>
               {r.note && <small>{r.note}</small>}
             </span>
-            <button class="btn small" disabled={locked} onClick={() => net.send({ c: 'pack', id: r.id, n: r.kind === 'food' ? 2 : 1 })}>
+            <button class="btn small" disabled={locked} onClick={() => net.send({ c: 'pack', id: r.id, n: r.ware ? Math.min(5, r.n) : r.kind === 'food' ? 2 : 1 })}>
               + {T.bagPack}
             </button>
           </li>

@@ -348,8 +348,9 @@ describe('two bot clients over WebSocket', () => {
     if (!finished()) console.log('WS autoplay stopped', steps, JSON.stringify(running!.game.state.flags));
     expect(finished()).toBe(true);
     await settle(a, b);
-    expect(a.view!.actDone?.act).toBe(1);
-    expect(b.view!.actDone?.act).toBe(1);
+    // the act is over (its banner waits for the last act of the build; a summary shows instead)
+    expect(running!.game.state.meta.actDone).toBe(1);
+    expect(a.view!.summary?.act ?? 1).toBe(1);
   }, 240_000);
 });
 

@@ -855,6 +855,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
         kind: r.kind ?? 'res',
         ...(r.weight !== undefined ? { weight: r.weight } : {}),
         ...(note ? { note } : {}),
+        ...(r.ware && g.test(r.ware, pid) ? { ware: true } : {}),
       };
     });
 

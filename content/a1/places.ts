@@ -66,6 +66,9 @@ export const areas: AreaDef[] = [
     links: [
       { to: A.well, time: 8 * SEC },
       { to: A.dyke, time: 12 * SEC },
+      // act two
+      { to: 'a_10', time: 14 * SEC },
+      { to: 'a_12', time: 14 * SEC },
     ],
   },
   {
@@ -79,6 +82,8 @@ export const areas: AreaDef[] = [
     scout: S.well,
     foes: [{ enemy: E.viper, w: 1 }],
     desc: 'Зруб над чорною водою. Ропа важка, густа, і в ній не видно неба.',
+    // act two
+    links: [{ to: 'a_10', time: 12 * SEC }],
   },
   {
     id: A.grove,
@@ -111,7 +116,11 @@ export const areas: AreaDef[] = [
       { enemy: E.catfish, w: 1 },
     ],
     desc: 'Кам\'яна гребля зі шлюзами, наполовину розібрана. З неї видно схід — і дим.',
-    links: [{ to: A.causeway, time: 12 * SEC }],
+    links: [
+      { to: A.causeway, time: 12 * SEC },
+      // act two
+      { to: 'a_12', time: 14 * SEC },
+    ],
   },
   {
     id: A.causeway,

@@ -33,6 +33,8 @@ export type Cond =
   | { tool: string }
   /** Some hero is wearing / owns (storage + worn + bags) this item. */
   | { owns: string; gte?: number }
+  /** Some hero has this item on. */
+  | { worn: string }
   /** An enemy trait has been seen (bestiary) / an enemy met. */
   | { trait: string }
   | { met: string }
@@ -126,6 +128,8 @@ export interface ResourceDef {
   weight?: number;
   gear?: GearDef;
   use?: UseDef;
+  /** Goods to sell: while this holds, they can be taken from the store along in the bag. */
+  ware?: Cond;
 }
 
 export type Slot = 'head' | 'body' | 'hands' | 'legs' | 'weapon' | 'offhand' | 'belt';
@@ -235,7 +239,7 @@ export interface ActionDef {
   /** Extra "what you get" line for results the engine cannot describe (unlocks, upgrades). */
   gives?: Text;
   hint?: Text;
-  kind?: 'gather' | 'craft' | 'build' | 'home' | 'train';
+  kind?: 'gather' | 'craft' | 'build' | 'home' | 'train' | 'trade';
   /** Why this recipe exists (the need it answers), shown with it. */
   why?: Text;
   /** Hide when this many of the yielded gear exist (stored + worn + carried). Default for gear: 2. */

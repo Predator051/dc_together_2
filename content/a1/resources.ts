@@ -1,6 +1,9 @@
 import type { ResourceDef } from '../../shared/src/content.js';
 import { G, R, U } from './ids.js';
 
+/** Goods can be taken along once the road to the buyers is known (act two). */
+const ware = { flag: 'done:s_31' };
+
 const shelves = (add: number) => [
   { if: { flag: 'built:x_31' }, add },
   { if: { flag: 'built:x_32' }, add },
@@ -27,12 +30,12 @@ export const resources: ResourceDef[] = [
       log: { self: 'Ти їси нашвидкуруч, стоячи. Сили трохи вертаються.', other: '{name} перекушує.' },
     },
   },
-  { id: R.hide, name: 'Шкури', order: 6, cap: 20, capBonus: shelves(10), weight: 1 },
+  { id: R.hide, name: 'Шкури', order: 6, cap: 20, capBonus: shelves(10), weight: 1, ware },
   { id: R.saltraw, name: 'Сіль-сирець', order: 7, cap: 20, capBonus: shelves(10), weight: 1 },
   { id: R.brine, name: 'Ропа', order: 8, cap: 12, capBonus: shelves(6), weight: 2 },
-  { id: R.salt, name: 'Сіль', order: 9, cap: 20, capBonus: shelves(10), weight: 0.5 },
+  { id: R.salt, name: 'Сіль', order: 9, cap: 20, capBonus: shelves(10), weight: 0.5, ware },
   { id: R.clay, name: 'Глина', order: 10, cap: 16, capBonus: shelves(8), weight: 2 },
-  { id: R.leather, name: 'Просолена шкіра', order: 11, cap: 12, capBonus: shelves(6), weight: 1 },
+  { id: R.leather, name: 'Просолена шкіра', order: 11, cap: 12, capBonus: shelves(6), weight: 1, ware },
   { id: R.bone, name: 'Кістки', order: 12, cap: 20, capBonus: shelves(10), weight: 0.5 },
   { id: R.bark, name: 'Кора', order: 13, cap: 20, capBonus: shelves(10), weight: 0.5 },
   { id: R.oak, name: 'Морений дуб', order: 14, cap: 12, capBonus: shelves(6), weight: 2 },
@@ -40,8 +43,8 @@ export const resources: ResourceDef[] = [
   { id: R.moss, name: 'Мох', order: 16, cap: 16, capBonus: shelves(8), weight: 0.3 },
   { id: R.stone, name: 'Камінь', order: 17, cap: 20, capBonus: shelves(10), weight: 2 },
   { id: R.iron, name: 'Залізо', order: 18, cap: 12, capBonus: shelves(6), weight: 2 },
-  { id: R.coal, name: 'Вугілля', order: 19, cap: 16, capBonus: shelves(8), weight: 1 },
-  { id: R.tusk, name: 'Ікла', order: 20, cap: 6, weight: 0.5 },
+  { id: R.coal, name: 'Вугілля', order: 19, cap: 16, capBonus: shelves(8), weight: 1, ware },
+  { id: R.tusk, name: 'Ікла', order: 20, cap: 6, weight: 0.5, ware },
   { id: R.flint, name: 'Кресало', order: 21, kind: 'tool', weight: 0 },
 
   // ----- things to take along -----

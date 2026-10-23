@@ -305,6 +305,8 @@ export interface ResView {
   weight?: number;
   /** One line about it (gear stats, what a consumable does). */
   note?: string;
+  /** Goods: can be taken along to sell. */
+  ware?: boolean;
 }
 
 export interface StatView {

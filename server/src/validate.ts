@@ -225,6 +225,7 @@ export function validateContent(c: Content): Report {
       if ('rel' in x && !npcs.has(x.rel)) err(`${where}: unknown npc ${x.rel}`);
       if (('at' in x && !areas.has(x.at)) || ('partnerAt' in x && !areas.has(x.partnerAt))) err(`${where}: unknown area`);
       if ('owns' in x && !res.has(x.owns)) err(`${where}: unknown item ${x.owns}`);
+      if ('worn' in x && !res.has(x.worn)) err(`${where}: unknown item ${x.worn}`);
       if ('tool' in x && !toolKinds.has(x.tool)) err(`${where}: no gear provides tool ${x.tool}`);
       if ('trait' in x && !traitIds.has(x.trait)) err(`${where}: unknown trait ${x.trait}`);
       if ('met' in x && !enemies.has(x.met)) err(`${where}: unknown enemy ${x.met}`);
@@ -265,6 +266,7 @@ export function validateContent(c: Content): Report {
 
   // Resources
   for (const r of c.resources) for (const b of r.capBonus ?? []) checkCond(`resource ${r.id}`, b.if);
+  for (const r of c.resources) if (r.ware) checkCond(`resource ${r.id} ware`, r.ware);
   for (const [k] of Object.entries(c.start.resources)) if (!res.has(k)) err(`start: unknown resource ${k}`);
 
   // Locations
@@ -345,7 +347,7 @@ export function validateContent(c: Content): Report {
     if (a.job && (!a.yield || a.cost)) err(`${w}: a job must yield and cost nothing`);
     for (const id of Object.keys(a.yield ?? {})) {
       const def = c.resources.find((r) => r.id === id);
-      if (def?.kind === 'gear' && a.kind !== 'craft') warnings.push(`${w}: yields gear but is not a craft`);
+      if (def?.kind === 'gear' && a.kind !== 'craft' && a.kind !== 'trade') warnings.push(`${w}: yields gear but is not a craft`);
     }
   }
 
@@ -712,6 +714,7 @@ function simulate(c: Content) {
     if ('anyClue' in cond) return gotClues.has(cond.anyClue);
     if ('stove' in cond) return cond.stove === 'never' || flags.has('stove');
     if ('owns' in cond) return have.has(cond.owns);
+    if ('worn' in cond) return have.has(cond.worn);
     if ('tool' in cond) return toolOf(cond.tool);
     if ('met' in cond) return met.has(cond.met);
     if ('trait' in cond) return [...met].some((id) => [...(enemies.get(id)?.traits ?? []), ...(enemies.get(id)?.hidden ?? [])].includes(cond.trait as never));

@@ -287,6 +287,7 @@ export class Game {
     }
     if ('tool' in c) return pid ? heroOf(this, pid).tools.has(c.tool) : false;
     if ('owns' in c) return ownsCount(this, c.owns) >= (c.gte ?? 1);
+    if ('worn' in c) return this.joinedIds().some((x) => Object.values(this.p(x).equip).includes(c.worn));
     if ('trait' in c) return Object.values(this.s.bestiary).some((b) => b.known.includes(c.trait));
     if ('met' in c) return (this.s.bestiary[c.met]?.seen ?? 0) > 0;
     if ('evening' in c) return this.isEvening() === c.evening;
@@ -475,8 +476,10 @@ export class Game {
       return;
     }
     if ('inc' in e) {
-      const v = this.flag(e.inc) + (e.by ?? 1);
-      this.s.flags[e.inc] = e.max !== undefined ? Math.min(e.max, v) : v;
+      const cur = this.flag(e.inc);
+      const v = cur + (e.by ?? 1);
+      // a cap stops the rise; it never pulls down what something else has raised higher
+      this.s.flags[e.inc] = e.max !== undefined && v > e.max ? Math.max(cur, e.max) : v;
       return;
     }
     if ('pset' in e) {
