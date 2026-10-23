@@ -67,10 +67,20 @@ export class Bot {
     if (v.me.hp < v.me.hpMax * 0.45) {
       const eat = v.atHome ? this.entry(v, 'x_13') : null;
       if (eat?.enabled) return { c: 'act', id: 'x_13' };
-      const band = v.bag.items.find((i) => i.usable && i.id !== this.c.food);
+      // a dish heals by its slot, and only if there is room for it
+      const edible = (id: string) => !g.ix.res.get(id)?.meal || !!v.needs?.edible.find((f) => f.id === id)?.can;
+      const band = v.bag.items.find((i) => i.usable && i.id !== this.c.food && edible(i.id));
       if (band) return { c: 'use', id: band.id };
       if (!v.atHome) return this.goTowards(v, g, g.ix.homeArea);
+      // at home: get the strength back before going out again (unless the cold keeps wounds open)
+      if (v.needs && v.needs.level !== 'frozen') {
+        if (v.needs.rest.can && v.needs.rested <= 0) return { c: 'rest' };
+        return null;
+      }
     }
+
+    const needs = this.needs(v, g);
+    if (needs) return needs;
 
     if (v.atHome) {
       // what did not fit into the store stays in the bag: throw it out (goods to sell excepted)
@@ -89,6 +99,50 @@ export class Bot {
     // waiting for the partner at the place of the story: work here, do not wander off
     const s = this.storyArea(g);
     return this.work(v, g, !!s && s.area === v.me.area);
+  }
+
+  // ------------------------------------------------------------------ needs
+
+  /** Eat, warm up, rest — as a person would when the strip turns red (a careless one, now and then). */
+  private needs(v: PlayerView, g: Game): Command | null {
+    const n = v.needs;
+    if (!n) return null;
+    if (this.o.careless && this.rng.next() < 0.5) return null;
+    // a dish when a slot is free (the best one first)
+    if (n.meals.length < 2 || (n.meals.length < n.slots && v.atHome)) {
+      // plain food only when there is nothing else in the belly: the store feeds the household too
+      const dish = n.edible
+        .filter((f) => f.can && (f.id !== this.c.food || !n.meals.length))
+        .sort((a, b) => this.dishValue(g, b.id) - this.dishValue(g, a.id))[0];
+      if (dish) return { c: 'eat', id: dish.id };
+    }
+    const bad = new Set(n.effects.filter((e) => !e.good).map((e) => e.id));
+    if (bad.has('cold') || bad.has('frozen')) {
+      const tea = n.drinks[0];
+      if (tea) return { c: 'use', id: tea.id };
+      if (n.camp?.can && !n.fire) return { c: 'camp' };
+      // home is worth going to only if there is a fire there, or wood to light one
+      const wood = g.ix.c.needs?.campWood ?? '';
+      const homeFire = g.stoveState() !== 'cold' || g.stockAll(wood) > 0;
+      if (!v.atHome && !n.fire && homeFire) return this.goTowards(v, g, g.ix.homeArea);
+      if (v.atHome && g.stoveState() !== 'warm') {
+        const stoke = this.entry(v, 'x_10');
+        if (stoke?.enabled) return { c: 'act', id: 'x_10' };
+        // no wood at home: unpack what is carried, else go and fetch some
+        const carried = v.bag.items.find((i) => i.id === wood);
+        if (carried) return { c: 'pack', id: wood, n: -carried.n };
+      }
+    }
+    // tired, or home by the fire with nothing better to keep the head clear
+    const tiredSoon = n.rested <= 0 && n.awake > n.tiredAfter * 0.75;
+    if ((bad.has('tired') || (tiredSoon && v.atHome)) && n.rest.can) return { c: 'rest' };
+    if (bad.has('tired') && !v.atHome && !n.fire && n.camp?.can) return { c: 'camp' };
+    return null;
+  }
+
+  private dishValue(g: Game, id: string): number {
+    const m = g.ix.res.get(id)?.meal;
+    return m ? m.hp * 2 + (m.dmg ?? 0) * 3 + m.minutes / 6 : 0;
   }
 
   // ------------------------------------------------------------------ fights
@@ -336,7 +390,8 @@ export class Bot {
     }
     // go and buy what is wanted and cannot be gathered, with shillings in the bag
     const myCoins = g.p(this.pid).bag[COIN] ?? 0;
-    for (const b of this.buys(g)) {
+    // the cheapest first: two buys at different prices must not pass the purse back and forth
+    for (const b of [...this.buys(g)].sort((x, y) => x.cost![COIN]! - y.cost![COIN]!)) {
       if (b.visible && !g.test(b.visible, this.pid)) continue;
       const area = g.ix.areaOf(b.group);
       if (!areaKnown(g, area)) continue;
@@ -414,12 +469,19 @@ export class Bot {
       add(a.cost);
     }
     for (const sc of this.c.scenes) {
-      if (!sc.cost || (sc.once !== false && g.flag(`done:${sc.id}`))) continue;
+      if (sc.once !== false && g.flag(`done:${sc.id}`)) continue;
       if (sc.visible && !g.test(sc.visible, this.pid)) continue;
       add(sc.cost);
+      // what an operation's moves will cost
+      for (const node of Object.values(sc.nodes)) {
+        if (node.type !== 'operation') continue;
+        for (const m of node.moves) for (const r of Object.keys(m.cost ?? {})) add({ [r]: this.reserve(g, r) });
+      }
     }
-    // always keep some food
+    // always keep some food, and wood for the hearth once it matters for warmth and rest
     if (g.stockAll(this.c.food!) < 6) out.set(this.c.food!, 6);
+    const wood = g.ix.c.needs?.campWood;
+    if (wood && g.p(this.pid).needs && g.stoveState() !== 'warm' && (g.s.res[wood] ?? 0) < 6) out.set(wood, 6);
     // trust is bought with goods: keep something to sell
     const trust = this.trustNeed(g);
     if (trust) {
@@ -433,8 +495,32 @@ export class Bot {
     return out;
   }
 
+  /**
+   * What the next story steps ask for at once — the scene's price and what its operation's moves
+   * cost over half its turns (a supper's food too): cooking must not eat into it.
+   */
+  private reserve(g: Game, r: string): number {
+    let need = r === this.c.food ? 2 : 0;
+    for (const sc of this.c.scenes) {
+      if (sc.once !== false && g.flag(`done:${sc.id}`)) continue;
+      if (sc.visible && !g.test(sc.visible, this.pid)) continue;
+      let n = sc.cost?.[r] ?? 0;
+      for (const node of Object.values(sc.nodes)) {
+        if (node.type !== 'operation') continue;
+        const per = Math.max(0, ...node.moves.map((m) => m.cost?.[r] ?? 0));
+        n += per * Math.ceil(node.turns / 2);
+      }
+      need = Math.max(need, n);
+    }
+    return need;
+  }
+
   private worthMaking(a: ActionDef, g: Game): boolean {
     if (g.atLimit(a)) return false;
+    // dishes and the like must not eat what the story will ask for
+    if (Object.keys(a.yield ?? {}).some((y) => g.ix.res.get(y)?.kind === 'use')) {
+      for (const [r, n] of Object.entries(a.cost ?? {})) if (g.stockAll(r) - n < this.reserve(g, r)) return false;
+    }
     const y = Object.keys(a.yield ?? {});
     for (const id of y) {
       const def = g.ix.res.get(id);
@@ -598,6 +684,8 @@ export class Bot {
 
   private pack(v: PlayerView): Command | null {
     const want: Record<string, number> = { u_02: 2, u_05: 1, u_03: 2, u_04: 2, u_07: 1, u_01: 12, u_06: 12, [this.c.food!]: 2 };
+    // food for the road and a hot drink once the needs count (a campfire burns driftwood picked up on the way)
+    if (v.needs) Object.assign(want, { u_09: 3, u_10: 1, u_11: 1 });
     for (const [id, n] of Object.entries(want)) {
       const inBag = v.bag.items.find((i) => i.id === id)?.n ?? 0;
       const stored = v.res.find((r) => r.id === id)?.n ?? 0;

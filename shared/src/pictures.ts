@@ -66,5 +66,6 @@ export const ITEM_ICONS = [
   'furcoat', 'helm',
   'coin', 'ore', 'peat', 'wax', 'cloth', 'felt', 'bloom', 'meat', 'mask', 'pincers', 'plugs',
   'pick', 'cleaver', 'bracers', 'robe', 'sabre', 'quilt',
+  'thyme', 'soup', 'driedfish', 'tea', 'tarboots', 'millet', 'porridge',
 ] as const;
 export type ItemIcon = (typeof ITEM_ICONS)[number];

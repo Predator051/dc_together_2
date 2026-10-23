@@ -90,6 +90,8 @@ export type Effect =
   | { scene: string }
   | { advanceDay: true }
   | { heal: number | 'full'; who?: EffectTarget }
+  /** A dish goes into the meal slots (if there is room for it), without being paid for. */
+  | { eat: string; who?: EffectTarget }
   | { stove: number }
   | { actDone: number }
   | { startAct: number }
@@ -132,6 +134,18 @@ export interface ResourceDef {
   ware?: Cond;
   /** Its small mark in lists (every visible thing has one). */
   icon?: ItemIcon;
+  /** A dish: eaten, it fills one of the hero's meal slots for a while. */
+  meal?: MealDef;
+}
+
+/** What a dish gives while it lasts (see NEED in rules.ts). */
+export interface MealDef {
+  hp: number;
+  dmg?: number;
+  /** How long it lasts, minutes of play. */
+  minutes: number;
+  /** Eaten hot: warms up right away (points of warmth). */
+  warm?: number;
 }
 
 export type Slot = 'head' | 'body' | 'hands' | 'legs' | 'weapon' | 'offhand' | 'belt';
@@ -189,6 +203,9 @@ export interface UseDef {
   anywhere?: boolean;
   /** Not used up (a rattle, a horn). */
   reusable?: boolean;
+  /** A hot drink: points of warmth at once, and for `warmFor` ms the cold bites half as hard. */
+  warm?: number;
+  warmFor?: number;
   label: Text;
   log: LogText;
 }
@@ -253,6 +270,8 @@ export interface ActionDef {
   /** Skill that grows with it and speeds it up. */
   skill?: SkillId;
   /** Chance of being attacked while doing it (overrides the area's). */
+  /** Work in water: the hero gets wet. */
+  wet?: boolean;
   ambush?: number;
   /** Residents can be set to do it: yield units per hour of real time. */
   job?: { rate: number };
@@ -335,6 +354,8 @@ export interface AreaDef {
   /** Who may jump at you here (weighted). */
   foes?: FoeEntry[];
   /** Chance of an attack per action / arrival. */
+  /** Wet underfoot: arriving here soaks the hero (unless something keeps feet dry). */
+  wet?: boolean;
   ambush?: number;
   /** Home: the store is here, the bag is emptied on arrival. */
   home?: boolean;
@@ -733,6 +754,18 @@ export interface DailyDef {
   if?: Cond;
 }
 
+export interface NeedsDef {
+  /** The needs count from this moment on (before it, nothing is shown). */
+  from: Cond;
+  /** What makes home cosy: each that holds adds one to the comfort of a rest by the home fire. */
+  comfort: Array<{ if: Cond; name: Text }>;
+  /** A dish the heroes are taken to have just eaten when the needs begin. */
+  snack?: string;
+  /** Burnt for a campfire away from home (from the bag), and what lights it (owned). */
+  campWood: string;
+  campLight?: string;
+}
+
 export interface StoveDef {
   /** Burn time of one log, ms. */
   perWood: number;
@@ -801,6 +834,8 @@ export interface Content {
   goals: GoalDef[];
   npcs: NpcDef[];
   stove: StoveDef;
+  /** Hunger, warmth and rest of the heroes. */
+  needs?: NeedsDef;
   ambient?: AmbientDef;
   maps?: DelveMapDef[];
   /** Applied every time a new day starts (after a supper). */

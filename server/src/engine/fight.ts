@@ -762,6 +762,11 @@ export function defeat(g: Game, pid: PlayerId): void {
   p.poison = 0;
   p.at = g.ix.homeArea;
   p.travel = null;
+  // brought home and laid by the fire: warm and dry, if weak
+  if (p.needs) {
+    p.needs.chill = 0;
+    p.needs.wet = 0;
+  }
   p.fight = null;
   p.busy = { action: 'rest:defeat', until: g.now + DEFEAT_BUSY };
   g.log({ self: g.ix.ui('defeat_self'), other: g.ix.ui('defeat_other'), kind: 'warn' }, pid);

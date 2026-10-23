@@ -124,6 +124,7 @@ export const areas: AreaDef[] = [
   },
   {
     id: A.causeway,
+    wet: true,
     name: 'Гать',
     where: 'на гаті',
     scene: 'causeway',
@@ -267,6 +268,7 @@ export const locations: LocationDef[] = [
       { id: 'sluice', name: 'Шлюзи', x: 50, y: 24, icon: 'sluice' },
       { id: 'stone', name: 'Кладка', x: 12, y: 46, icon: 'stoneblock' },
       { id: 'ruin', name: 'Розвал', x: 88, y: 46, icon: 'iron' },
+      { id: 'slope', name: 'Схил', x: 12, y: 74, icon: 'grass' },
     ],
     visible: { flag: 'p2_hut' },
     desc: [

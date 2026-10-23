@@ -435,6 +435,62 @@ const DRAW: Record<ItemIcon, () => JSX.Element> = {
       <path class="thin" d="M4 11.5h16M4 15.5h16M8 7.5V20M16 7.5V20" />
     </Ink>
   ),
+
+  // ----- needs -----
+  thyme: () => (
+    <Ink>
+      <path d="M12 21V9M12 15c-2-1-4-1-5.5.5M12 12c2-1 4-1 5.5.5" />
+      <circle class="dot" cx="12" cy="7.5" r="1.2" />
+      <circle class="dot" cx="9.5" cy="9" r="1" />
+      <circle class="dot" cx="14.5" cy="9" r="1" />
+      <circle class="dot" cx="6.5" cy="14.5" r=".9" />
+      <circle class="dot" cx="17.5" cy="11.5" r=".9" />
+    </Ink>
+  ),
+  soup: () => (
+    <Ink>
+      <path d="M4 11h16c0 5-3.6 8-8 8s-8-3-8-8z" />
+      <path d="M3 11h18" />
+      <path class="thin" d="M8 8c-1-1.3 1-2.2 0-3.8M12 8c-1-1.3 1-2.2 0-3.8M16 8c-1-1.3 1-2.2 0-3.8" />
+    </Ink>
+  ),
+  driedfish: () => (
+    <Ink>
+      <path d="M12 3v3" />
+      <path d="M12 6c3 2 4 5 3.5 8.5L12 21l-3.5-6.5C8 11 9 8 12 6z" />
+      <path class="thin" d="M10 11h4M9.8 14h4.4" />
+    </Ink>
+  ),
+  tea: () => (
+    <Ink>
+      <path d="M5 9h11v6a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5z" />
+      <path d="M16 11h1.5a2.5 2.5 0 0 1 0 5H16" />
+      <path class="thin" d="M8.5 6.5c-.8-1 .8-1.8 0-3M12.5 6.5c-.8-1 .8-1.8 0-3" />
+    </Ink>
+  ),
+  tarboots: () => (
+    <Ink>
+      <path d="M8 3.5V14l-4 3v3h13.5v-3c0-2-2-3-5-3V3.5z" />
+      <path class="fill" d="M8 8h4.5v6c3 0 5 1 5 3v3H4v-3l4-3z" />
+    </Ink>
+  ),
+  millet: () => (
+    <Ink>
+      <path d="M6 20c0-5 2-8 6-9.5M18 20c0-5-2-8-6-9.5" />
+      <path d="M5 20h14" />
+      <circle class="dot" cx="12" cy="7" r="1" />
+      <circle class="dot" cx="10" cy="8.5" r=".9" />
+      <circle class="dot" cx="14" cy="8.5" r=".9" />
+      <circle class="dot" cx="12" cy="4.5" r=".8" />
+    </Ink>
+  ),
+  porridge: () => (
+    <Ink>
+      <path d="M4 12h16c0 4-3.6 7-8 7s-8-3-8-7z" />
+      <path class="fill" d="M5 12c1.5-2.5 4-3.5 7-3.5s5.5 1 7 3.5z" />
+      <path d="M15 9.5L20 3" />
+    </Ink>
+  ),
 };
 
 /** A thing's small mark; nothing at all when the thing has none. */

@@ -178,7 +178,8 @@ export function validateContent(c: Content): Report {
   };
 
   // Flags written anywhere (the engine itself writes a few).
-  const written = new Set<string>(['bag_full']);
+  // the engine writes: an overflowed bag, the first soaking in a wet place
+  const written = new Set<string>(['bag_full', ...(c.areas.some((a) => a.wet) ? ['wet_feet'] : [])]);
   const pwritten = new Set<string>();
   const collectWrites = (effs: Effect[]) => {
     for (const e of effs) {
@@ -191,6 +192,7 @@ export function validateContent(c: Content): Report {
     collectWrites(actionEffects(a));
     if (a.once) written.add(`built:${a.id}`);
     if (a.oncePerPlayer) pwritten.add(`built:${a.id}`);
+    if (a.kind === 'craft' || a.kind === 'build') written.add(`made:${a.id}`);
   }
   for (const s of c.scenes) {
     collectWrites(sceneEffects(s));
@@ -252,6 +254,7 @@ export function validateContent(c: Content): Report {
       if ('resident' in e && !residentIds.has(e.resident)) err(`${where}: unknown resident ${e.resident}`);
       if ('give' in e) checkRes(where, e.give);
       if ('wear' in e && !res.has(e.wear)) err(`${where}: unknown item ${e.wear}`);
+      if ('eat' in e && !c.resources.find((r) => r.id === e.eat)?.meal) err(`${where}: ${e.eat} is not a dish`);
       if ('fight' in e) for (const f of e.fight) if (!enemies.has(f.enemy)) err(`${where}: unknown enemy ${f.enemy}`);
     }
   };
@@ -268,6 +271,12 @@ export function validateContent(c: Content): Report {
   for (const r of c.resources) for (const b of r.capBonus ?? []) checkCond(`resource ${r.id}`, b.if);
   for (const r of c.resources) if (r.ware) checkCond(`resource ${r.id} ware`, r.ware);
   for (const [k] of Object.entries(c.start.resources)) if (!res.has(k)) err(`start: unknown resource ${k}`);
+  if (c.needs) {
+    const n = c.needs;
+    if (n.snack && !c.resources.find((r) => r.id === n.snack)?.meal) err(`needs: snack ${n.snack} is not a dish`);
+    if (!res.has(n.campWood)) err(`needs: unknown resource ${n.campWood}`);
+    if (n.campLight && !res.has(n.campLight)) err(`needs: unknown resource ${n.campLight}`);
+  }
 
   // Locations
   for (const l of c.locations) {
@@ -410,6 +419,8 @@ export function validateContent(c: Content): Report {
     if (r.kind === 'gear' && !r.gear) err(`${w}: kind gear without gear stats`);
     if (r.gear?.ammo && !res.has(r.gear.ammo)) err(`${w}: unknown ammo ${r.gear.ammo}`);
     if (r.use && r.kind !== 'use' && r.kind !== 'food') err(`${w}: a consumable must be of kind use or food`);
+    if (r.meal && (r.meal.hp <= 0 || r.meal.minutes <= 0)) err(`${w}: a dish must give health for some time`);
+    if (r.meal && r.kind !== 'use' && r.kind !== 'food') err(`${w}: a dish must be of kind use or food`);
   }
 
   // Residents
@@ -779,6 +790,7 @@ function simulate(c: Content) {
       const open = a.home || (a.scout ? flags.has(`done:${a.scout}`) : ok(a.visible));
       if (!open || areas.has(a.id)) continue;
       mark(areas, a.id);
+      if (a.wet) mark(flags, 'wet_feet');
       if (a.ambush) for (const f of a.foes ?? []) if (ok(f.if)) changed = meetEnemy(f.enemy) || changed;
     }
     for (const l of c.locations) if (ok(l.visible) && areas.has(l.area ?? homeArea!)) mark(locations, l.id);
@@ -790,6 +802,7 @@ function simulate(c: Content) {
       for (const ch of a.chance ?? []) for (const [k, n] of Object.entries(ch.add ?? {})) if (n > 0) mark(have, k);
       if (a.once) mark(flags, `built:${a.id}`);
       if (a.oncePerPlayer) mark(pflags, `built:${a.id}`);
+      if (a.kind === 'craft' || a.kind === 'build') mark(flags, `made:${a.id}`);
       if (absorb(actionEffects(a))) changed = true;
     }
     const poolOpen = new Set<string>();

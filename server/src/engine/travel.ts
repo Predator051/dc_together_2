@@ -4,6 +4,7 @@ import { travelMult } from '../../../shared/src/rules.js';
 import { bagCap, bagLoad, gainSkill, heroOf, skillOf, unloadBag } from './hero.js';
 import { startFight } from './fight.js';
 import type { Game, Result } from './index.js';
+import { paceOf, soakByPlace } from './needs.js';
 
 export function areaDef(g: Game, id: string): AreaDef | undefined {
   return g.ix.c.areas.find((a) => a.id === id);
@@ -92,7 +93,7 @@ export function travelTime(g: Game, pid: PlayerId, from: string, to: string): nu
   const base = linkTime(g, from, to) ?? 0;
   const h = heroOf(g, pid);
   const load = bagLoad(g, pid) / Math.max(1, bagCap(g, pid));
-  return Math.round(base * travelMult({ trail: skillOf(g, pid, 'trail'), load, heavy: h.heavy }));
+  return Math.round(base * travelMult({ trail: skillOf(g, pid, 'trail'), load, heavy: h.heavy }) * paceOf(g, pid));
 }
 
 /**
@@ -134,6 +135,7 @@ function arrive(g: Game, pid: PlayerId): void {
   p.at = tr.to;
   const a = areaDef(g, tr.to);
   const [next, ...rest] = tr.route ?? [];
+  soakByPlace(g, pid, tr.to);
   if (next) {
     // passing by: the bag stays packed, but a beast may still jump out — then the walk ends here
     const foes = ambushRoll(g, pid, tr.to, a?.ambush ?? 0);

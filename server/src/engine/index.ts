@@ -53,6 +53,7 @@ import {
 } from './hero.js';
 import { activeFoes, dropFight, fightChoose, fightOf, help, maybeResolve, startFight } from './fight.js';
 import { ambush, areaDef, areaKnown, go, linkTime, setJob, settleTravel, settleWork } from './travel.js';
+import { camp, drink, eat, feed, nightRest, paceOf, rest, settleNeeds, soak } from './needs.js';
 
 /** How long a player must have been gone to get a summary on return. */
 export const WELCOME_AFTER = 3 * 60 * 1000;
@@ -231,8 +232,9 @@ export class Game {
   settle(): boolean {
     const a = settleTravel(this);
     const b = settleWork(this);
+    const n = settleNeeds(this);
     const c = settleHealth(this);
-    return a || b || c;
+    return a || b || c || n;
   }
 
   // ----- conditions ----------------------------------------------------------
@@ -527,6 +529,11 @@ export class Game {
       for (const pid of this.joinedIds()) text[pid] = `${this.ix.ui('new_day')} ${this.s.meta.day}.`;
       this.logRaw('system', text);
       this.applyDaily();
+      nightRest(this);
+      return;
+    }
+    if ('eat' in e) {
+      for (const pid of this.targets(e.who ?? 'actor', actor)) feed(this, pid, e.eat);
       return;
     }
     if ('heal' in e) {
@@ -677,7 +684,7 @@ export class Game {
 
   /** How long the action keeps this hero busy. */
   actionTime(a: ActionDef, pid: PlayerId): number {
-    let t = a.cooldown * this.cooldownMult(this.ix.areaOf(a.group));
+    let t = a.cooldown * this.cooldownMult(this.ix.areaOf(a.group)) * paceOf(this, pid);
     if (a.skill) {
       const h = heroOf(this, pid);
       const knack = a.knack && a.knack.role === this.p(pid).role ? a.knack.x : 1;
@@ -763,6 +770,7 @@ export class Game {
     if (a.kind === 'craft') st.crafted += 1;
     if ((a.effects ?? []).some((e) => 'moveTo' in e)) st.trips += 1;
 
+    if (a.wet) soak(this, pid);
     if (a.once) this.s.flags[`built:${a.id}`] = 1;
     if (a.oncePerPlayer) p.flags[`built:${a.id}`] = 1;
     const cd = this.actionTime(a, pid);
@@ -1454,11 +1462,14 @@ export class Game {
     const u = def?.use;
     if (!def || !u || !u.anywhere) return this.fail('err_not_now');
     if (p.fight !== null) return this.fail('err_in_fight');
+    // a dish goes into a meal slot (once the needs count)
+    if (def.meal && p.needs) return eat(this, pid, id);
     if (this.stockOf(pid, id) <= 0) return this.fail('err_cost');
-    if (u.heal && p.hp >= p.hpMax && !(u.cure ?? []).length) return this.fail('err_full_hp');
+    if (u.heal && p.hp >= p.hpMax && !(u.cure ?? []).length && !(u.warm && p.needs)) return this.fail('err_full_hp');
     this.payCostFor(pid, { [id]: 1 });
     if (u.heal) p.hp = Math.min(p.hpMax, p.hp + u.heal);
     if (u.cure?.includes('poison')) p.poison = 0;
+    if (u.warm) drink(this, pid, u.warm, u.warmFor ?? 0);
     this.log(u.log, pid);
     return OK;
   }
@@ -1505,6 +1516,15 @@ export class Game {
       case 'job':
         r = setJob(this, cmd.who, cmd.id);
         break;
+      case 'eat':
+        r = eat(this, pid, cmd.id);
+        break;
+      case 'camp':
+        r = camp(this, pid);
+        break;
+      case 'rest':
+        r = rest(this, pid);
+        break;
       case 'act': {
         const e = this.ix.entry(cmd.id);
         if (!e) r = this.fail('err_not_now');
@@ -1547,6 +1567,8 @@ export class Game {
   setOnline(pid: PlayerId, online: boolean): void {
     const p = this.p(pid);
     if (p.online === online) return;
+    // the needs count up to now as they were (in the game or not)
+    settleNeeds(this);
     p.online = online;
     p.lastSeen = this.now;
     if (!online) {

@@ -15,6 +15,7 @@ import { IconBell, IconBellOff, IconDown, IconFlame, IconHero, IconLock, IconLog
 import { T } from './strings.js';
 import { BagPanel, FightPanel, MapPanel, NearFight, PackList, ResidentsPanel } from './world.js';
 import { Thing } from './items.js';
+import { NeedsBar, NeedsSheet } from './needs.js';
 
 type Tab = 'work' | 'map' | 'hero' | 'notes' | 'log';
 
@@ -573,6 +574,8 @@ export function Game({ s }: { s: NetState }) {
 
   useEffect(() => store('bezgomin.tab', tab), [tab]);
   const [homeView, setHomeView] = useState<'plan' | 'list'>(load('bezgomin.homeView') === 'list' ? 'list' : 'plan');
+  const [needsOpen, setNeedsOpen] = useState(false);
+  const needsShown = needsOpen && !!v.needs;
   useEffect(() => store('bezgomin.homeView', homeView), [homeView]);
 
   // The partner calls you: a knock.
@@ -690,6 +693,8 @@ export function Game({ s }: { s: NetState }) {
           <span class="goal-label">{T.goal}.</span> {v.goal}
         </p>
       )}
+      {v.needs && <NeedsBar v={v} offset={s.offset} open={needsShown} onOpen={() => setNeedsOpen(!needsOpen)} />}
+      {needsShown && <NeedsSheet v={v} offset={s.offset} desktop={desktop} locked={locked} onClose={() => setNeedsOpen(false)} />}
       {v.stove.text && (
         <p class={`stove ${v.stove.state}`}>
           {v.stove.state === 'cold' ? <IconSnow /> : <IconFlame />}
@@ -700,7 +705,7 @@ export function Game({ s }: { s: NetState }) {
         {!v.atHome && !plan && <BagPanel v={v} locked={locked} />}
         {!plan && <Stock v={v} foldable />}
       </div>
-      {plan ? (
+      {desktop && needsShown ? null : plan ? (
         <>
           {groups
             .filter((g) => g.spots?.length && (g.desc || g.progress))

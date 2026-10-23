@@ -4,6 +4,7 @@ import { SKILLS, SLOTS, STATS } from '../../../shared/src/content.js';
 import { derive, levelFromXp, skillLevel, type Derived } from '../../../shared/src/rules.js';
 import type { PlayerState } from '../../../shared/src/state.js';
 import type { Game, Result } from './index.js';
+import { bodyOf, learnOf, regenOf } from './needs.js';
 
 export function gearOf(g: Game, id: string): GearDef | undefined {
   return g.ix.res.get(id)?.gear;
@@ -11,7 +12,7 @@ export function gearOf(g: Game, id: string): GearDef | undefined {
 
 export function heroOf(g: Game, pid: PlayerId): Derived {
   const p = g.p(pid);
-  return derive(p, (id) => gearOf(g, id));
+  return derive(p, (id) => gearOf(g, id), bodyOf(g, pid));
 }
 
 /** Keep hpMax in step with level and gear (health is kept, clamped). */
@@ -29,7 +30,8 @@ export function skillOf(g: Game, pid: PlayerId, s: SkillId): number {
 export function gainSkill(g: Game, pid: PlayerId, s: SkillId, n = 1): void {
   const p = g.p(pid);
   const before = skillLevel(p.skills[s] ?? 0);
-  p.skills[s] = (p.skills[s] ?? 0) + n;
+  // rested heads learn faster, tired ones slower
+  p.skills[s] = (p.skills[s] ?? 0) + n * learnOf(g, pid);
   const after = skillLevel(p.skills[s]);
   if (after > before) {
     g.logRaw('find', { [pid]: `${g.ix.ui('skill_up')} ${g.ix.ui(`skill_${s}`)} — ${after}.` }, pid);
@@ -274,19 +276,20 @@ export function useNote(g: Game, id: string): string {
   if (u.heal) parts.push(`${g.ix.ui('st_heal')} +${u.heal}`);
   if (u.dmg) parts.push(`${g.ix.ui('st_dmg')} ${u.dmg[0]}–${u.dmg[1]}`);
   for (const c of u.cure ?? []) parts.push(g.ix.ui(`cure_${c}`));
+  if (u.warm) parts.push(g.ix.ui('drink_warm'));
   if (u.scare) parts.push(`${g.ix.ui('scare')} ${g.ix.c.traits[u.scare.trait]?.name ?? ''}`.trim());
   return parts.join(' · ');
 }
 
 export function blankHero(): Pick<
   PlayerState,
-  'level' | 'xp' | 'points' | 'stats' | 'perks' | 'perkChoice' | 'skills' | 'equip' | 'sets' | 'bag' | 'travel' | 'fight' | 'poison' | 'regenAt'
+  'level' | 'xp' | 'points' | 'stats' | 'perks' | 'perkChoice' | 'skills' | 'equip' | 'sets' | 'bag' | 'travel' | 'fight' | 'poison' | 'regenAt' | 'needs'
 > {
   const skills = {} as Record<SkillId, number>;
   for (const s of SKILLS) skills[s] = 0;
   const stats = {} as Record<StatId, number>;
   for (const s of STATS) stats[s] = 2;
-  return { level: 1, xp: 0, points: 0, stats, perks: [], perkChoice: null, skills, equip: {}, sets: {}, bag: {}, travel: null, fight: null, poison: 0, regenAt: 0 };
+  return { level: 1, xp: 0, points: 0, stats, perks: [], perkChoice: null, skills, equip: {}, sets: {}, bag: {}, travel: null, fight: null, poison: 0, regenAt: 0, needs: null };
 }
 
 /** Rest heals: one point every 15 s by the fire at home, every 45 s elsewhere (never in a fight). */
@@ -302,7 +305,13 @@ export function settleHealth(g: Game): boolean {
       p.regenAt = g.now;
       continue;
     }
-    const every = g.atHome(pid) ? REGEN_HOME : REGEN_AWAY;
+    // hungry or cold, wounds do not close; warmed through, faster
+    const speed = regenOf(g, pid);
+    if (speed <= 0) {
+      p.regenAt = g.now;
+      continue;
+    }
+    const every = (g.atHome(pid) ? REGEN_HOME : REGEN_AWAY) / speed;
     const n = Math.floor((g.now - p.regenAt) / every);
     if (n <= 0) continue;
     p.hp = Math.min(p.hpMax, p.hp + n);

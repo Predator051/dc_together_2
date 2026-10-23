@@ -1,5 +1,6 @@
 import type { ActionDef, ChoiceNode, DelveNode, Effect, PlayerId, PoolActionDef, SceneDef, StealthNode } from '../../../shared/src/content.js';
 import type {
+  NeedsView,
   ClueView,
   CostView,
   DeltaItem,
@@ -26,6 +27,8 @@ import { skillLevel, skillXpFor, xpForLevel } from '../../../shared/src/rules.js
 import { bagCap, bagLoad, gearNote, heroOf, ownsCount, useNote } from './hero.js';
 import { activeFoes, enemyOf, fightMoves, fightOf, holder } from './fight.js';
 import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, residentJobs, routeLegs, routeTo, travelTime, walkOf } from './travel.js';
+import { byFire, campBlock, chillRate, comfortOf, eatBlock, restBlock, restLength, tired } from './needs.js';
+import { NEED, coldLevel, mealFading } from '../../../shared/src/rules.js';
 
 const LOG_SEND = 120;
 
@@ -607,7 +610,7 @@ function bagView(g: Game, pid: PlayerId): BagView {
     .filter(([, n]) => n > 0)
     .map(([id, n]) => {
       const def = g.ix.res.get(id);
-      const note = def?.use ? useNote(g, id) : def?.gear ? gearNote(g, id) : undefined;
+      const note = def?.meal ? mealNote(g, id) : def?.use ? useNote(g, id) : def?.gear ? gearNote(g, id) : undefined;
       return {
         id,
         name: def?.name ?? id,
@@ -857,7 +860,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     .sort((a, b) => a.order - b.order)
     .map((r) => {
       const cap = g.cap(r.id);
-      const note = r.gear ? gearNote(g, r.id) : r.use ? useNote(g, r.id) : '';
+      const note = r.gear ? gearNote(g, r.id) : r.meal ? mealNote(g, r.id) : r.use ? useNote(g, r.id) : '';
       return {
         id: r.id,
         name: r.name,
@@ -1014,6 +1017,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     busyAction: me.busy && me.busy.until > g.now ? me.busy.action : null,
     hero: heroView(g, pid),
     bag: bagView(g, pid),
+    needs: needsView(g, pid),
     map: mapView(g, pid),
     fight: fightView(g, pid),
     nearFight: nearFight(g, pid),
@@ -1090,5 +1094,98 @@ function summaryView(g: Game, pid: PlayerId): SummaryView | null {
     trips: g.s.stats.trips,
     actions: { me: g.s.stats.actions[pid] ?? 0, partner: g.s.stats.actions[other] ?? 0 },
     gathered,
+  };
+}
+
+/** One line about a dish: «+4 здоров'я · 12 хв · гріє». */
+export function mealNote(g: Game, id: string): string {
+  const m = g.ix.res.get(id)?.meal;
+  if (!m) return '';
+  const parts = [`+${m.hp} ${g.ix.ui('st_hp_word')}`];
+  if (m.dmg) parts.push(`+${m.dmg} ${g.ix.ui('st_dmg_word')}`);
+  parts.push(`${m.minutes} ${g.ix.ui('min_short')}`);
+  if (m.warm) parts.push(g.ix.ui('meal_warm'));
+  return parts.join(' · ');
+}
+
+function needsView(g: Game, pid: PlayerId): NeedsView | null {
+  const p = g.p(pid);
+  const n = p.needs;
+  if (!n) return null;
+  const ui = (k: string) => g.ix.ui(k);
+  const MIN = 60_000;
+  const meals = n.meals.flatMap((m) => {
+    const def = g.ix.res.get(m.id);
+    if (!def?.meal) return [];
+    const full = def.meal.minutes * MIN;
+    return [{ id: m.id, name: def.name, ...(def.icon ? { icon: def.icon } : {}), left: m.left, full, fadeAt: full * NEED.fade, hp: def.meal.hp, ...(def.meal.dmg ? { dmg: def.meal.dmg } : {}) }];
+  });
+  const level = coldLevel(n.chill);
+  const fire = byFire(g, pid);
+  const effects: NeedsView['effects'] = [];
+  const fx = (id: string, good: boolean, text?: string) => effects.push({ id, name: ui(`need_${id}_name`), text: text ?? ui(`need_${id}_text`), good });
+  if (meals.length) {
+    let hp = 0;
+    let dmg = 0;
+    for (const m of meals) {
+      const half = m.left < m.fadeAt;
+      hp += half ? Math.ceil(m.hp / 2) : m.hp;
+      if (m.dmg && !half) dmg += m.dmg;
+    }
+    fx('fed', true, [`+${hp} ${ui('st_hp_word')}`, dmg ? `+${dmg} ${ui('st_dmg_word')}` : ''].filter(Boolean).join(', '));
+  } else fx('hungry', false);
+  if (level === 'warm') fx('warm', true);
+  if (level === 'cold') fx('cold', false);
+  if (level === 'frozen') fx('frozen', false);
+  if (n.wet > 0) fx('wet', false);
+  if (n.drink > 0) fx('drink', true);
+  if (n.rested > 0) fx('rested', true);
+  else if (tired(n)) fx('tired', false);
+  const home = g.atHome(pid);
+  const edible: NeedsView['edible'] = [];
+  const drinks: NeedsView['drinks'] = [];
+  for (const r of g.ix.c.resources) {
+    const count = (p.bag[r.id] ?? 0) + (home ? (g.s.res[r.id] ?? 0) : 0);
+    if (count <= 0) continue;
+    const icon = r.icon ? { icon: r.icon } : {};
+    if (r.meal) {
+      const block = eatBlock(g, pid, r.id);
+      edible.push({ id: r.id, name: r.name, ...icon, n: count, note: mealNote(g, r.id), can: !block && p.fight === null, ...(block ? { reason: block } : {}) });
+    } else if (r.use?.warm && r.use.anywhere) {
+      drinks.push({ id: r.id, name: r.name, ...icon, n: count, note: useNote(g, r.id) });
+    }
+  }
+  const c = g.ix.c.needs!;
+  const campB = home ? null : campBlock(g, pid);
+  const fireUntil = g.s.fires?.[p.at] ?? 0;
+  const restB = restBlock(g, pid);
+  return {
+    paused: g.sceneBlocksRoutine() || !p.online,
+    slots: NEED.slots,
+    meals,
+    warmth: Math.round(100 - n.chill),
+    rate: -chillRate(g, pid),
+    level,
+    wet: n.wet,
+    dry: fire ? NEED.dryByFire : 1,
+    drink: n.drink,
+    rested: n.rested,
+    awake: n.awake,
+    tiredAfter: NEED.tiredAfter,
+    fire,
+    effects,
+    edible,
+    drinks,
+    camp: home
+      ? null
+      : {
+          can: !campB,
+          ...(campB ? { reason: campB } : {}),
+          wood: p.bag[c.campWood] ?? 0,
+          need: NEED.campWood,
+          until: fireUntil > g.now ? fireUntil : null,
+        },
+    rest: { can: !restB, ...(restB ? { reason: restB } : {}), minutes: restLength(g, pid) },
+    comfort: home ? comfortOf(g, pid).filter((x) => x.on).map((x) => x.name) : [],
   };
 }

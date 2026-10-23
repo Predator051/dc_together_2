@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { PlayerView, SlotView } from '../../shared/src/protocol.js';
 import { net } from './net.js';
 import { Thing } from './items.js';
+import { NeedChips } from './needs.js';
 import { Sheet } from './sheet.js';
 import { T } from './strings.js';
 
@@ -191,6 +192,7 @@ function HeroCard({ v, onGrowth }: { v: PlayerView; onGrowth: () => void }) {
           </div>
         ))}
       </dl>
+      <NeedChips v={v} />
       {(d.resist.length > 0 || d.tools.length > 0) && (
         <p class="hero-also">
           {d.resist.length > 0 && (

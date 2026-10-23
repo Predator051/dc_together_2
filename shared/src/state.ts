@@ -65,6 +65,27 @@ export interface PlayerState {
   poison: number;
   /** Last time health was restored by rest. */
   regenAt: number;
+  /** Hunger, warmth and rest (null until they begin). Times are ms of play. */
+  needs: NeedsState | null;
+}
+
+export interface NeedsState {
+  /** Last time the needs were counted. */
+  at: number;
+  /** Dishes in the slots: ms left of each. */
+  meals: Array<{ id: string; left: number }>;
+  /** 0 = warm, 100 = frozen stiff. */
+  chill: number;
+  /** Wet for this long. */
+  wet: number;
+  /** A hot drink still helps for this long. */
+  drink: number;
+  /** Rested for this long. */
+  rested: number;
+  /** Play since the last rest. */
+  awake: number;
+  /** Last time freezing took health. */
+  bite: number;
 }
 
 export interface Snapshot {
@@ -253,6 +274,8 @@ export interface WorldState {
   seenRes: Record<string, number>;
   flags: Record<string, number>;
   stove: { fuel: number; lit: boolean };
+  /** Campfires burning away from home: area → when it goes out. */
+  fires?: Record<string, number>;
   scene: SceneState | null;
   proposal: Proposal | null;
   log: LogEntry[];

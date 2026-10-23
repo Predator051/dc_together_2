@@ -428,12 +428,17 @@ function validCommand(cmd: unknown): Command | null {
       return { c: c.c, id: x.id, n: x.n } as Command;
     }
     case 'use':
+    case 'eat':
     case 'stat':
     case 'perk':
     case 'fight':
       return typeof c.id === 'string' && c.id.length < 64 ? ({ c: c.c, id: c.id } as Command) : null;
     case 'help':
       return { c: 'help' };
+    case 'camp':
+      return { c: 'camp' };
+    case 'rest':
+      return { c: 'rest' };
     case 'job': {
       const x = cmd as { who?: unknown; id?: unknown };
       if (typeof x.who !== 'string' || x.who.length > 64) return null;

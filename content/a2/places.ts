@@ -45,6 +45,7 @@ export const areas2: AreaDef[] = [
   },
   {
     id: A2.bog,
+    wet: true,
     name: 'Іржаві мочари',
     where: 'на мочарах',
     scene: 'bog',

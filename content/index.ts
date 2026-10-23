@@ -13,6 +13,8 @@ import { scenes1 } from './a1/scenes.js';
 import { ambient } from './ambient.js';
 import { hero, perks, roleTitles, traits } from './core.js';
 import { ui } from './ui.js';
+import { needs, needs1Actions, needs1Fx, needs1Resources } from './a1/needs.js';
+import { needs2Actions, needs2Fx, needs2Resources } from './a2/needs.js';
 import { actions2 as actionsA2, fx2 } from './a2/actions.js';
 import { enemies2 } from './a2/enemies.js';
 import { clues2, goals2, mysteries2, npcs2 } from './a2/journal.js';
@@ -24,8 +26,8 @@ import { scenesA2b } from './a2/scenes2.js';
 
 export const content: Content = {
   areas: [...areas, ...areas2],
-  resources: [...resources, ...resources2],
-  actions: [...actions, ...actions2, ...actionsA2],
+  resources: [...resources, ...resources2, ...needs1Resources, ...needs2Resources],
+  actions: [...actions, ...actions2, ...actionsA2, ...needs1Actions, ...needs2Actions],
   pools,
   locations: [...locations, ...locations2],
   scenes: [...scenes1, ...scenes2, ...scenesA2, ...scenesA2b, ...suppersA2],
@@ -42,7 +44,8 @@ export const content: Content = {
   dog: { flag: 'p2_dog_back', name: 'Сірко' },
   food: R.food,
   stove: { perWood: 4 * 60 * 1000, maxWood: 8, coldPenalty: 1.3, low: 60 * 1000 },
-  ambient: { ...ambient, areas: { ...ambient.areas, a_10: 'hill', a_11: 'river', a_12: 'marsh' }, actions: { ...ambient.actions, ...fx2 } },
+  needs,
+  ambient: { ...ambient, areas: { ...ambient.areas, a_10: 'hill', a_11: 'river', a_12: 'marsh' }, actions: { ...ambient.actions, ...fx2, ...needs1Fx, ...needs2Fx } },
   maps: [],
   start: { resources: {}, hp: 22, area: A.shore },
   storyFlags: ['p2_', 'done:s_', 'legacy'],
