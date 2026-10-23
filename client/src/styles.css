@@ -622,6 +622,115 @@ b {
   color: var(--ink-2);
   white-space: nowrap;
 }
+/* the home garden: beds in a grid, a strip about the water, the seeds to sow */
+.garden {
+  margin: 0 0 14px;
+}
+.garden-water {
+  margin: 0 0 10px;
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  color: var(--faded);
+}
+.garden-water.wet {
+  color: var(--gall);
+}
+.beds {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 8px;
+}
+.bed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 78px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule-2);
+  border-radius: 8px;
+  background: linear-gradient(to top, rgba(92, 70, 45, 0.35), rgba(92, 70, 45, 0.12));
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  text-align: left;
+}
+button.bed {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+button.bed:focus-visible {
+  outline: 2px solid var(--ochre);
+}
+.bed.empty {
+  border-style: dashed;
+  color: var(--faded);
+}
+.bed.empty.on {
+  border-color: var(--ochre);
+  border-style: solid;
+}
+.bed.ready {
+  border-color: var(--verdigris);
+  box-shadow: inset 0 0 0 1px rgba(141, 176, 143, 0.35);
+}
+.bed.ready .bed-note {
+  color: var(--verdigris);
+  font-weight: 600;
+}
+.bed-name {
+  display: inline-flex;
+  align-items: center;
+}
+.bed-note {
+  font-size: 0.82rem;
+  color: var(--faded);
+}
+.bed-bar {
+  width: 100%;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--rule);
+  overflow: hidden;
+}
+.bed-bar i {
+  display: block;
+  height: 100%;
+  background: var(--verdigris);
+  transition: width 1s linear;
+}
+.sow {
+  margin-top: 10px;
+}
+.sow-head {
+  margin: 0 0 8px;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+.sow-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sow-seed {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+}
+.sow-meta {
+  font-size: 0.8rem;
+  color: var(--faded);
+  font-weight: 400;
+}
+.garden-hint {
+  margin: 8px 0 0;
+  font-family: var(--sans);
+  font-size: 0.84rem;
+  color: var(--faded);
+}
+
 /* a small happening: a card at the top of the place, waiting for an answer */
 .panel.event {
   margin: 0 0 14px;

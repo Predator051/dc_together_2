@@ -44,6 +44,8 @@ export type Cond =
   | { weather: string }
   /** This resident lives in the household. */
   | { resident: string }
+  /** This thing has been in the store at least once. */
+  | { seen: string }
   | { all: Cond[] }
   | { any: Cond[] }
   | { not: Cond };
@@ -115,6 +117,8 @@ export type Effect =
   | { fight: Array<{ enemy: string; n?: number }> }
   /** A perk (usually an errand's) for the target(s). */
   | { perk: string; who?: EffectTarget }
+  /** Water the home garden (it grows faster while moist). */
+  | { garden: 'water' }
   | { if: Cond; then: Effect[]; else?: Effect[] };
 
 export interface ResourceDef {
@@ -798,6 +802,31 @@ export interface NeedsDef {
   campLight?: string;
 }
 
+/** A crop of the home garden: planted from its seed, grows in real time (also while nobody plays). */
+export interface CropDef {
+  id: string;
+  /** What goes into the ground (one, from the store). */
+  seed: string;
+  /** Growing time at the plain pace (dry, calm weather), ms. */
+  grows: number;
+  /** What a ripe bed gives (into the store). */
+  yield: Record<string, number | [number, number]>;
+}
+
+export interface GardenDef {
+  /** The home place whose panel shows the beds. */
+  group: string;
+  /** How many beds there are: the largest `n` whose condition holds. */
+  beds: Array<{ if: Cond; n: number }>;
+  crops: CropDef[];
+  /** Watering keeps the beds moist this long, and moist they grow this many times as fast. */
+  wetFor: number;
+  wet: number;
+  /** The action residents can be set to: they keep the beds watered while the store has `water`. */
+  tend?: string;
+  water: string;
+}
+
 /** One way an event can go (picked by weight when a choice has several). */
 export interface EventOutcome {
   w?: number;
@@ -883,6 +912,9 @@ export interface WeatherDef {
   xp?: number;
   /** Some kinds of work (by their accent) sometimes yield one more. */
   bonus?: { fx: FxKind[]; p: number; text: string };
+  /** The garden grows this many times as fast; rain waters it. */
+  grow?: number;
+  waters?: boolean;
 }
 
 export interface WeatherSetDef {
@@ -967,6 +999,7 @@ export interface Content {
   needs?: NeedsDef;
   weather?: WeatherSetDef;
   events?: EventSetDef;
+  garden?: GardenDef;
   ambient?: AmbientDef;
   maps?: DelveMapDef[];
   /** Applied every time a new day starts (after a supper). */

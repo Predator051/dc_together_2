@@ -35,6 +35,7 @@ export const weather: WeatherSetDef = {
       chill: 2,
       dry: 0,
       jobs: 0.85,
+      waters: true,
       bonus: { fx: ['fish', 'water'], p: 0.35, text: 'У дощ риба й раки беруться краще' },
     },
     {
@@ -49,6 +50,7 @@ export const weather: WeatherSetDef = {
       chill: 4,
       dry: 0,
       jobs: 0.6,
+      waters: true,
     },
     {
       id: 'w_fog',
@@ -71,6 +73,7 @@ export const weather: WeatherSetDef = {
       frozen: true,
       travel: 0.9,
       jobs: 0.9,
+      grow: 0.5,
       bonus: { fx: ['chop'], p: 0.35, text: 'Мерзле гілля ламається легше' },
     },
     {
@@ -82,6 +85,7 @@ export const weather: WeatherSetDef = {
       pace: 1.1,
       chill: -3,
       dry: 2,
+      grow: 1.25,
       bonus: { fx: ['rubble'], p: 0.3, text: 'Суха земля копається легше' },
     },
   ],

@@ -32,6 +32,7 @@ import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, residentJobs, routeLe
 import { byFire, campBlock, chillRate, comfortOf, dryOf, eatBlock, restBlock, restLength, tired } from './needs.js';
 import { outside, weatherNow } from './weather.js';
 import { eventsView } from './events.js';
+import { bedCount, gardenView } from './garden.js';
 import { NEED, coldLevel, mealFading } from '../../../shared/src/rules.js';
 
 const LOG_SEND = 120;
@@ -801,7 +802,8 @@ function residentsView(g: Game, pid: PlayerId): ResidentView[] {
           id: j.id,
           label: g.render(a.label, pid),
           place: areaDef(g, j.area)?.name ?? j.area,
-          rate: Math.round(a.job!.rate * per * mult),
+          // at the garden: water a hour, not a yield
+          rate: a.id === g.ix.c.garden?.tend ? a.job!.rate : Math.round(a.job!.rate * per * mult),
           ...(j.missing ? { reason: `${g.ix.ui('job_needs')} ${g.ix.ui(`tool_${j.missing}`)}` } : {}),
         };
       });
@@ -1029,6 +1031,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     needs: needsView(g, pid),
     weather: weatherView(g, pid),
     events: eventsView(g, pid, (c) => costView(g, c, pid)),
+    garden: gardenView(g, pid),
     map: mapView(g, pid),
     fight: fightView(g, pid),
     nearFight: nearFight(g, pid),
@@ -1137,6 +1140,10 @@ function weatherView(g: Game, pid: PlayerId): WeatherView | null {
     if (w.chill) add(w.chill > 0 ? 'wx_cold' : 'wx_warm', w.chill < 0);
     if (k(w.dry)) add(w.dry === 0 ? 'wx_no_dry' : w.dry! > 1 ? 'wx_dry_fast' : 'wx_dry_slow', w.dry! > 1);
     if (w.frozen && g.flag('wet_feet')) add('wx_frozen', true);
+  }
+  if (bedCount(g) > 0) {
+    if (w.waters) add('wx_garden_rain', true);
+    if (k(w.grow)) add(w.grow! > 1 ? 'wx_garden_fast' : 'wx_garden_slow', w.grow! > 1, pct(w.grow!));
   }
   if (k(w.jobs) && Object.keys(g.s.residents).length) add(w.jobs! < 1 ? 'wx_jobs_slow' : 'wx_jobs_fast', w.jobs! > 1, pct(w.jobs!));
   const next = g.ix.c.weather!.kinds.find((x) => x.id === st.next);

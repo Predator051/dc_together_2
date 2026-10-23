@@ -50,6 +50,7 @@ export const SPOT_ICONS = [
   'ore',
   'peat',
   'berry',
+  'garden',
 ] as const;
 export type SpotIcon = (typeof SPOT_ICONS)[number];
 
@@ -69,5 +70,6 @@ export const ITEM_ICONS = [
   'thyme', 'soup', 'driedfish', 'tea', 'tarboots', 'millet', 'porridge',
   'feather', 'osier', 'viperskin', 'fat', 'oar', 'boat', 'block', 'mark', 'level', 'grapnel', 'buckle', 'bighook', 'lamp',
   'key', 'lyre', 'paw', 'bag', 'book', 'ladle', 'whistle', 'honey',
+  'garlic', 'beet', 'seeds', 'flax', 'pumpkin', 'borscht',
 ] as const;
 export type ItemIcon = (typeof ITEM_ICONS)[number];

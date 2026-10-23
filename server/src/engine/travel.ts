@@ -5,6 +5,7 @@ import { bagCap, bagLoad, gainSkill, heroOf, skillOf, unloadBag } from './hero.j
 import { startFight } from './fight.js';
 import { skyAt, weatherNow } from './weather.js';
 import { roadEvent } from './events.js';
+import { tendGarden } from './garden.js';
 import type { Game, Result } from './index.js';
 import { paceOf, soakByPlace } from './needs.js';
 
@@ -260,6 +261,11 @@ export function settleWork(g: Game): boolean {
     mult *= skyAt(g, g.ix.areaOf(a.group))?.jobs ?? 1;
     for (const b of g.ix.c.workBonus ?? []) if (g.test(b.if)) mult *= b.mult;
     const units = a.job.rate * hours * mult;
+    // at the garden: watering, not gathering
+    if (a.id === g.ix.c.garden?.tend) {
+      if (tendGarden(g, units)) changed = true;
+      continue;
+    }
     for (const [res, y] of Object.entries(a.yield ?? {})) {
       const per = Array.isArray(y) ? (y[0] + y[1]) / 2 : y;
       const total = (r.acc[res] ?? 0) + units * per;

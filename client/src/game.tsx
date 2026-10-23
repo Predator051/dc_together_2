@@ -18,6 +18,7 @@ import { Thing } from './items.js';
 import { NeedsBar, NeedsSheet } from './needs.js';
 import { WeatherChip } from './weather.js';
 import { EventCards } from './events.js';
+import { GardenBeds } from './garden.js';
 
 type Tab = 'work' | 'map' | 'hero' | 'notes' | 'log';
 
@@ -254,6 +255,7 @@ function Group({ g, c }: { g: GroupView; c: Ctx }) {
           </div>
         )}
       </header>
+      {c.v.garden && c.v.garden.group === g.id && <GardenBeds v={c.v} offset={c.offset} locked={c.locked} />}
       <div class="tiles">
         {g.entries.map((e) => (
           <Entry key={e.id} e={e} c={c} />
@@ -649,6 +651,9 @@ export function Game({ s }: { s: NetState }) {
     const [spots, rest] = groupSpots(groups, (g) => <Group g={g} c={ctx} />);
     if (spots.length > 0) {
       const gate = spots.findIndex((x) => x.id === 'paths');
+      // ripe beds count as things to do in the garden
+      const gardenSpot = v.garden && spots.find((x) => x.id === v.garden!.group);
+      if (gardenSpot) gardenSpot.ready += v.garden!.beds.filter((b) => b.ready).length;
       const extra: Spot[] = [];
       if (v.atHome && v.residents.length > 0) {
         const warn = v.residents.some((r) => r.hungry || r.hurt);

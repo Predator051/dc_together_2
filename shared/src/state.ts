@@ -281,6 +281,8 @@ export interface WorldState {
     open: Array<{ uid: number; id: string; pid: PlayerId | null; area: string; at: number }>;
     uid: number;
   };
+  /** The home garden: what grows in each bed and how far, until when it is watered, when last counted. */
+  garden?: { beds: Array<{ crop: string | null; grown: number }>; wetUntil: number; at: number };
   /** The weather now, until when it holds, and what comes after it. */
   weather?: { id: string; until: number; next: string };
   /** Campfires burning away from home: area → when it goes out. */

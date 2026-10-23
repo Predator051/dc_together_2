@@ -41,7 +41,10 @@ export type Command =
   /** Rest by a fire: at home or at a campfire. */
   | { c: 'rest' }
   /** Answer a small happening (the card's uid and the choice's index). */
-  | { c: 'event'; uid: number; choice: number };
+  | { c: 'event'; uid: number; choice: number }
+  /** The home garden: sow a seed into an empty bed, gather a ripe one. */
+  | { c: 'plant'; bed: number; crop: string }
+  | { c: 'harvest'; bed: number };
 
 export type ClientMsg =
   | { t: 'hello'; token: string }
@@ -574,6 +577,20 @@ export interface SummaryView {
   gathered: DeltaItem[];
 }
 
+/** The home garden (at home, once there are beds). Growth is counted on by the client from `rate`. */
+export interface GardenView {
+  group: string;
+  beds: Array<{ crop: { id: string; name: string; icon?: string } | null; grown: number; grows: number; ready: boolean }>;
+  /** How many times as fast it grows right now (water, weather). */
+  rate: number;
+  /** Server time until the beds stay moist (0: dry). */
+  wetUntil: number;
+  /** Rain does the watering now. */
+  rain: boolean;
+  /** Seeds in the store, by crop. */
+  seeds: Array<{ crop: string; name: string; icon?: string; have: number; grows: number; gives: string }>;
+}
+
 /** A small happening waiting for an answer. */
 export interface EventView {
   uid: number;
@@ -624,6 +641,7 @@ export interface PlayerView {
   needs: NeedsView | null;
   weather: WeatherView | null;
   events: EventView[];
+  garden: GardenView | null;
   map: MapView;
   fight: FightView | null;
   /** A fight of the partner where you stand (you may join). */

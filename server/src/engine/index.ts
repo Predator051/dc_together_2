@@ -36,6 +36,7 @@ import { PART, STATE_VERSION } from '../../../shared/src/state.js';
 import { gatherMult } from '../../../shared/src/rules.js';
 import { settleWeather, skyFor, turnWeather, weatherNow } from './weather.js';
 import { answerEvent, placeEvent, settleEvents } from './events.js';
+import { harvest, plant, settleGarden, waterGarden } from './garden.js';
 import {
   addBag,
   blankHero,
@@ -270,7 +271,8 @@ export class Game {
     const c = settleHealth(this);
     const w = settleWeather(this);
     const e = settleEvents(this);
-    return a || b || c || n || w || e;
+    const gr = settleGarden(this);
+    return a || b || c || n || w || e || gr;
   }
 
   // ----- conditions ----------------------------------------------------------
@@ -331,6 +333,7 @@ export class Game {
     if ('evening' in c) return this.isEvening() === c.evening;
     if ('weather' in c) return weatherNow(this)?.id === c.weather;
     if ('resident' in c) return !!this.s.residents[c.resident];
+    if ('seen' in c) return !!this.s.seenRes[c.seen];
     return false;
   }
 
@@ -650,6 +653,10 @@ export class Game {
           else addBag(this, pid, r, n);
         }
       }
+      return;
+    }
+    if ('garden' in e) {
+      waterGarden(this);
       return;
     }
     if ('fight' in e) {
@@ -1583,6 +1590,12 @@ export class Game {
         break;
       case 'event':
         r = answerEvent(this, pid, cmd.uid, cmd.choice);
+        break;
+      case 'plant':
+        r = plant(this, pid, cmd.bed, cmd.crop);
+        break;
+      case 'harvest':
+        r = harvest(this, pid, cmd.bed);
         break;
       case 'act': {
         const e = this.ix.entry(cmd.id);

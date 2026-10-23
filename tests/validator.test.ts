@@ -25,6 +25,18 @@ describe('content validator', () => {
     expect(errs.some((e) => e.includes('unknown weather w_none'))).toBe(true);
   });
 
+  it('the garden is checked: seeds, harvests, the tending job', () => {
+    const c = clone();
+    const gd = c.garden!;
+    gd.crops[0]!.seed = 'r_none';
+    gd.crops[1]!.yield = { r_nowhere: 1 };
+    gd.tend = 'x_201';
+    const errs = validateContent(c).errors;
+    expect(errs).toContain(`crop ${gd.crops[0]!.id}: unknown seed r_none`);
+    expect(errs.some((e) => e.includes(`crop ${gd.crops[1]!.id}: unknown resource r_nowhere`))).toBe(true);
+    expect(errs).toContain('garden: the tending action x_201 is not a job');
+  });
+
   it('happenings are checked: places, choices, costs', () => {
     const c = clone();
     const ev = c.events!.kinds;

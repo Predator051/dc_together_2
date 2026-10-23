@@ -315,6 +315,14 @@ const PICS: Record<SpotIcon, () => JSX.Element> = {
       <path d="M24 14l3-6M27 8l1 3" />
     </Pic>
   ),
+  garden: () => (
+    <Pic>
+      <path d="M4 22h24M4 27h24" />
+      <path d="M9 22c0-3 1.2-5 3.4-6M9 22c0-2.2-1-4-3.2-5" />
+      <path d="M16 22c0-3.5 1.2-6 3.6-7M16 22c0-2.5-1.1-4.5-3.4-5.5" />
+      <path d="M23 22c0-3 1.2-5 3.4-6M23 22c0-2.2-1-4-3.2-5" />
+    </Pic>
+  ),
   berry: () => (
     <Pic>
       <path d="M16 4c-1 4-4 7-8 9M16 4c2 4 5 6 8 7M16 4v9" />

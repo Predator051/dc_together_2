@@ -64,6 +64,12 @@ npm run typecheck
   строка журнала и эффекты сразу; с выбором — карточка (`WorldState.events.open`), команда `event`.
   Домашнюю карточку видят и решают оба, кто дома; чужую — только тот герой, пока он на месте.
   Не в бою и не в общей сцене. Условие `{resident: id}`. `heal` с минусом не роняет ниже 1.
+- **Город (`engine/garden.ts`, `content/garden.ts`)**: `GardenDef {group, beds[{if, n}], crops[{id,
+  seed, grows, yield}], wetFor, wet, tend, water}`; `WorldState.garden {beds[{crop, grown}], wetUntil, at}`.
+  Растёт в реальном времени (и офлайн) в `settleGarden`: полито — ×`wet`, погода `grow`/`waters`;
+  ничего не вянет. Команды `plant {bed, crop}` / `harvest {bed}` (дома; семя из коморы, урожай в комору).
+  Эффект `{garden: 'water'}` (действие «Полити»); житель на `tend` поливает из коморы. Грядки — внутри
+  места `group` (клиент `client/src/garden.tsx`). Условие `{seen: res}` (было в коморе хоть раз).
 - Новые эффекты: `xp`, `resident`, `checkpoint` (снимок мира в архив БД), `give` (в торбу),
   `wear` (надеть), `fight` (начать бой). Новые условия: `level`, `tool`, `owns`, `trait`, `met`,
   `evening`. Движок сам ставит флаг `bag_full`.
@@ -126,7 +132,7 @@ npm run typecheck
 
 Условия: `flag` (с `gte`/`lt`), `noFlag`, `pflag`, `noPflag`, `partnerPflag`, `res`, `day`,
 `role`, `clue` (у смотрящего), `anyClue`, `partnerJoined`, `partnerOnline`, `stove`, `rel`,
-`weather`, `resident`, `all`/`any`/`not`.
+`weather`, `resident`, `seen`, `all`/`any`/`not`.
 
 Эффекты: `set`, `unset`, `inc` (`by`, `max`), `pset` (`who: actor|both|hunter|maker`), `add`, `take`, `clue`,
 `log`, `mystery` (поднять уровень), `rel`, `meet`, `scene` (только из сцен — цепочка),

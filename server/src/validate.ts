@@ -243,6 +243,7 @@ export function validateContent(c: Content): Report {
       if ('met' in x && !enemies.has(x.met)) err(`${where}: unknown enemy ${x.met}`);
       if ('weather' in x && !c.weather?.kinds.some((k) => k.id === x.weather)) err(`${where}: unknown weather ${x.weather}`);
       if ('resident' in x && !residentIds.has(x.resident)) err(`${where}: unknown resident ${x.resident}`);
+      if ('seen' in x && !res.has(x.seen)) err(`${where}: unknown resource ${x.seen}`);
     }
   };
   const checkEffects = (where: string, effs: Effect[], inScene: boolean) => {
@@ -366,6 +367,24 @@ export function validateContent(c: Content): Report {
   }
 
   // Actions
+  if (c.garden) {
+    const gd = c.garden;
+    if (!locs.has(gd.group)) err(`garden: unknown place ${gd.group}`);
+    if (!res.has(gd.water)) err(`garden: unknown resource ${gd.water}`);
+    for (const b of gd.beds) checkCond('garden beds', b.if);
+    const ids = new Set<string>();
+    for (const cr of gd.crops) {
+      const w = `crop ${cr.id}`;
+      if (ids.has(cr.id)) err(`${w}: duplicate id`);
+      ids.add(cr.id);
+      if (!res.has(cr.seed)) err(`${w}: unknown seed ${cr.seed}`);
+      checkRes(w, cr.yield);
+      if (!(cr.grows > 0)) err(`${w}: growing time must be positive`);
+    }
+    if (gd.tend && !c.actions.find((a) => a.id === gd.tend)?.job) err(`garden: the tending action ${gd.tend} is not a job`);
+    if (!(gd.wet >= 1) || !(gd.wetFor > 0)) err('garden: bad watering');
+  }
+
   if (c.events) {
     const ev = c.events;
     checkCond('events', ev.from);
@@ -419,7 +438,8 @@ export function validateContent(c: Content): Report {
     cs.forEach((x) => checkCond(w, x));
     if (!a.log && !(a.beats && a.beats.length)) warnings.push(`${w}: no log text`);
     if (a.tool && !toolKinds.has(a.tool)) err(`${w}: no gear provides tool ${a.tool}`);
-    if (a.job && (!a.yield || a.cost)) err(`${w}: a job must yield and cost nothing`);
+    // tending the garden is the one job that yields nothing (residents water it from the store)
+    if (a.job && a.id !== c.garden?.tend && (!a.yield || a.cost)) err(`${w}: a job must yield and cost nothing`);
     for (const id of Object.keys(a.yield ?? {})) {
       const def = c.resources.find((r) => r.id === id);
       if (def?.kind === 'gear' && a.kind !== 'craft' && a.kind !== 'trade') warnings.push(`${w}: yields gear but is not a craft`);
@@ -786,6 +806,15 @@ export function renewable(c: Content, reachableActions: Set<string>, reachableAr
           changed = true;
         }
     }
+    // a crop keeps going as long as its seed can be had again (most give their seed back)
+    for (const cr of c.garden?.crops ?? []) {
+      if (!usable(cr.seed)) continue;
+      for (const k of Object.keys(cr.yield))
+        if (!out.has(k)) {
+          out.add(k);
+          changed = true;
+        }
+    }
   }
   return out;
 }
@@ -820,6 +849,7 @@ function simulate(c: Content) {
     if ('worn' in cond) return have.has(cond.worn);
     if ('tool' in cond) return toolOf(cond.tool);
     if ('met' in cond) return met.has(cond.met);
+    if ('seen' in cond) return have.has(cond.seen);
     if ('trait' in cond) return [...met].some((id) => [...(enemies.get(id)?.traits ?? []), ...(enemies.get(id)?.hidden ?? [])].includes(cond.trait as never));
     return true;
   };
@@ -893,6 +923,9 @@ function simulate(c: Content) {
       if (a.kind === 'craft' || a.kind === 'build') mark(flags, `made:${a.id}`);
       if (absorb(actionEffects(a))) changed = true;
     }
+    // the garden: once there are beds, every crop whose seed is at hand gives its harvest
+    if (c.garden && c.garden.beds.some((b) => ok(b.if)))
+      for (const cr of c.garden.crops) if (have.has(cr.seed)) for (const k of Object.keys(cr.yield)) mark(have, k);
     const poolOpen = new Set<string>();
     for (const p of c.pools) if (locations.has(p.group) && ok(p.visible) && ok(p.enabled) && canPay(p.cost)) poolOpen.add(p.pool);
     for (const s of c.scenes) {

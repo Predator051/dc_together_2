@@ -63,6 +63,14 @@ export class Bot {
     }
     if (v.busyUntil > v.now || v.map.travel) return null;
     if (v.nearFight) return { c: 'help' };
+    // the garden: gather what is ripe, sow what there is seed for (keeping one of each back)
+    if (v.garden) {
+      const ripe = v.garden.beds.findIndex((b) => b.ready);
+      if (ripe >= 0) return { c: 'harvest', bed: ripe };
+      const empty = v.garden.beds.findIndex((b) => !b.crop);
+      const seed = v.garden.seeds.find((x) => x.have > 1);
+      if (empty >= 0 && seed) return { c: 'plant', bed: empty, crop: seed.crop };
+    }
 
     const idle = v.residents.find((r) => !r.job && r.jobs.some((j) => !j.reason) && !r.hurt);
     if (idle) {
