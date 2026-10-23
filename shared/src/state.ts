@@ -48,7 +48,17 @@ export interface PlayerState {
   /** What the hero carries (taken from the place or packed at home). */
   bag: Record<string, number>;
   /** On the way somewhere. */
-  travel: { from: string; to: string; since: number; until: number } | null;
+  travel: {
+    from: string;
+    to: string;
+    since: number;
+    until: number;
+    /** A longer walk: the stops still ahead after `to`, each with its walking time. */
+    route?: Array<[string, number]>;
+    /** When the whole walk began and when it ends. */
+    begin?: number;
+    end?: number;
+  } | null;
   /** In a fight (id). */
   fight: number | null;
   /** Poison ticks left. */

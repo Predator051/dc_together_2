@@ -25,7 +25,7 @@ import type { BagView, BeastView, FightView, HeroView, MapView, ResidentView } f
 import { skillLevel, skillXpFor, xpForLevel } from '../../../shared/src/rules.js';
 import { bagCap, bagLoad, gearNote, heroOf, ownsCount, useNote } from './hero.js';
 import { activeFoes, enemyOf, fightMoves, fightOf, holder } from './fight.js';
-import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, residentJobs, travelTime } from './travel.js';
+import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, residentJobs, routeLegs, routeTo, travelTime, walkOf } from './travel.js';
 
 const LOG_SEND = 120;
 
@@ -639,6 +639,7 @@ function mapView(g: Game, pid: PlayerId): MapView {
       here: p.at === a.id && !p.travel,
       partner: o.joined && o.at === a.id && !o.travel,
       home: !!a.home,
+      ...(known && a.scene ? { icon: a.scene } : {}),
       danger: known ? (a.danger ?? 0) : 0,
       foes: known
         ? [...new Set((a.foes ?? []).filter((f) => (g.s.bestiary[f.enemy]?.seen ?? 0) > 0).map((f) => f.enemy))].map((id) => {
@@ -648,11 +649,18 @@ function mapView(g: Game, pid: PlayerId): MapView {
         : [],
       ...(known && a.desc ? { desc: g.render(a.desc, pid) } : {}),
     };
-    if (a.id !== p.at && linkTime(g, p.at, a.id) !== null) {
-      if (known) {
-        const block = goBlock(g, pid, a.id, true);
-        node.go = { time: travelTime(g, pid, p.at, a.id), enabled: block === null, ...(block ? { reason: block } : {}) };
-      } else if (a.scout) {
+    const route = known && a.id !== p.at ? routeTo(g, p.at, a.id) : null;
+    if (route) {
+      // further places are reached through the near ones: the walks add up
+      const block = goBlock(g, pid, a.id, true);
+      node.go = {
+        time: routeLegs(g, pid, p.at, route).reduce((s, [, t]) => s + t, 0),
+        enabled: block === null,
+        ...(block ? { reason: block } : {}),
+        ...(route.length > 1 ? { via: route.slice(0, -1) } : {}),
+      };
+    } else if (!known && a.id !== p.at && linkTime(g, p.at, a.id) !== null) {
+      if (a.scout) {
         const sc = g.ix.scenes.get(a.scout);
         if (sc && g.sceneOrPoolVisible(sc, pid)) {
           const block = g.proposalBlock(sc, pid);
@@ -667,10 +675,12 @@ function mapView(g: Game, pid: PlayerId): MapView {
     }
     nodes.push(node);
     for (const l of a.links ?? []) {
-      if (areaOnMap(g, l.to) && (known || areaKnown(g, l.to))) links.push([a.id, l.to]);
+      if (!areaOnMap(g, l.to) || !(known || areaKnown(g, l.to))) continue;
+      // a way written down at both ends is still one way
+      if (!links.some(([x, y]) => (x === a.id && y === l.to) || (x === l.to && y === a.id))) links.push([a.id, l.to]);
     }
   }
-  const tr = p.travel;
+  const tr = p.travel ? walkOf(p.travel) : null;
   return {
     nodes,
     links,
@@ -894,8 +904,9 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
   if (o.fight !== null) {
     partnerBusy = { text: g.render(ui('partner_fighting'), pid, other), from: g.now, until: g.now };
   } else if (o.travel) {
-    const to = areaDef(g, o.travel.to);
-    partnerBusy = { text: `${g.render(ui('partner_walks'), pid, other)} ${to?.name ?? ''}`.trim(), from: o.travel.since, until: o.travel.until };
+    const walk = walkOf(o.travel);
+    const to = areaDef(g, walk.to);
+    partnerBusy = { text: `${g.render(ui('partner_walks'), pid, other)} ${to?.name ?? ''}`.trim(), from: walk.since, until: walk.until };
   } else if (o.busy && o.busy.until > g.now) {
     const a = g.ix.actions.get(o.busy.action);
     if (a?.busy) {
@@ -1020,7 +1031,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
 function busyFrom(g: Game, pid: PlayerId): number {
   const me = g.p(pid);
   if (!me.busy || me.busy.until <= g.now) return 0;
-  if (me.travel) return me.travel.since;
+  if (me.travel) return walkOf(me.travel).since;
   const a = g.ix.actions.get(me.busy.action);
   if (a) return me.busy.until - g.actionTime(a, pid);
   if (me.busy.action.startsWith('rest:')) return me.busy.until - 60_000;

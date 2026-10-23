@@ -656,7 +656,7 @@ export function Game({ s }: { s: NetState }) {
               {!v.bag.items.length && <p class="empty-note">{T.bagEmpty}</p>}
               <Stock v={v} />
             </>
-          )),
+          ), false, { load: v.bag.load, cap: v.bag.cap }),
         );
       }
       if (!desktop && v.atHome) {
@@ -667,7 +667,7 @@ export function Game({ s }: { s: NetState }) {
               <PackList v={v} locked={locked} />
               <Stock v={v} />
             </>
-          )),
+          ), false, v.bag.items.length ? { load: v.bag.load, cap: v.bag.cap } : undefined),
         );
       }
       // the way out stays last

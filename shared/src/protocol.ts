@@ -369,11 +369,13 @@ export interface MapNodeView {
   here: boolean;
   partner: boolean;
   home: boolean;
+  /** Its mark (the ground it is drawn on), once known. */
+  icon?: string;
   danger: number;
   /** Known foes of the place. */
   foes: Array<{ name: string; icon: string }>;
   /** Can walk there from here now, and how long it takes. */
-  go?: { time: number; enabled: boolean; reason?: string };
+  go?: { time: number; enabled: boolean; reason?: string; via?: string[] };
   /** A joint scouting scene to propose from here. */
   scout?: { id: string; label: string; enabled: boolean; reason?: string };
   desc?: string;

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { FightView, MapNodeView, PlayerView } from '../../shared/src/protocol.js';
 import { net } from './net.js';
+import { MapIcon } from './mapicons.js';
 import { Portrait } from './portraits.js';
 import { Thing } from './items.js';
 import { sound } from './sound.js';
@@ -70,8 +71,13 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
   const CELL = Math.max(52, Math.min(104, Math.floor((width - 2 * PAD_X) / cols)));
   const w = cols * CELL + 2 * PAD_X;
   const h = rows * CELL + PAD_B;
+  // a node is big enough for its mark, yet leaves room for the names on a narrow phone
+  const R = CELL >= 70 ? 17 : 15;
   const pos = (n: MapNodeView) => ({ x: PAD_X + (n.x - minX + 0.5) * CELL, y: (n.y - minY + 0.5) * CELL });
   const byId = new Map(m.nodes.map((n) => [n.id, n]));
+  // the way to a far place goes through the near ones: show it
+  const way = picked?.go && here ? [here.id, ...(picked.go.via ?? []), picked.id] : [];
+  const onWay = (a: string, b: string) => way.some((id, i) => i > 0 && ((way[i - 1] === a && id === b) || (way[i - 1] === b && id === a)));
   return (
     <div class="mapview">
       {m.travel && (
@@ -93,7 +99,24 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
           if (!na || !nb) return null;
           const pa = pos(na);
           const pb = pos(nb);
-          return <line class={`map-link ${na.known && nb.known ? '' : 'faint'}`} x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} />;
+          const cls = `map-link ${na.known && nb.known ? '' : 'faint'} ${onWay(a, b) ? 'way' : ''}`;
+          // a way that would run over another place bends around it, so it does not seem to lead through
+          const dx = pb.x - pa.x;
+          const dy = pb.y - pa.y;
+          const len = Math.hypot(dx, dy) || 1;
+          const over = m.nodes.some((n) => {
+            if (n.id === a || n.id === b) return false;
+            const q = pos(n);
+            const t = ((q.x - pa.x) * dx + (q.y - pa.y) * dy) / (len * len);
+            if (t <= 0.05 || t >= 0.95) return false;
+            return Math.hypot(pa.x + t * dx - q.x, pa.y + t * dy - q.y) < R + 8;
+          });
+          if (!over) return <line class={cls} x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y} />;
+          // the middle of the curve passes half the bend away: well clear of the place in between
+          const bend = Math.max(CELL * 0.6, 2 * (R + 14));
+          const cx = (pa.x + pb.x) / 2 + (-dy / len) * bend;
+          const cy = (pa.y + pb.y) / 2 + (dx / len) * bend;
+          return <path class={cls} fill="none" d={`M${pa.x} ${pa.y}Q${cx} ${cy} ${pb.x} ${pb.y}`} />;
         })}
         {m.nodes.map((n) => {
           const p = pos(n);
@@ -107,11 +130,13 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
               tabIndex={0}
               aria-label={n.name}
             >
-              <circle r={n.home ? 15 : 12} />
+              <circle r={n.home ? R + 3 : R} />
+              {n.known && <MapIcon scene={n.icon} r={n.home ? R + 3 : R} />}
               {n.danger > 0 && n.known && (
-                <text class="map-danger" y={4}>
-                  {n.danger}
-                </text>
+                <g class="map-danger" transform={`translate(${R - 2},${R - 3})`}>
+                  <circle r={7} />
+                  <text y={3.5}>{n.danger}</text>
+                </g>
               )}
               {!n.known && (
                 <text class="map-q" y={5}>
@@ -119,12 +144,12 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
                 </text>
               )}
               {n.known && (
-                <text class="map-name" y={30}>
+                <text class="map-name" y={(n.home ? R + 3 : R) + 15}>
                   {n.name}
                 </text>
               )}
-              {n.partner && <circle class="map-mate" r={5} cx={13} cy={-12} />}
-              {n.here && <circle class="map-me" r={5} cx={-13} cy={-12} />}
+              {n.partner && <circle class="map-mate" r={5} cx={R} cy={-R} />}
+              {n.here && <circle class="map-me" r={5} cx={-R} cy={-R} />}
             </g>
           );
         })}
@@ -163,6 +188,11 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
               <button class="btn primary" disabled={locked || busy || !picked.go.enabled} onClick={() => net.send({ c: 'go', to: picked.id })}>
                 {T.mapGo} · {secs(picked.go.time)}
               </button>
+            )}
+            {picked.go?.via && (
+              <p class="meta map-via">
+                {T.mapVia}: {picked.go.via.map((id) => byId.get(id)?.name ?? '?').join(' → ')}
+              </p>
             )}
             {picked.scout && (
               <button class="btn primary" disabled={locked || !picked.scout.enabled} onClick={() => net.send({ c: 'act', id: picked.scout!.id })}>

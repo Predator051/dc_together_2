@@ -556,6 +556,7 @@ export class Game {
         const p = this.p(pid);
         p.at = e.moveTo;
         p.travel = null;
+        if (p.busy?.action.startsWith('go:')) p.busy = null;
         if (areaDef(this, e.moveTo)?.home) this.unloadQuiet(pid);
       }
       this.s.proposal = null;

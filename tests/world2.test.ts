@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PlayerId } from '../shared/src/content.js';
+import { Rng } from '../shared/src/rng.js';
 import { levelFromXp, xpForLevel } from '../shared/src/rules.js';
 import { bagCap, bagLoad, gainXp } from '../server/src/engine/hero.js';
 import { settleWork } from '../server/src/engine/travel.js';
@@ -168,6 +169,57 @@ describe('the map', () => {
     expect(w.cmd(h, { c: 'act', id: 'x_02' }).ok).toBe(false);
     w.rest(h);
     expect(w.state.players[h].at).toBe('a_02');
+  });
+
+  it('a far place is reached through the near ones: the walks add up, the bag stays packed on the way', () => {
+    const { w, h, m } = home();
+    calm(w);
+    for (const f of ['seen:a_04', 'seen:a_07']) w.state.flags[f] = 1;
+    w.state.players[h].at = 'a_02';
+    w.state.players[h].bag = { u_03: 1 };
+    const node = w.view(h).map.nodes.find((n) => n.id === 'a_07')!;
+    expect(node.go?.via).toEqual(['a_01', 'a_04']);
+    const legs = ['a_01', 'a_04'].map((id) => w.view(h).map.nodes.find((n) => n.id === id)!.go!.time);
+    expect(legs[0]).toBeLessThan(node.go!.time);
+    const t0 = w.now;
+    expect(w.cmd(h, { c: 'go', to: 'a_07' }).ok).toBe(true);
+    const v = w.view(h);
+    expect(v.map.travel?.to).toBe('a_07');
+    expect(v.busyUntil).toBe(t0 + node.go!.time);
+    expect(w.view(m).partner.busy?.until).toBe(t0 + node.go!.time);
+    // halfway: at home, but just passing by
+    w.advance(legs[0]! + 1);
+    expect(w.state.players[h].at).toBe('a_01');
+    expect(w.state.players[h].travel?.to).toBe('a_04');
+    expect(w.state.players[h].bag).toEqual({ u_03: 1 });
+    w.rest(h);
+    expect(w.state.players[h].at).toBe('a_07');
+    expect(w.state.players[h].travel).toBeNull();
+    expect(w.now).toBeGreaterThanOrEqual(t0 + node.go!.time);
+  });
+
+  it('an attack on the way ends the walk where it happened', () => {
+    const { w, h } = home();
+    calm(w);
+    for (const f of ['seen:a_04', 'seen:a_07']) w.state.flags[f] = 1;
+    const flat = w.g().ix.c.areas.find((a) => a.id === 'a_04')!;
+    const was = { ambush: flat.ambush, foes: flat.foes };
+    flat.ambush = 100;
+    flat.foes = [{ enemy: flat.foes?.[0]?.enemy ?? 'e_01', w: 1 }];
+    expect(w.cmd(h, { c: 'go', to: 'a_07' }).ok).toBe(true);
+    const chance = Rng.prototype.chance;
+    Rng.prototype.chance = () => true;
+    try {
+      w.advance(30_000);
+    } finally {
+      Rng.prototype.chance = chance;
+      Object.assign(flat, was);
+    }
+    const p = w.state.players[h];
+    expect(p.at).toBe('a_04');
+    expect(p.travel).toBeNull();
+    expect(p.fight).not.toBeNull();
+    expect(p.busy).toBeNull();
   });
 
   it('a finished action does not keep the paths locked (nothing is sent when it ends)', () => {

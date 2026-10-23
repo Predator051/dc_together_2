@@ -2733,32 +2733,32 @@ mark {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.map-node circle:first-child {
+.map-node > circle:first-child {
   fill: var(--leaf-2);
   stroke: var(--ink-2);
   stroke-width: 1.5;
   transition: stroke 0.15s;
 }
-.map-node.unknown circle:first-child {
+.map-node.unknown > circle:first-child {
   fill: transparent;
   stroke: var(--pale);
   stroke-dasharray: 3 3;
 }
-.map-node.home circle:first-child {
+.map-node.home > circle:first-child {
   fill: var(--ochre-wash);
   stroke: var(--ochre);
 }
-.map-node.can circle:first-child {
+.map-node.can > circle:first-child {
   stroke: var(--ochre-ink);
 }
-.map-node.sel circle:first-child {
+.map-node.sel > circle:first-child {
   stroke: var(--cinnabar-ink);
   stroke-width: 2.5;
 }
 .map-node:focus-visible {
   outline: none;
 }
-.map-node:focus-visible circle:first-child {
+.map-node:focus-visible > circle:first-child {
   stroke: var(--cinnabar-ink);
 }
 .map-name {
@@ -2770,13 +2770,54 @@ mark {
   stroke-width: 3px;
   text-anchor: middle;
 }
-.map-danger,
 .map-q {
   fill: var(--ink);
   font-family: var(--sans);
   font-size: 12px;
   font-weight: 700;
   text-anchor: middle;
+}
+.map-ico {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.map-ico .thin {
+  stroke-width: 1.3;
+}
+.map-ico .fill {
+  fill: currentColor;
+  fill-opacity: 0.3;
+}
+.map-node.home .map-ico {
+  stroke: var(--ochre-ink);
+}
+.map-node.sel .map-ico {
+  stroke: var(--ink);
+}
+.map-danger circle {
+  fill: var(--page);
+  stroke: var(--cinnabar-ink);
+  stroke-width: 1.2;
+}
+.map-danger text {
+  fill: var(--ink);
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+.map-link.way {
+  stroke: var(--ochre);
+  stroke-dasharray: none;
+  stroke-width: 2.5;
+}
+.map-via {
+  flex-basis: 100%;
+  margin: 2px 0 0;
 }
 .map-q {
   fill: var(--faded);
@@ -3478,6 +3519,46 @@ mark {
   animation-name: spot-run;
   animation-timing-function: linear;
   animation-fill-mode: both;
+}
+.spot-fill {
+  position: absolute;
+  inset: -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+.spot-fill circle {
+  fill: none;
+  stroke: var(--gall);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 100px;
+  transition: stroke-dashoffset 0.5s ease;
+}
+.spot-fill.high circle {
+  stroke: var(--ochre);
+}
+.spot-fill.full circle {
+  stroke: var(--cinnabar-ink);
+}
+.spot-name small.spot-free {
+  color: var(--gall);
+  font-weight: 600;
+}
+.spot-name small.spot-free.full,
+.chip-free.full {
+  color: var(--cinnabar-ink);
+}
+.chip-free {
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--gall-wash);
+  color: var(--gall);
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 @keyframes spot-run {
   from {

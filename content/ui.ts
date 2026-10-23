@@ -139,6 +139,7 @@ export const ui: Record<string, string> = {
   go_to: 'Іти:',
   danger: 'Небезпека',
   arrived_self: 'Ти тепер',
+  passed_self: 'позаду, ідеш далі.',
   arrived_other: 'тепер',
   unloaded: 'Ти розвантажуєш торбу:',
   near_fight: '{partner} тут б\'ється:',
