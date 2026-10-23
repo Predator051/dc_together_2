@@ -5,6 +5,7 @@ import { NEED, bodyMods, coldLevel, mealFading, type BodyMods, type ColdLevel } 
 import type { NeedsState } from '../../../shared/src/state.js';
 import { addBag, heroOf, ownsCount, refreshHero } from './hero.js';
 import type { Game, Result } from './index.js';
+import { skyAt, skyFor } from './weather.js';
 
 const MIN = 60_000;
 
@@ -94,9 +95,17 @@ export function chillRate(g: Game, pid: PlayerId): number {
   let rate = 0;
   if (g.isEvening()) rate += g.atHome(pid) ? NEED.chill.homeEvening : NEED.chill.evening;
   if (n.wet > 0) rate += NEED.chill.wet;
-  if (heroOf(g, pid).resist.has('cold')) rate *= NEED.chill.resist;
-  if (n.drink > 0) rate *= NEED.chill.drink;
+  rate += skyFor(g, pid)?.chill ?? 0;
+  // warm clothes and a hot drink keep the cold off; they do not stop a hot sun warming
+  if (rate > 0 && heroOf(g, pid).resist.has('cold')) rate *= NEED.chill.resist;
+  if (rate > 0 && n.drink > 0) rate *= NEED.chill.drink;
   return rate;
+}
+
+/** How fast wet clothes dry: fast by a fire; outside the weather decides. */
+export function dryOf(g: Game, pid: PlayerId): number {
+  if (byFire(g, pid)) return NEED.dryByFire;
+  return skyFor(g, pid)?.dry ?? 1;
 }
 
 /** How cosy the home is: the things that hold, by name. */
@@ -154,9 +163,8 @@ function step(g: Game, pid: PlayerId, n: NeedsState, dt: number): boolean {
   }
   if (mealsOf(g, n).filter((m) => mealFading(m.left, m.minutes)).length !== fadingBefore) changed = true;
   // wet and warm
-  const fire = byFire(g, pid);
   const wasWet = n.wet > 0;
-  n.wet = Math.max(0, n.wet - dt * (fire ? NEED.dryByFire : 1));
+  n.wet = Math.max(0, n.wet - dt * dryOf(g, pid));
   if (wasWet && n.wet <= 0) changed = true;
   n.drink = Math.max(0, n.drink - dt);
   const before: ColdLevel = coldLevel(n.chill);
@@ -214,6 +222,7 @@ export function soakByPlace(g: Game, pid: PlayerId, area: string): void {
   // the first soaking shows that dry boots would be worth making
   g.s.flags.wet_feet = 1;
   if (heroOf(g, pid).tools.has('dry')) return;
+  if (skyAt(g, area)?.frozen) return;
   soak(g, pid);
 }
 

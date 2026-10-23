@@ -33,6 +33,11 @@ const OCHRE = '221, 184, 103';
 const EMBER = '240, 150, 70';
 const GALL = '142, 165, 179';
 const WOOD = '170, 120, 70';
+const ICE = '200, 222, 236';
+
+type Sky = NonNullable<AmbientView['sky']>;
+/** Screen area per particle of each sky. */
+const SKY_DENSITY: Record<Sky, number> = { rain: 7000, storm: 3500, wind: 26000, frost: 30000, heat: 45000, fog: 70000 };
 
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
@@ -78,8 +83,11 @@ class Engine {
   private h = 0;
   private dpr = 1;
   private back: P[] = [];
+  /** The weather over the place: its own layer on the back canvas. */
+  private sky: P[] = [];
+  private flash = 0;
   private front: P[] = [];
-  private s: State = { kind: 'snow', fire: 'none', fx: null, partnerFx: null, fxUntil: 0, partnerFxUntil: 0, paused: true };
+  private s: State = { kind: 'snow', sky: null, fire: 'none', fx: null, partnerFx: null, fxUntil: 0, partnerFxUntil: 0, paused: true };
   private raf = 0;
   private last = 0;
   /** Seconds until the next emission, per emitter key. */
@@ -108,8 +116,13 @@ class Engine {
 
   set(next: State) {
     const kindChanged = next.kind !== this.s.kind;
+    const skyChanged = next.sky !== this.s.sky;
     this.s = next;
     if (kindChanged) this.back = [];
+    if (skyChanged) {
+      this.sky = [];
+      this.flash = 0;
+    }
     this.wake();
   }
 
@@ -150,6 +163,7 @@ class Engine {
     if (this.bctx && this.fctx) {
       this.weather(dt);
       this.draw(this.bctx, this.back, dt);
+      this.drawSky(this.bctx, dt);
       this.draw(this.fctx, this.front, dt);
     } else {
       this.front.length = 0;
@@ -221,6 +235,67 @@ class Engine {
       return { x: anywhere ? rnd(0, this.w) : -100, y: rnd(this.h * 0.3, this.h), vx: rnd(4, 10), vy: rnd(-1, 1), age: 0, life: 999, size: rnd(50, 110), rot: 0, vr: 0, shape: 'dot', color: GALL, alpha: rnd(0.025, 0.05) };
     // cave, cellar: slow motes
     return { x: rnd(0, this.w), y: anywhere ? rnd(0, this.h) : this.h + 10, vx: rnd(-4, 4), vy: rnd(-8, -2), age: 0, life: 999, size: rnd(0.5, 1.4), rot: rnd(0, 6), vr: rnd(0.2, 0.6), shape: 'dot', color: kind === 'cave' ? INK : OCHRE, alpha: rnd(0.06, 0.2) };
+  }
+
+  private spawnSky(sky: Sky, anywhere: boolean): P {
+    const w = this.w;
+    const h = this.h;
+    const base = { age: 0, life: 999, rot: rnd(0, 6), shape: 'dot' as const };
+    if (sky === 'rain' || sky === 'storm') {
+      const heavy = sky === 'storm';
+      // slanted drops: spawn above, a little to the right so the slant covers the screen
+      return { ...base, x: rnd(0, w + 120), y: anywhere ? rnd(0, h) : rnd(-40, -10), vx: heavy ? rnd(-220, -160) : rnd(-90, -60), vy: heavy ? rnd(800, 1000) : rnd(520, 700), size: 1, vr: 0, color: GALL, alpha: heavy ? rnd(0.2, 0.38) : rnd(0.16, 0.32) };
+    }
+    if (sky === 'wind')
+      return { ...base, x: anywhere ? rnd(0, w) : rnd(-80, -20), y: rnd(0, h), vx: rnd(380, 600), vy: rnd(-12, 12), size: 1, vr: 0, color: INK, alpha: rnd(0.05, 0.12) };
+    if (sky === 'frost')
+      // hoarfrost glinting in the air
+      return { ...base, x: rnd(0, w), y: anywhere ? rnd(0, h) : -10, vx: rnd(-3, 3), vy: rnd(3, 8), size: rnd(0.6, 1.4), vr: rnd(1.2, 3), color: ICE, alpha: rnd(0.25, 0.55), glow: true };
+    if (sky === 'heat')
+      // warm air rising off the ground
+      return { ...base, x: rnd(0, w), y: anywhere ? rnd(0, h) : h + 10, vx: rnd(-4, 4), vy: rnd(-16, -6), size: rnd(0.6, 1.6), vr: 0, color: OCHRE, alpha: rnd(0.06, 0.16) };
+    return { ...base, x: anywhere ? rnd(0, w) : -140, y: rnd(h * 0.2, h), vx: rnd(6, 14), vy: rnd(-1, 1), size: rnd(70, 140), vr: 0, color: GALL, alpha: rnd(0.03, 0.06) };
+  }
+
+  private drawSky(ctx: CanvasRenderingContext2D, dt: number) {
+    const sky = this.s.sky;
+    if (!sky) return;
+    const want = Math.round((this.w * this.h) / SKY_DENSITY[sky]);
+    while (this.sky.length < want) this.sky.push(this.spawnSky(sky, true));
+    if (this.sky.length > want) this.sky.length = want;
+    const streak = sky === 'rain' || sky === 'storm' || sky === 'wind';
+    const len = sky === 'wind' ? 0.05 : 0.018;
+    ctx.lineWidth = 1;
+    for (const p of this.sky) {
+      p.age += dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      if (p.y > this.h + 40 || p.y < -60 || p.x > this.w + 160 || p.x < -200) Object.assign(p, this.spawnSky(sky, false));
+      if (streak) {
+        ctx.strokeStyle = `rgba(${p.color}, ${p.alpha})`;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - p.vx * len, p.y - p.vy * len);
+        ctx.stroke();
+        continue;
+      }
+      const a = sky === 'frost' ? p.alpha * (0.35 + 0.65 * Math.abs(Math.sin(p.rot + p.age * p.vr))) : p.alpha;
+      ctx.globalCompositeOperation = p.glow ? 'lighter' : 'source-over';
+      ctx.fillStyle = `rgba(${p.color}, ${a})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    // a storm: now and then the sky lights up, softly (never a hard white flash)
+    if (sky === 'storm') {
+      if (this.tick('flash', dt, rnd(12, 26))) this.flash = 0.14;
+      if (this.flash > 0) {
+        ctx.fillStyle = `rgba(${ICE}, ${this.flash})`;
+        ctx.fillRect(0, 0, this.w, this.h);
+        this.flash = Math.max(0, this.flash - dt * 0.35);
+      }
+    }
   }
 
   // ---------- foreground: action accents ----------
@@ -464,13 +539,14 @@ export function Ambient({
   useEffect(() => {
     engine.current?.set({ ...a, paused });
     sound.set({ ...a, scene: paused, mood, dusk });
-  }, [a.kind, a.fire, a.fx, a.partnerFx, paused, mood, Math.round(dusk * 10)]);
+  }, [a.kind, a.sky, a.fire, a.fx, a.partnerFx, paused, mood, Math.round(dusk * 10)]);
 
   return (
     <>
-      <div class={`amb amb-${a.kind} fire-${a.fire} ${a.fx === 'fire' || a.partnerFx === 'fire' ? 'stoking' : ''}`} aria-hidden="true">
+      <div class={`amb amb-${a.kind} fire-${a.fire} ${a.sky ? `sky-${a.sky}` : ''} ${a.fx === 'fire' || a.partnerFx === 'fire' ? 'stoking' : ''}`} aria-hidden="true">
         <div class="amb-glow" />
         <div class="amb-edge" />
+        <div class="amb-sky" />
         <div class="amb-dusk" style={{ opacity: String(dusk) }} />
       </div>
       {!still && <canvas ref={backRef} class="amb-canvas back" aria-hidden="true" />}

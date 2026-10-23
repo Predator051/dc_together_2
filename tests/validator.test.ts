@@ -11,6 +11,20 @@ describe('content validator', () => {
     expect(r.errors).toEqual([]);
   });
 
+  it('the weather is checked: known kinds, sane numbers, work it can favour', () => {
+    const c = clone();
+    const w = c.weather!;
+    w.first = 'w_none';
+    w.kinds[1]!.travel = 0;
+    w.kinds[2]!.bonus = { fx: ['heart'], p: 0.3, text: 'х' };
+    c.actions[0]!.visible = { weather: 'w_none' };
+    const errs = validateContent(c).errors;
+    expect(errs).toContain('weather: unknown first w_none');
+    expect(errs.some((e) => e.includes(`weather ${w.kinds[1]!.id}: multipliers must be positive`))).toBe(true);
+    expect(errs.some((e) => e.includes(`weather ${w.kinds[2]!.id}: no action has the favoured accent`))).toBe(true);
+    expect(errs.some((e) => e.includes('unknown weather w_none'))).toBe(true);
+  });
+
   it('every place at home has its own spot on the plan', () => {
     const c = clone();
     const home = c.areas.find((a) => a.home)!.id;

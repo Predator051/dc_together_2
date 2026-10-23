@@ -3,6 +3,7 @@ import type { AreaDef, PlayerId } from '../../../shared/src/content.js';
 import { travelMult } from '../../../shared/src/rules.js';
 import { bagCap, bagLoad, gainSkill, heroOf, skillOf, unloadBag } from './hero.js';
 import { startFight } from './fight.js';
+import { skyAt, weatherNow } from './weather.js';
 import type { Game, Result } from './index.js';
 import { paceOf, soakByPlace } from './needs.js';
 
@@ -94,7 +95,7 @@ export function travelTime(g: Game, pid: PlayerId, from: string, to: string): nu
   const base = linkTime(g, from, to) ?? 0;
   const h = heroOf(g, pid);
   const load = bagLoad(g, pid) / Math.max(1, bagCap(g, pid));
-  return Math.round(base * travelMult({ trail: skillOf(g, pid, 'trail'), load, heavy: h.heavy }) * paceOf(g, pid));
+  return Math.round(base * travelMult({ trail: skillOf(g, pid, 'trail'), load, heavy: h.heavy }) * paceOf(g, pid) * (weatherNow(g)?.travel ?? 1));
 }
 
 /**
@@ -174,10 +175,12 @@ function ambushRoll(g: Game, pid: PlayerId, area: string, base: number): Array<{
   if (!a?.foes?.length || base <= 0) return null;
   const p = g.p(pid);
   if (p.fight !== null || !p.online) return null;
-  let chance = base * (1 - 0.05 * skillOf(g, pid, 'trail'));
+  // a good tracker avoids half the attacks at most (like the other skills, it counts up to ten)
+  let chance = base * (1 - 0.05 * Math.min(10, skillOf(g, pid, 'trail')));
   if (g.isEvening()) chance *= heroOf(g, pid).tools.has('light') ? 0.75 : 1.5;
   const dog = g.ix.c.dog;
   if (dog && g.flag(dog.flag) && p.role === 'hunter') chance *= dog.trained && g.test(dog.trained) ? 0.6 : 0.8;
+  chance *= skyAt(g, area)?.ambush ?? 1;
   if (!g.rng.chance(Math.min(0.6, chance))) return null;
   const pool = a.foes.filter((e) => (!e.night || g.isEvening()) && (!e.if || g.test(e.if, pid)));
   if (!pool.length) return null;
@@ -253,6 +256,7 @@ export function settleWork(g: Game): boolean {
       if (a.skill) mult *= t.mult?.[`skill:${a.skill}`] ?? 1;
     }
     if (r.hungry) mult *= 0.5;
+    mult *= skyAt(g, g.ix.areaOf(a.group))?.jobs ?? 1;
     for (const b of g.ix.c.workBonus ?? []) if (g.test(b.if)) mult *= b.mult;
     const units = a.job.rate * hours * mult;
     for (const [res, y] of Object.entries(a.yield ?? {})) {

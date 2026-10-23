@@ -4,6 +4,7 @@ import type { EnemyDef, EnemyMove, PlayerId, TraitId } from '../../../shared/src
 import { hitChance } from '../../../shared/src/rules.js';
 import type { FightState, FoeState, Intent } from '../../../shared/src/state.js';
 import { addBag, gainSkill, gainXp, heroOf, refreshHero } from './hero.js';
+import { skyAt } from './weather.js';
 import type { Game, Result } from './index.js';
 
 /** How long a beaten hero lies before getting up at home. */
@@ -800,6 +801,7 @@ function finishFight(g: Game, f: FightState, how: 'win' | 'lose' | 'fled'): void
         xp += def.level;
       }
     }
+    xp = Math.round(xp * (skyAt(g, f.area)?.xp ?? 1));
     const standing = party.filter((pid) => !f.down.includes(pid) && !f.fled.includes(pid));
     const takers = standing.length ? standing : party;
     // share the loot: one by one into whoever has room

@@ -34,6 +34,7 @@ import { Rng } from '../../../shared/src/rng.js';
 import type { LogEntry, PlayerState, WorldState } from '../../../shared/src/state.js';
 import { PART, STATE_VERSION } from '../../../shared/src/state.js';
 import { gatherMult } from '../../../shared/src/rules.js';
+import { settleWeather, skyFor, turnWeather, weatherNow } from './weather.js';
 import {
   addBag,
   blankHero,
@@ -266,7 +267,8 @@ export class Game {
     const b = settleWork(this);
     const n = settleNeeds(this);
     const c = settleHealth(this);
-    return a || b || c || n;
+    const w = settleWeather(this);
+    return a || b || c || n || w;
   }
 
   // ----- conditions ----------------------------------------------------------
@@ -325,6 +327,7 @@ export class Game {
     if ('trait' in c) return Object.values(this.s.bestiary).some((b) => b.known.includes(c.trait));
     if ('met' in c) return (this.s.bestiary[c.met]?.seen ?? 0) > 0;
     if ('evening' in c) return this.isEvening() === c.evening;
+    if ('weather' in c) return weatherNow(this)?.id === c.weather;
     return false;
   }
 
@@ -562,6 +565,7 @@ export class Game {
       this.logRaw('system', text);
       this.applyDaily();
       nightRest(this);
+      turnWeather(this);
       return;
     }
     if ('eat' in e) {
@@ -727,7 +731,7 @@ export class Game {
 
   /** How long the action keeps this hero busy. */
   actionTime(a: ActionDef, pid: PlayerId): number {
-    let t = a.cooldown * this.cooldownMult(this.ix.areaOf(a.group)) * paceOf(this, pid);
+    let t = a.cooldown * this.cooldownMult(this.ix.areaOf(a.group)) * paceOf(this, pid) * (skyFor(this, pid)?.pace ?? 1);
     if (a.skill) {
       const h = heroOf(this, pid);
       const knack = a.knack && a.knack.role === this.p(pid).role ? a.knack.x : 1;
@@ -796,6 +800,11 @@ export class Game {
       const variants = Array.isArray(a.log) ? a.log : [a.log];
       this.log(this.rng.pick(variants), pid);
     }
+    // some weather favours some work: now and then one more
+    const bonus = a.kind === 'gather' && !a.quest && !a.once ? skyFor(this, pid)?.bonus : undefined;
+    const fx = this.ix.c.ambient?.actions[a.id];
+    const first = Object.keys(a.yield ?? {})[0];
+    if (bonus && fx && first && bonus.fx.includes(fx) && this.rng.chance(bonus.p)) gained[first] = (gained[first] ?? 0) + put(first, 1);
     for (let i = 0; i < rolls; i++) {
       for (const ch of a.chance ?? []) {
         if (ch.if && !this.test(ch.if, pid)) continue;

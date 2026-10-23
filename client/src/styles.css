@@ -251,6 +251,42 @@ b {
   animation: flicker 2.6s ease-in-out infinite alternate;
   transform-origin: 50% 30%;
 }
+/* the weather over the place: a tint of the whole page, fading in as it sets */
+.amb-sky {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 6s ease;
+}
+.sky-rain .amb-sky {
+  opacity: 1;
+  background: linear-gradient(to bottom, rgba(70, 85, 100, 0.22), rgba(40, 50, 60, 0.12));
+}
+.sky-storm .amb-sky {
+  opacity: 1;
+  background:
+    radial-gradient(140% 90% at 50% 0%, rgba(20, 24, 34, 0.5), transparent 70%),
+    rgba(30, 38, 50, 0.25);
+}
+.sky-wind .amb-sky {
+  opacity: 1;
+  background: linear-gradient(100deg, rgba(142, 165, 179, 0.06), transparent 40%, rgba(142, 165, 179, 0.05));
+}
+.sky-frost .amb-sky {
+  opacity: 1;
+  background: radial-gradient(130% 100% at 50% 50%, rgba(170, 200, 220, 0.05) 50%, rgba(190, 215, 232, 0.2));
+}
+.sky-heat .amb-sky {
+  opacity: 1;
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgba(240, 190, 110, 0.12), transparent 70%),
+    linear-gradient(to top, rgba(221, 184, 103, 0.06), transparent 40%);
+}
+.sky-fog .amb-sky {
+  opacity: 1;
+  background: linear-gradient(to top, rgba(150, 165, 175, 0.2), rgba(150, 165, 175, 0.08) 60%, rgba(150, 165, 175, 0.04));
+}
+
 /* evening: the page darkens and cools as a long day draws on; supper brings the morning */
 .amb-dusk {
   opacity: 0;
@@ -586,6 +622,108 @@ b {
   color: var(--ink-2);
   white-space: nowrap;
 }
+/* the weather: a sign and a name in the top bar, a small card under it */
+.wx {
+  position: relative;
+  flex: none;
+}
+.wx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: -6px 0;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 18px;
+  background: none;
+  color: var(--ink-2);
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.wx-chip:hover,
+.wx-chip.on {
+  background: var(--gall-wash);
+}
+.wx-chip:focus-visible {
+  outline: 2px solid var(--ochre);
+}
+.wx-ico {
+  width: 20px;
+  height: 20px;
+  color: var(--gall);
+}
+.wx-pop {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: -8px;
+  z-index: 40;
+  width: min(300px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border: 1px solid var(--rule-2);
+  border-radius: 10px;
+  background: var(--leaf-2);
+  box-shadow: var(--shadow);
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  color: var(--ink-2);
+  animation: wx-in 0.18s ease backwards;
+}
+@keyframes wx-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.wx-pop p {
+  margin: 0 0 8px;
+}
+.wx-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+.wx-note {
+  color: var(--faded);
+}
+.wx-effects {
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+.wx-effects li {
+  position: relative;
+  padding: 2px 0 2px 16px;
+}
+.wx-effects li::before {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+}
+.wx-effects .good::before {
+  content: '+';
+  color: var(--verdigris);
+}
+.wx-effects .bad::before {
+  content: '−';
+  color: var(--cinnabar-ink);
+}
+.wx-next {
+  margin: 0 !important;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule);
+  color: var(--faded);
+}
+.wx-next b {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
 .sound-toggle {
   display: grid;
   place-items: center;
@@ -5194,4 +5332,22 @@ body.sheet-open {
   stroke: rgba(10, 8, 6, 0.6);
   stroke-width: 6;
   stroke-linecap: round;
+}
+
+/* the weather on a narrow screen: the sign only; the card spans the screen under the top bar */
+@media (max-width: 599px) {
+  .wx-name {
+    display: none;
+  }
+  .wx {
+    position: static;
+  }
+  .wx-pop {
+    position: absolute;
+    top: 100%;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    margin-top: 6px;
+  }
 }

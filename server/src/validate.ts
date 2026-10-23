@@ -237,6 +237,7 @@ export function validateContent(c: Content): Report {
       if ('tool' in x && !toolKinds.has(x.tool)) err(`${where}: no gear provides tool ${x.tool}`);
       if ('trait' in x && !traitIds.has(x.trait)) err(`${where}: unknown trait ${x.trait}`);
       if ('met' in x && !enemies.has(x.met)) err(`${where}: unknown enemy ${x.met}`);
+      if ('weather' in x && !c.weather?.kinds.some((k) => k.id === x.weather)) err(`${where}: unknown weather ${x.weather}`);
     }
   };
   const checkEffects = (where: string, effs: Effect[], inScene: boolean) => {
@@ -282,6 +283,25 @@ export function validateContent(c: Content): Report {
     if (n.snack && !c.resources.find((r) => r.id === n.snack)?.meal) err(`needs: snack ${n.snack} is not a dish`);
     if (!res.has(n.campWood)) err(`needs: unknown resource ${n.campWood}`);
     if (n.campLight && !res.has(n.campLight)) err(`needs: unknown resource ${n.campLight}`);
+  }
+
+  if (c.weather) {
+    const w = c.weather;
+    checkCond('weather', w.from);
+    const ids = new Set<string>();
+    for (const k of w.kinds) {
+      if (ids.has(k.id)) err(`weather ${k.id}: duplicate id`);
+      ids.add(k.id);
+      if (!(k.weight > 0)) err(`weather ${k.id}: weight must be positive`);
+      if (!k.log.length) err(`weather ${k.id}: needs a line for the log`);
+      checkCond(`weather ${k.id}`, k.when);
+      for (const m of [k.pace, k.travel, k.ambush, k.jobs, k.xp]) if (m !== undefined && !(m > 0)) err(`weather ${k.id}: multipliers must be positive`);
+      if (k.bonus && !(k.bonus.p > 0 && k.bonus.p < 1)) err(`weather ${k.id}: bonus chance out of range`);
+      if (k.bonus && !k.bonus.fx.some((fx) => Object.values(c.ambient?.actions ?? {}).includes(fx))) err(`weather ${k.id}: no action has the favoured accent`);
+    }
+    if (!ids.has(w.first)) err(`weather: unknown first ${w.first}`);
+    if (w.kinds.length < 2) err('weather: needs at least two kinds to turn');
+    if (!(w.span[0] > 0 && w.span[1] >= w.span[0])) err('weather: bad span');
   }
 
   // Locations

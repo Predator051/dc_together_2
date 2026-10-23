@@ -1,4 +1,4 @@
-import type { AmbientKind, FxKind, Gender, PlayerId, Role, LogKind } from './content.js';
+import type { AmbientKind, SkyKind, FxKind, Gender, PlayerId, Role, LogKind } from './content.js';
 
 // ---------- Client -> server ----------
 
@@ -531,6 +531,8 @@ export interface PersonView {
 
 export interface AmbientView {
   kind: AmbientKind;
+  /** The weather over the place (null under a roof or before the weather begins). */
+  sky: SkyKind | null;
   fire: 'none' | 'warm' | 'low' | 'cold';
   /** Accent of this player's running action. */
   fx: FxKind | null;
@@ -570,6 +572,19 @@ export interface SummaryView {
   gathered: DeltaItem[];
 }
 
+/** The weather now and the forecast; effects count only outside. */
+export interface WeatherView {
+  id: string;
+  name: string;
+  sky: SkyKind | null;
+  /** Server time when it turns. */
+  until: number;
+  next: string;
+  /** This hero is out in it now. */
+  outside: boolean;
+  effects: Array<{ text: string; good: boolean }>;
+}
+
 export interface PlayerView {
   now: number;
   me: MeView;
@@ -596,6 +611,7 @@ export interface PlayerView {
   bag: BagView;
   /** Hunger, warmth and rest (null until they begin). */
   needs: NeedsView | null;
+  weather: WeatherView | null;
   map: MapView;
   fight: FightView | null;
   /** A fight of the partner where you stand (you may join). */

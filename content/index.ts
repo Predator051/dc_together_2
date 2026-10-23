@@ -13,6 +13,7 @@ import { scenes1 } from './a1/scenes.js';
 import { ambient } from './ambient.js';
 import { hero, perks, roleTitles, traits } from './core.js';
 import { ui } from './ui.js';
+import { weather } from './weather.js';
 import { needs, needs1Actions, needs1Fx, needs1Resources } from './a1/needs.js';
 import { needs2Actions, needs2Fx, needs2Resources } from './a2/needs.js';
 import { quests1, sideAreas1, sideClues1, sideComfort1, sideDaily1, sideEnemies1, sideLocations1, sideMysteries, sideNpcs1, sideResources1 } from './side/a1base.js';
@@ -60,6 +61,7 @@ export const content: Content = {
   food: R.food,
   stove: { perWood: 4 * 60 * 1000, maxWood: 8, coldPenalty: 1.3, low: 60 * 1000 },
   needs: { ...needs, comfort: [...needs.comfort, ...sideComfort1, ...sideComfort2] },
+  weather,
   ambient: { ...ambient, areas: { ...ambient.areas, a_10: 'hill', a_11: 'river', a_12: 'marsh', a_13: 'river', a_14: 'grove' }, actions: { ...ambient.actions, ...fx2, ...needs1Fx, ...needs2Fx, ...sideFx1, ...sideFx2 } },
   maps: [],
   start: { resources: {}, hp: 22, area: A.shore },

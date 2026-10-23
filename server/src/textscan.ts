@@ -170,6 +170,11 @@ export function collectStrings(c: Content): Found[] {
     out.push({ where: `role ${r}.f`, text: t.f });
   }
   for (const [k, v] of Object.entries(c.ui)) out.push({ where: `ui ${k}`, text: v });
+  for (const w of c.weather?.kinds ?? []) {
+    out.push({ where: `weather ${w.id}.name`, text: w.name });
+    w.log.forEach((t, i) => out.push({ where: `weather ${w.id}.log${i}`, text: t }));
+    if (w.bonus) out.push({ where: `weather ${w.id}.bonus`, text: w.bonus.text });
+  }
   return out;
 }
 

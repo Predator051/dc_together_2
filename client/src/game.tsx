@@ -16,6 +16,7 @@ import { T } from './strings.js';
 import { BagPanel, FightPanel, MapPanel, NearFight, PackList, ResidentsPanel } from './world.js';
 import { Thing } from './items.js';
 import { NeedsBar, NeedsSheet } from './needs.js';
+import { WeatherChip } from './weather.js';
 
 type Tab = 'work' | 'map' | 'hero' | 'notes' | 'log';
 
@@ -766,6 +767,7 @@ export function Game({ s }: { s: NetState }) {
             <IconPin />
             <span>{v.map.travel ? `${T.travelling} → ${v.map.travel.name}` : v.me.where}</span>
           </span>
+          <WeatherChip v={v} offset={s.offset} />
           {v.day > 0 && (
             <span class="day">
               {T.day} {v.day}

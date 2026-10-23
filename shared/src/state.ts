@@ -274,6 +274,8 @@ export interface WorldState {
   seenRes: Record<string, number>;
   flags: Record<string, number>;
   stove: { fuel: number; lit: boolean };
+  /** The weather now, until when it holds, and what comes after it. */
+  weather?: { id: string; until: number; next: string };
   /** Campfires burning away from home: area → when it goes out. */
   fires?: Record<string, number>;
   scene: SceneState | null;

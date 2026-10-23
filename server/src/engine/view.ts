@@ -24,12 +24,13 @@ import type { Game } from './index.js';
 import { questProgress } from './index.js';
 import { resolveParas } from './text.js';
 import { SKILLS, SLOTS, STATS } from '../../../shared/src/content.js';
-import type { BagView, BeastView, FightView, HeroView, MapView, ResidentView } from '../../../shared/src/protocol.js';
+import type { BagView, BeastView, FightView, HeroView, MapView, ResidentView, WeatherView } from '../../../shared/src/protocol.js';
 import { skillLevel, skillXpFor, xpForLevel } from '../../../shared/src/rules.js';
 import { bagCap, bagLoad, gearNote, heroOf, ownsCount, useNote } from './hero.js';
 import { activeFoes, enemyOf, fightMoves, fightOf, holder } from './fight.js';
 import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, residentJobs, routeLegs, routeTo, travelTime, walkOf } from './travel.js';
-import { byFire, campBlock, chillRate, comfortOf, eatBlock, restBlock, restLength, tired } from './needs.js';
+import { byFire, campBlock, chillRate, comfortOf, dryOf, eatBlock, restBlock, restLength, tired } from './needs.js';
+import { outside, weatherNow } from './weather.js';
 import { NEED, coldLevel, mealFading } from '../../../shared/src/rules.js';
 
 const LOG_SEND = 120;
@@ -899,8 +900,10 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     pl.busy && pl.busy.until > g.now ? (amb?.actions[pl.busy.action] ?? null) : null;
   const fx = fxOf(me);
   const partnerFx = o.joined && o.online && o.at === here ? fxOf(o) : null;
+  const roofed = ambKind === 'cellar' || ambKind === 'candle' || ambKind === 'cave' || (!me.travel && !!areaDef(g, here)?.roof);
   const ambient: PlayerView['ambient'] = {
     kind: ambKind,
+    sky: roofed ? null : (weatherNow(g)?.sky ?? null),
     fire,
     fx,
     partnerFx,
@@ -1023,6 +1026,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     hero: heroView(g, pid),
     bag: bagView(g, pid),
     needs: needsView(g, pid),
+    weather: weatherView(g, pid),
     map: mapView(g, pid),
     fight: fightView(g, pid),
     nearFight: nearFight(g, pid),
@@ -1113,6 +1117,30 @@ export function mealNote(g: Game, id: string): string {
   return parts.join(' · ');
 }
 
+/** The weather and what it does, in words (only what the players can already meet). */
+function weatherView(g: Game, pid: PlayerId): WeatherView | null {
+  const w = weatherNow(g);
+  const st = g.s.weather;
+  if (!w || !st) return null;
+  const effects: WeatherView['effects'] = [];
+  const pct = (x: number) => `${Math.round(Math.abs(x - 1) * 100)} %`;
+  const add = (key: string, good: boolean, n?: string) => effects.push({ text: g.ix.ui(key).replace('{n}', n ?? ''), good });
+  const k = (x: number | undefined) => x !== undefined && x !== 1;
+  if (k(w.pace)) add(w.pace! > 1 ? 'wx_pace_slow' : 'wx_pace_fast', w.pace! < 1, pct(w.pace!));
+  if (k(w.travel)) add(w.travel! > 1 ? 'wx_travel_slow' : 'wx_travel_fast', w.travel! < 1, pct(w.travel!));
+  if (k(w.ambush)) add(w.ambush! > 1 ? 'wx_ambush_more' : 'wx_ambush_less', w.ambush! < 1, pct(w.ambush!));
+  if (k(w.xp)) add(w.xp! > 1 ? 'wx_xp_more' : 'wx_xp_less', w.xp! > 1, pct(w.xp!));
+  if (w.bonus) effects.push({ text: w.bonus.text, good: true });
+  if (g.p(pid).needs) {
+    if (w.chill) add(w.chill > 0 ? 'wx_cold' : 'wx_warm', w.chill < 0);
+    if (k(w.dry)) add(w.dry === 0 ? 'wx_no_dry' : w.dry! > 1 ? 'wx_dry_fast' : 'wx_dry_slow', w.dry! > 1);
+    if (w.frozen && g.flag('wet_feet')) add('wx_frozen', true);
+  }
+  if (k(w.jobs) && Object.keys(g.s.residents).length) add(w.jobs! < 1 ? 'wx_jobs_slow' : 'wx_jobs_fast', w.jobs! > 1, pct(w.jobs!));
+  const next = g.ix.c.weather!.kinds.find((x) => x.id === st.next);
+  return { id: w.id, name: w.name, sky: w.sky ?? null, until: st.until, next: next?.name ?? '', outside: outside(g, pid), effects };
+}
+
 function needsView(g: Game, pid: PlayerId): NeedsView | null {
   const p = g.p(pid);
   const n = p.needs;
@@ -1172,7 +1200,7 @@ function needsView(g: Game, pid: PlayerId): NeedsView | null {
     rate: -chillRate(g, pid),
     level,
     wet: n.wet,
-    dry: fire ? NEED.dryByFire : 1,
+    dry: dryOf(g, pid),
     drink: n.drink,
     rested: n.rested,
     awake: n.awake,

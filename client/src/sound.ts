@@ -95,11 +95,13 @@ class Sound {
   private bed: Bed | null = null;
   private fireBed: Bed | null = null;
   private hiss: Bed | null = null;
-  private state: SoundState = { kind: 'snow', fire: 'none', fx: null, partnerFx: null, fxUntil: 0, partnerFxUntil: 0, scene: false, mood: null, dusk: 0 };
+  private state: SoundState = { kind: 'snow', sky: null, fire: 'none', fx: null, partnerFx: null, fxUntil: 0, partnerFxUntil: 0, scene: false, mood: null, dusk: 0 };
   private moodBed: Bed | null = null;
   private moodKind: Mood = null;
   private bedKind: string | null = null;
   private fireKind: string | null = null;
+  private skyBed: Bed | null = null;
+  private skyKind: string | null = null;
   private listeners = new Set<() => void>();
 
   constructor() {
@@ -219,6 +221,13 @@ class Sound {
       this.fadeOut(this.fireBed);
       this.fireBed = fireKind === 'none' ? null : this.makeFire(fireKind === 'warm' ? 1 : 0.45);
       this.fireKind = fireKind;
+    }
+    // rain and wind over the place's own sound (frost, warmth and fog are quiet)
+    const skyKind = s.sky === 'rain' || s.sky === 'storm' || s.sky === 'wind' ? s.sky : null;
+    if (skyKind !== this.skyKind) {
+      this.fadeOut(this.skyBed);
+      this.skyBed = skyKind ? this.makeSky(skyKind) : null;
+      this.skyKind = skyKind;
     }
     const steaming = s.fx === 'steam' || s.partnerFx === 'steam';
     if (steaming && !this.hiss) this.hiss = this.makeHiss(s.fx === 'steam' ? 1 : 0.45);
@@ -670,6 +679,68 @@ class Sound {
       stop: () => {
         for (const n of nodes) n.stop();
         fire?.stop();
+        out.disconnect();
+      },
+    };
+  }
+
+  /** Rain hissing (and thunder far off in a storm), or a strong wind gusting. */
+  private makeSky(kind: 'rain' | 'storm' | 'wind'): Bed {
+    const ctx = this.ctx!;
+    const out = ctx.createGain();
+    out.gain.value = 0;
+    out.connect(this.bedBus);
+    const nodes: AudioScheduledSourceNode[] = [];
+    let timer = 0;
+    if (kind === 'wind') {
+      const src = this.noiseSrc();
+      const lp = this.filter('lowpass', 700, 0.9);
+      const g = ctx.createGain();
+      g.gain.value = 0.12;
+      src.connect(lp).connect(g).connect(out);
+      src.start();
+      nodes.push(src, this.lfo(lp.frequency, rnd(0.08, 0.14), 380), this.lfo(g.gain, rnd(0.1, 0.18), 0.07));
+    } else {
+      const heavy = kind === 'storm';
+      const src = this.noiseSrc();
+      const bp = this.filter('bandpass', heavy ? 2200 : 3200, 0.5);
+      const g = ctx.createGain();
+      g.gain.value = heavy ? 0.12 : 0.06;
+      src.connect(bp).connect(g).connect(out);
+      src.start();
+      const low = this.noiseSrc();
+      const lp = this.filter('lowpass', 400, 0.5);
+      const lg = ctx.createGain();
+      lg.gain.value = heavy ? 0.08 : 0.04;
+      low.connect(lp).connect(lg).connect(out);
+      low.start(0, 0.7);
+      nodes.push(src, low, this.lfo(g.gain, rnd(0.05, 0.09), heavy ? 0.03 : 0.015));
+      if (heavy) {
+        const thunder = () => {
+          if (this.ctx && this.on && this.ctx.state === 'running') {
+            const t = ctx.currentTime + 0.05;
+            const s = this.noiseSrc();
+            const f = this.filter('lowpass', rnd(90, 160), 0.7);
+            const e = ctx.createGain();
+            const dur = rnd(2.5, 4.5);
+            e.gain.setValueAtTime(0.0001, t);
+            e.gain.exponentialRampToValueAtTime(rnd(0.25, 0.45), t + rnd(0.15, 0.5));
+            e.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            s.connect(f).connect(e).connect(out);
+            s.start(t, rnd(0, 1.5));
+            s.stop(t + dur + 0.1);
+          }
+          timer = window.setTimeout(thunder, rnd(14000, 32000));
+        };
+        timer = window.setTimeout(thunder, rnd(3000, 9000));
+      }
+    }
+    out.gain.setTargetAtTime(1, ctx.currentTime, 1.5);
+    return {
+      out,
+      stop: () => {
+        for (const n of nodes) n.stop();
+        window.clearTimeout(timer);
         out.disconnect();
       },
     };

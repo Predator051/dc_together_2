@@ -40,6 +40,8 @@ export type Cond =
   | { met: string }
   /** It is evening now (the day grows long). */
   | { evening: boolean }
+  /** The weather now is this one. */
+  | { weather: string }
   | { all: Cond[] }
   | { any: Cond[] }
   | { not: Cond };
@@ -370,6 +372,8 @@ export interface AreaDef {
   desc?: Text;
   /** Hardships of the place: without the resist/tool, each action here hurts. */
   cond?: Array<{ need: string; hp: number; text: Text }>;
+  /** Under a roof or underground: the weather does not reach it. */
+  roof?: boolean;
 }
 
 export interface FoeEntry {
@@ -792,6 +796,51 @@ export interface NeedsDef {
   campLight?: string;
 }
 
+/** How the sky looks behind the page (client layer over the place's own backdrop). */
+export type SkyKind = 'rain' | 'storm' | 'wind' | 'frost' | 'heat' | 'fog';
+
+/**
+ * A kind of weather. It holds for both heroes at once; its effects are trade-offs and count only
+ * outside (away from home, not under a roof), except the effect on the residents' work.
+ */
+export interface WeatherDef {
+  id: string;
+  name: string;
+  /** Lines for the log when it sets in (one at random). */
+  log: string[];
+  /** How often it comes compared to the others; `when` limits it to a part of the story. */
+  weight: number;
+  when?: Cond;
+  sky?: SkyKind;
+  /** Work and walking take this many times longer. */
+  pace?: number;
+  travel?: number;
+  /** Chance of an attack × this. */
+  ambush?: number;
+  /** Chill points per minute outside (negative: it warms). */
+  chill?: number;
+  /** Wet clothes dry this many times as fast (0: they do not dry outside at all). */
+  dry?: number;
+  /** Wet places do not soak (the ground is frozen). */
+  frozen?: boolean;
+  /** Residents' work × this. */
+  jobs?: number;
+  /** Experience from fights × this. */
+  xp?: number;
+  /** Some kinds of work (by their accent) sometimes yield one more. */
+  bonus?: { fx: FxKind[]; p: number; text: string };
+}
+
+export interface WeatherSetDef {
+  /** The weather turns from this moment on (before it the sky is just the place's own). */
+  from: Cond;
+  /** How long one weather holds, ms (random between). */
+  span: [number, number];
+  /** The first weather. */
+  first: string;
+  kinds: WeatherDef[];
+}
+
 export interface StoveDef {
   /** Burn time of one log, ms. */
   perWood: number;
@@ -835,7 +884,7 @@ export type FxKind =
   | 'breath' // slow breathing
   | 'heart'; // a heartbeat
 
-/** Purely visual ambience: never affects rules. */
+/** Ambience; the action accents also tell the weather which work it favours. */
 export interface AmbientDef {
   /** Backdrop per area id. */
   areas: Record<string, AmbientKind>;
@@ -862,6 +911,7 @@ export interface Content {
   stove: StoveDef;
   /** Hunger, warmth and rest of the heroes. */
   needs?: NeedsDef;
+  weather?: WeatherSetDef;
   ambient?: AmbientDef;
   maps?: DelveMapDef[];
   /** Applied every time a new day starts (after a supper). */

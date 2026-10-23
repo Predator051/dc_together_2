@@ -48,6 +48,15 @@ npm run typecheck
   Работают в реальном времени (и офлайн), едят `content.food` раз в час, упираются в склад.
 - **Наследие**: мир первой части (в `world.db` или `DATA_DIR/part1.db`) читается один раз:
   герои, `bg_*`, концовка → флаги `legacy_*` (см. `legacyFlags`).
+- **Погода (`engine/weather.ts`, `content/weather.ts`)**: одна на двоих, `WorldState.weather
+  {id, until, next}`; начинается с `weather.from`, держится `span` (случайно), потом приходит
+  прогноз `next`; ужин (`advanceDay`) тоже меняет погоду. Пока никого нет в сети или идёт общая
+  сцена — ждёт. `WeatherDef`: `pace`/`travel`/`ambush`/`jobs`/`xp` (множители), `chill` (холод
+  в минуту, минус — греет), `dry` (сушка, 0 — не сохнет без огня), `frozen` (мокрые места не мочат),
+  `bonus {fx, p}` (работа с таким акцентом иногда даёт +1; кроме побочек и разовых), `sky` (вид).
+  Действует только «надворі»: не дома и не в месте с `roof`; жители и засады — по месту.
+  Клиент: значок в шапке с карточкой эффектов и прогнозом (`client/src/weather.tsx`), слой неба
+  в `ambient.tsx`, звук дождя/грозы/ветра в `sound.ts`. Условие `{weather: id}`.
 - Новые эффекты: `xp`, `resident`, `checkpoint` (снимок мира в архив БД), `give` (в торбу),
   `wear` (надеть), `fight` (начать бой). Новые условия: `level`, `tool`, `owns`, `trait`, `met`,
   `evening`. Движок сам ставит флаг `bag_full`.
@@ -110,7 +119,7 @@ npm run typecheck
 
 Условия: `flag` (с `gte`/`lt`), `noFlag`, `pflag`, `noPflag`, `partnerPflag`, `res`, `day`,
 `role`, `clue` (у смотрящего), `anyClue`, `partnerJoined`, `partnerOnline`, `stove`, `rel`,
-`all`/`any`/`not`.
+`weather`, `all`/`any`/`not`.
 
 Эффекты: `set`, `unset`, `inc` (`by`, `max`), `pset` (`who: actor|both|hunter|maker`), `add`, `take`, `clue`,
 `log`, `mystery` (поднять уровень), `rel`, `meet`, `scene` (только из сцен — цепочка),
