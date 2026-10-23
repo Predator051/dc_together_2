@@ -342,12 +342,15 @@ function Stock({ v, foldable = false }: { v: PlayerView; foldable?: boolean }) {
       {shown && tools.length > 0 && (
         <p class="inline-list tools">
           <span class="il-head">{T.items}:</span>{' '}
+          {/* the comma and space stay outside the unbreakable name: the line may wrap between things */}
           {tools.map((r, i) => (
-            <span class="il-thing">
+            <>
               {i > 0 && ', '}
-              <Thing icon={r.icon} />
-              {r.n > 1 ? `${r.name} ×${r.n}` : r.name}
-            </span>
+              <span class="il-thing">
+                <Thing icon={r.icon} />
+                {r.n > 1 ? `${r.name} ×${r.n}` : r.name}
+              </span>
+            </>
           ))}
           .
         </p>
