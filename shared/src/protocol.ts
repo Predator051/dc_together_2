@@ -33,7 +33,13 @@ export type Command =
   /** Join a fight going on where you stand. */
   | { c: 'help' }
   /** Set a resident to work (action id) or let them rest (null). */
-  | { c: 'job'; who: string; id: string | null };
+  | { c: 'job'; who: string; id: string | null }
+  /** Eat a dish (from the bag, or at home from the store). */
+  | { c: 'eat'; id: string }
+  /** Light a campfire where you stand (away from home). */
+  | { c: 'camp' }
+  /** Rest by a fire: at home or at a campfire. */
+  | { c: 'rest' };
 
 export type ClientMsg =
   | { t: 'hello'; token: string }
@@ -106,6 +112,8 @@ export interface EntryView {
   fresh?: boolean;
   /** Named spot of its place on the plan. */
   spot?: string;
+  /** Part of a side errand. */
+  quest?: boolean;
 }
 
 export interface GroupView {
@@ -359,6 +367,51 @@ export interface BagView {
   cap: number;
 }
 
+/** Times are ms of play left at `now`; they run only while the player is in the game outside joint scenes. */
+export interface NeedsView {
+  /** The clock is stopped (a joint scene holds everyone). */
+  paused: boolean;
+  slots: number;
+  meals: Array<{ id: string; name: string; icon?: string; left: number; full: number; fadeAt: number; hp: number; dmg?: number }>;
+  /** 0 = frozen, 100 = warm; it changes by `rate` points a minute. */
+  warmth: number;
+  rate: number;
+  level: 'warm' | 'ok' | 'cold' | 'frozen';
+  wet: number;
+  /** Clothes dry this many times faster now (by a fire). */
+  dry: number;
+  drink: number;
+  rested: number;
+  /** Play since the last rest, and when that makes the hero tired. */
+  awake: number;
+  tiredAfter: number;
+  fire: 'home' | 'low' | 'camp' | null;
+  /** Buffs and troubles in effect now. */
+  effects: Array<{ id: string; name: string; text: string; good: boolean }>;
+  /** Dishes at hand (bag, and at home the store). */
+  edible: Array<{ id: string; name: string; icon?: string; n: number; note: string; can: boolean; reason?: string }>;
+  /** Hot drinks at hand. */
+  drinks: Array<{ id: string; name: string; icon?: string; n: number; note: string }>;
+  /** Away from home: a campfire to light here. */
+  camp: { can: boolean; reason?: string; wood: number; need: number; until: number | null } | null;
+  rest: { can: boolean; reason?: string; minutes: number };
+  /** What makes home cosy (only what is there). */
+  comfort: string[];
+}
+
+/** A side errand in the journal. */
+export interface QuestView {
+  id: string;
+  title: string;
+  from: string;
+  state: 'on' | 'done' | 'closed';
+  /** Steps done so far, and the one to do now (while it is open). */
+  done: string[];
+  now: string | null;
+  /** What came of it (done or closed). */
+  outcome?: string;
+}
+
 export interface MapNodeView {
   id: string;
   name: string;
@@ -369,11 +422,13 @@ export interface MapNodeView {
   here: boolean;
   partner: boolean;
   home: boolean;
+  /** Its mark (the ground it is drawn on), once known. */
+  icon?: string;
   danger: number;
   /** Known foes of the place. */
   foes: Array<{ name: string; icon: string }>;
   /** Can walk there from here now, and how long it takes. */
-  go?: { time: number; enabled: boolean; reason?: string };
+  go?: { time: number; enabled: boolean; reason?: string; via?: string[] };
   /** A joint scouting scene to propose from here. */
   scout?: { id: string; label: string; enabled: boolean; reason?: string };
   desc?: string;
@@ -531,7 +586,7 @@ export interface PlayerView {
   proposal: ProposalView | null;
   scene: SceneView | null;
   log: LogView[];
-  journal: { clues: ClueView[]; questions: QuestionView[]; people: PersonView[] };
+  journal: { clues: ClueView[]; questions: QuestionView[]; people: PersonView[]; quests: QuestView[] };
   actDone: { act: number; text: string } | null;
   welcome: WelcomeView | null;
   summary: SummaryView | null;
@@ -539,6 +594,8 @@ export interface PlayerView {
   dayAt: number;
   hero: HeroView;
   bag: BagView;
+  /** Hunger, warmth and rest (null until they begin). */
+  needs: NeedsView | null;
   map: MapView;
   fight: FightView | null;
   /** A fight of the partner where you stand (you may join). */

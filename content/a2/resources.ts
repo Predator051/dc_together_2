@@ -18,7 +18,23 @@ export const resources2: ResourceDef[] = [
   { id: R2.cloth, icon: 'cloth', name: 'Полотно', order: 26, cap: 12, capBonus: shelves(4), weight: 0.5 },
   { id: R2.felt, icon: 'felt', name: 'Повсть', order: 27, cap: 8, weight: 0.5 },
   { id: R2.bloom, icon: 'bloom', name: 'Криця', order: 28, cap: 10, capBonus: shelves(4), weight: 2 },
-  { id: R2.meat, icon: 'meat', name: 'Солонина', order: 29, cap: 20, capBonus: shelves(6), weight: 1, ware: WARE },
+  {
+    id: R2.meat,
+    icon: 'meat',
+    name: 'Солонина',
+    order: 29,
+    kind: 'food',
+    cap: 20,
+    capBonus: shelves(6),
+    weight: 1,
+    ware: WARE,
+    meal: { hp: 5, dmg: 1, minutes: 15 },
+    use: {
+      anywhere: true,
+      label: 'З\'їсти солонини',
+      log: { self: 'Ти відрізаєш скибку солонини. Солона, жорстка — і сили від неї як від доброго сну.', other: '{name} жує солонину.' },
+    },
+  },
 
   // ----- things kept for a purpose -----
   { id: T2.mask, icon: 'mask', name: 'Мокра хустка', order: 40, kind: 'tool', weight: 0, desc: 'Полотно, змочене водою. Зав\'язати на обличчя — і дим не так б\'є в голову.' },
@@ -47,7 +63,7 @@ export const resources2: ResourceDef[] = [
   { id: G2.ironshield, icon: 'shield', name: 'Окутий щит', order: 72, kind: 'gear', weight: 2.5, gear: { slot: 'offhand', armor: 1, dodge: 0.05 } },
   { id: G2.bracers, icon: 'bracers', name: 'Наручі з бляхою', order: 73, kind: 'gear', weight: 0.5, gear: { slot: 'hands', armor: 1, acc: -0.02 } },
   { id: G2.softboots, icon: 'boots', name: 'М\'які постоли', order: 74, kind: 'gear', weight: 0.5, gear: { slot: 'legs', dodge: 0.03, tools: ['quiet'] } },
-  { id: G2.coat, icon: 'robe', name: 'Чумацька свита', order: 75, kind: 'gear', weight: 1.5, gear: { slot: 'body', hp: 2, tools: ['disguise'] } },
+  { id: G2.coat, icon: 'robe', name: 'Чумацька свита', order: 75, kind: 'gear', weight: 1.5, gear: { slot: 'body', hp: 2, resist: ['cold'], tools: ['disguise'] } },
   { id: G2.sabre, icon: 'sabre', name: 'Шабля', order: 76, kind: 'gear', weight: 1, gear: { slot: 'weapon', dmg: [3, 7], acc: 0.08, tools: ['blade'] } },
-  { id: G2.quilt, icon: 'quilt', name: 'Стьобанка', order: 77, kind: 'gear', weight: 2, gear: { slot: 'body', armor: 2, hp: 3 } },
+  { id: G2.quilt, icon: 'quilt', name: 'Стьобанка', order: 77, kind: 'gear', weight: 2, gear: { slot: 'body', armor: 2, hp: 3, resist: ['cold'] } },
 ];

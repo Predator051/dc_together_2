@@ -21,6 +21,7 @@ export const resources: ResourceDef[] = [
     name: 'Харчі',
     order: 5,
     kind: 'food',
+    meal: { hp: 2, minutes: 8 },
     cap: 30,
     capBonus: shelves(15),
     weight: 0.5,
@@ -167,7 +168,7 @@ export const resources: ResourceDef[] = [
     gear: { slot: 'hands', acc: -0.03, tools: ['gloves'], speed: 0.35 },
   },
   { id: G.jacket, icon: 'jacket', name: 'Шкіряна куртка', order: 57, kind: 'gear', weight: 2, gear: { slot: 'body', armor: 1, hp: 2 } },
-  { id: G.hood, icon: 'hood', name: 'Каптур зі шкур', order: 58, kind: 'gear', weight: 0.5, gear: { slot: 'head', hp: 3 } },
+  { id: G.hood, icon: 'hood', name: 'Каптур зі шкур', order: 58, kind: 'gear', weight: 0.5, gear: { slot: 'head', hp: 3, resist: ['cold'] } },
   { id: G.shield, icon: 'shield', name: 'Щит з лози', order: 59, kind: 'gear', weight: 1.5, gear: { slot: 'offhand', dodge: 0.06 } },
   { id: G.basket, icon: 'basket', name: 'Плетений кіш', order: 60, kind: 'gear', weight: 0, gear: { slot: 'belt', carry: 6 } },
   {
@@ -196,7 +197,7 @@ export const resources: ResourceDef[] = [
     order: 64,
     kind: 'gear',
     weight: 3,
-    gear: { slot: 'body', armor: 2, hp: 4, tags: ['heavy'] },
+    gear: { slot: 'body', armor: 2, hp: 4, tags: ['heavy'], resist: ['cold'] },
   },
   { id: G.helm, icon: 'helm', name: 'Шолом з кабанячої шкіри', order: 65, kind: 'gear', weight: 1, gear: { slot: 'head', armor: 1, hp: 2 } },
   {

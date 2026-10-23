@@ -79,6 +79,8 @@ export interface Spot {
   /** Keys of what is here, for the "new" mark. */
   keys: string[];
   progress?: { n: number; max: number };
+  /** The bag: how full it is (shown on the spot, so nobody has to open it to know). */
+  meter?: { load: number; cap: number };
   /** What opens when the spot is tapped. */
   body: () => JSX.Element;
 }
@@ -127,9 +129,30 @@ export function groupSpots(groups: GroupView[], body: (g: GroupView) => JSX.Elem
   return [spots, rest];
 }
 
-export function extraSpot(id: 'store' | 'bag' | 'folk', name: string, body: () => JSX.Element, warn = false): Spot {
+export function extraSpot(
+  id: 'store' | 'bag' | 'folk',
+  name: string,
+  body: () => JSX.Element,
+  warn = false,
+  meter?: Spot['meter'],
+): Spot {
   const at = id === 'bag' ? { ...PLAN_FIXED.store, icon: 'bag' as const } : PLAN_FIXED[id];
-  return { id, name, ...at, ready: 0, together: false, warn, keys: [id], body };
+  return { id, name, ...at, ready: 0, together: false, warn, keys: [id], body, ...(meter ? { meter } : {}) };
+}
+
+/** Room left in the bag, as a short number. */
+export function bagFree(m: NonNullable<Spot['meter']>): string {
+  return String(Math.max(0, Math.floor((m.cap - m.load) * 10) / 10));
+}
+
+/** A ring around the bag spot: how full it is. */
+function FillRing({ m }: { m: NonNullable<Spot['meter']> }) {
+  const p = Math.max(0, Math.min(1, m.load / Math.max(1, m.cap)));
+  return (
+    <svg class={`spot-fill ${p >= 1 ? 'full' : p >= 0.8 ? 'high' : ''}`} viewBox="0 0 50 50" aria-hidden="true">
+      <circle cx="25" cy="25" r="23" pathLength={100} style={{ strokeDashoffset: `${(1 - p) * 100}px` }} />
+    </svg>
+  );
 }
 
 /** A ring around the spot that fills while my work here runs (pure CSS, like the other bars). */
@@ -173,6 +196,7 @@ function SpotButton({
     s.ready > 0 ? `${T.planReady} ${s.ready}` : '',
     s.together ? T.together : '',
     fresh ? T.planNew : '',
+    s.meter ? `${T.bagFree} ${bagFree(s.meter)}` : '',
   ]
     .filter(Boolean)
     .join(', ');
@@ -188,6 +212,7 @@ function SpotButton({
       <span class="spot-medal">
         {picture(s.icon)}
         {running && <RunRing key={v.busyUntil} from={v.busyFrom} until={v.busyUntil} offset={offset} />}
+        {s.meter && <FillRing m={s.meter} />}
         {s.ready > 0 && (
           <span key={s.ready} class="spot-count">
             {s.ready}
@@ -203,6 +228,11 @@ function SpotButton({
       <span class="spot-name">
         {s.name}
         {running && <small>{Math.max(1, Math.ceil((v.busyUntil - now) / 1000))} {T.sec}</small>}
+        {s.meter && (
+          <small class={`spot-free ${s.meter.load >= s.meter.cap ? 'full' : ''}`}>
+            {T.bagFree} {bagFree(s.meter)}
+          </small>
+        )}
       </span>
       {s.progress && (
         <span class="spot-progress" aria-hidden="true">
@@ -311,6 +341,11 @@ export function AreaPlan({
                 >
                   {picture(s.icon)}
                   <span>{s.name}</span>
+                  {s.meter && (
+                    <small class={`chip-free ${s.meter.load >= s.meter.cap ? 'full' : ''}`} title={T.bagFree}>
+                      {bagFree(s.meter)}
+                    </small>
+                  )}
                   {s.id !== shown.id && (isFresh(s) || s.together) && <span class="badge" />}
                 </button>
               ))}

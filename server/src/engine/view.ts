@@ -1,5 +1,7 @@
 import type { ActionDef, ChoiceNode, DelveNode, Effect, PlayerId, PoolActionDef, SceneDef, StealthNode } from '../../../shared/src/content.js';
 import type {
+  NeedsView,
+  QuestView,
   ClueView,
   CostView,
   DeltaItem,
@@ -19,13 +21,16 @@ import type {
   WelcomeView,
 } from '../../../shared/src/protocol.js';
 import type { Game } from './index.js';
+import { questProgress } from './index.js';
 import { resolveParas } from './text.js';
 import { SKILLS, SLOTS, STATS } from '../../../shared/src/content.js';
 import type { BagView, BeastView, FightView, HeroView, MapView, ResidentView } from '../../../shared/src/protocol.js';
 import { skillLevel, skillXpFor, xpForLevel } from '../../../shared/src/rules.js';
 import { bagCap, bagLoad, gearNote, heroOf, ownsCount, useNote } from './hero.js';
 import { activeFoes, enemyOf, fightMoves, fightOf, holder } from './fight.js';
-import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, residentJobs, travelTime } from './travel.js';
+import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, residentJobs, routeLegs, routeTo, travelTime, walkOf } from './travel.js';
+import { byFire, campBlock, chillRate, comfortOf, eatBlock, restBlock, restLength, tired } from './needs.js';
+import { NEED, coldLevel, mealFading } from '../../../shared/src/rules.js';
 
 const LOG_SEND = 120;
 
@@ -124,6 +129,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         gain: sceneGains(g, sc, pid),
         together: true,
         ...(sc.spot ? { spot: sc.spot } : {}),
+        ...(sc.quest ? { quest: true } : {}),
       });
     }
     for (const pool of g.ix.c.pools) {
@@ -160,6 +166,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         readyAt: cd > g.now ? cd : undefined,
         cooldown: g.actionTime(a, pid),
         ...(a.spot ? { spot: a.spot } : {}),
+        ...(a.quest ? { quest: true } : {}),
       });
     }
     const partner = mateEntries(g, pid, loc.id);
@@ -607,7 +614,7 @@ function bagView(g: Game, pid: PlayerId): BagView {
     .filter(([, n]) => n > 0)
     .map(([id, n]) => {
       const def = g.ix.res.get(id);
-      const note = def?.use ? useNote(g, id) : def?.gear ? gearNote(g, id) : undefined;
+      const note = def?.meal ? mealNote(g, id) : def?.use ? useNote(g, id) : def?.gear ? gearNote(g, id) : undefined;
       return {
         id,
         name: def?.name ?? id,
@@ -639,6 +646,7 @@ function mapView(g: Game, pid: PlayerId): MapView {
       here: p.at === a.id && !p.travel,
       partner: o.joined && o.at === a.id && !o.travel,
       home: !!a.home,
+      ...(known && a.scene ? { icon: a.scene } : {}),
       danger: known ? (a.danger ?? 0) : 0,
       foes: known
         ? [...new Set((a.foes ?? []).filter((f) => (g.s.bestiary[f.enemy]?.seen ?? 0) > 0).map((f) => f.enemy))].map((id) => {
@@ -648,11 +656,18 @@ function mapView(g: Game, pid: PlayerId): MapView {
         : [],
       ...(known && a.desc ? { desc: g.render(a.desc, pid) } : {}),
     };
-    if (a.id !== p.at && linkTime(g, p.at, a.id) !== null) {
-      if (known) {
-        const block = goBlock(g, pid, a.id, true);
-        node.go = { time: travelTime(g, pid, p.at, a.id), enabled: block === null, ...(block ? { reason: block } : {}) };
-      } else if (a.scout) {
+    const route = known && a.id !== p.at ? routeTo(g, p.at, a.id) : null;
+    if (route) {
+      // further places are reached through the near ones: the walks add up
+      const block = goBlock(g, pid, a.id, true);
+      node.go = {
+        time: routeLegs(g, pid, p.at, route).reduce((s, [, t]) => s + t, 0),
+        enabled: block === null,
+        ...(block ? { reason: block } : {}),
+        ...(route.length > 1 ? { via: route.slice(0, -1) } : {}),
+      };
+    } else if (!known && a.id !== p.at && linkTime(g, p.at, a.id) !== null) {
+      if (a.scout) {
         const sc = g.ix.scenes.get(a.scout);
         if (sc && g.sceneOrPoolVisible(sc, pid)) {
           const block = g.proposalBlock(sc, pid);
@@ -667,10 +682,13 @@ function mapView(g: Game, pid: PlayerId): MapView {
     }
     nodes.push(node);
     for (const l of a.links ?? []) {
-      if (areaOnMap(g, l.to) && (known || areaKnown(g, l.to))) links.push([a.id, l.to]);
+      if (l.if && !g.test(l.if)) continue;
+      if (!areaOnMap(g, l.to) || !(known || areaKnown(g, l.to))) continue;
+      // a way written down at both ends is still one way
+      if (!links.some(([x, y]) => (x === a.id && y === l.to) || (x === l.to && y === a.id))) links.push([a.id, l.to]);
     }
   }
-  const tr = p.travel;
+  const tr = p.travel ? walkOf(p.travel) : null;
   return {
     nodes,
     links,
@@ -847,7 +865,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     .sort((a, b) => a.order - b.order)
     .map((r) => {
       const cap = g.cap(r.id);
-      const note = r.gear ? gearNote(g, r.id) : r.use ? useNote(g, r.id) : '';
+      const note = r.gear ? gearNote(g, r.id) : r.meal ? mealNote(g, r.id) : r.use ? useNote(g, r.id) : '';
       return {
         id: r.id,
         name: r.name,
@@ -894,8 +912,9 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
   if (o.fight !== null) {
     partnerBusy = { text: g.render(ui('partner_fighting'), pid, other), from: g.now, until: g.now };
   } else if (o.travel) {
-    const to = areaDef(g, o.travel.to);
-    partnerBusy = { text: `${g.render(ui('partner_walks'), pid, other)} ${to?.name ?? ''}`.trim(), from: o.travel.since, until: o.travel.until };
+    const walk = walkOf(o.travel);
+    const to = areaDef(g, walk.to);
+    partnerBusy = { text: `${g.render(ui('partner_walks'), pid, other)} ${to?.name ?? ''}`.trim(), from: walk.since, until: walk.until };
   } else if (o.busy && o.busy.until > g.now) {
     const a = g.ix.actions.get(o.busy.action);
     if (a?.busy) {
@@ -996,13 +1015,14 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     proposal,
     scene: sceneView(g, pid),
     log,
-    journal: { clues, questions, people },
+    journal: { clues, questions, people, quests: questsView(g, pid) },
     actDone,
     busyUntil: me.busy && me.busy.until > g.now ? me.busy.until : 0,
     busyFrom: busyFrom(g, pid),
     busyAction: me.busy && me.busy.until > g.now ? me.busy.action : null,
     hero: heroView(g, pid),
     bag: bagView(g, pid),
+    needs: needsView(g, pid),
     map: mapView(g, pid),
     fight: fightView(g, pid),
     nearFight: nearFight(g, pid),
@@ -1020,7 +1040,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
 function busyFrom(g: Game, pid: PlayerId): number {
   const me = g.p(pid);
   if (!me.busy || me.busy.until <= g.now) return 0;
-  if (me.travel) return me.travel.since;
+  if (me.travel) return walkOf(me.travel).since;
   const a = g.ix.actions.get(me.busy.action);
   if (a) return me.busy.until - g.actionTime(a, pid);
   if (me.busy.action.startsWith('rest:')) return me.busy.until - 60_000;
@@ -1080,4 +1100,120 @@ function summaryView(g: Game, pid: PlayerId): SummaryView | null {
     actions: { me: g.s.stats.actions[pid] ?? 0, partner: g.s.stats.actions[other] ?? 0 },
     gathered,
   };
+}
+
+/** One line about a dish: «+4 здоров'я · 12 хв · гріє». */
+export function mealNote(g: Game, id: string): string {
+  const m = g.ix.res.get(id)?.meal;
+  if (!m) return '';
+  const parts = [`+${m.hp} ${g.ix.ui('st_hp_word')}`];
+  if (m.dmg) parts.push(`+${m.dmg} ${g.ix.ui('st_dmg_word')}`);
+  parts.push(`${m.minutes} ${g.ix.ui('min_short')}`);
+  if (m.warm) parts.push(g.ix.ui('meal_warm'));
+  return parts.join(' · ');
+}
+
+function needsView(g: Game, pid: PlayerId): NeedsView | null {
+  const p = g.p(pid);
+  const n = p.needs;
+  if (!n) return null;
+  const ui = (k: string) => g.ix.ui(k);
+  const MIN = 60_000;
+  const meals = n.meals.flatMap((m) => {
+    const def = g.ix.res.get(m.id);
+    if (!def?.meal) return [];
+    const full = def.meal.minutes * MIN;
+    return [{ id: m.id, name: def.name, ...(def.icon ? { icon: def.icon } : {}), left: m.left, full, fadeAt: full * NEED.fade, hp: def.meal.hp, ...(def.meal.dmg ? { dmg: def.meal.dmg } : {}) }];
+  });
+  const level = coldLevel(n.chill);
+  const fire = byFire(g, pid);
+  const effects: NeedsView['effects'] = [];
+  const fx = (id: string, good: boolean, text?: string) => effects.push({ id, name: ui(`need_${id}_name`), text: text ?? ui(`need_${id}_text`), good });
+  if (meals.length) {
+    let hp = 0;
+    let dmg = 0;
+    for (const m of meals) {
+      const half = m.left < m.fadeAt;
+      hp += half ? Math.ceil(m.hp / 2) : m.hp;
+      if (m.dmg && !half) dmg += m.dmg;
+    }
+    fx('fed', true, [`+${hp} ${ui('st_hp_word')}`, dmg ? `+${dmg} ${ui('st_dmg_word')}` : ''].filter(Boolean).join(', '));
+  } else fx('hungry', false);
+  if (level === 'warm') fx('warm', true);
+  if (level === 'cold') fx('cold', false);
+  if (level === 'frozen') fx('frozen', false);
+  if (n.wet > 0) fx('wet', false);
+  if (n.drink > 0) fx('drink', true);
+  if (n.rested > 0) fx('rested', true);
+  else if (tired(n)) fx('tired', false);
+  const home = g.atHome(pid);
+  const edible: NeedsView['edible'] = [];
+  const drinks: NeedsView['drinks'] = [];
+  for (const r of g.ix.c.resources) {
+    const count = (p.bag[r.id] ?? 0) + (home ? (g.s.res[r.id] ?? 0) : 0);
+    if (count <= 0) continue;
+    const icon = r.icon ? { icon: r.icon } : {};
+    if (r.meal) {
+      const block = eatBlock(g, pid, r.id);
+      edible.push({ id: r.id, name: r.name, ...icon, n: count, note: mealNote(g, r.id), can: !block && p.fight === null, ...(block ? { reason: block } : {}) });
+    } else if (r.use?.warm && r.use.anywhere) {
+      drinks.push({ id: r.id, name: r.name, ...icon, n: count, note: useNote(g, r.id) });
+    }
+  }
+  const c = g.ix.c.needs!;
+  const campB = home ? null : campBlock(g, pid);
+  const fireUntil = g.s.fires?.[p.at] ?? 0;
+  const restB = restBlock(g, pid);
+  return {
+    paused: g.sceneBlocksRoutine() || !p.online,
+    slots: NEED.slots,
+    meals,
+    warmth: Math.round(100 - n.chill),
+    rate: -chillRate(g, pid),
+    level,
+    wet: n.wet,
+    dry: fire ? NEED.dryByFire : 1,
+    drink: n.drink,
+    rested: n.rested,
+    awake: n.awake,
+    tiredAfter: NEED.tiredAfter,
+    fire,
+    effects,
+    edible,
+    drinks,
+    camp: home
+      ? null
+      : {
+          can: !campB,
+          ...(campB ? { reason: campB } : {}),
+          wood: p.bag[c.campWood] ?? 0,
+          need: NEED.campWood,
+          until: fireUntil > g.now ? fireUntil : null,
+        },
+    rest: { can: !restB, ...(restB ? { reason: restB } : {}), minutes: restLength(g, pid) },
+    comfort: home ? comfortOf(g, pid).filter((x) => x.on).map((x) => x.name) : [],
+  };
+}
+
+function questsView(g: Game, pid: PlayerId): QuestView[] {
+  const st = g.s.quests ?? {};
+  const out: QuestView[] = [];
+  for (const q of g.ix.c.quests ?? []) {
+    const state = st[q.id];
+    if (!state) continue;
+    const k = questProgress(g, q, pid);
+    const done = q.steps.slice(0, k).map((s) => g.render(s.text, pid));
+    const now = k < q.steps.length ? g.render(q.steps[k]!.text, pid) : null;
+    out.push({
+      id: q.id,
+      title: q.title,
+      from: g.render(q.from, pid),
+      state,
+      done,
+      now: state === 'on' ? now : null,
+      ...(state === 'done' ? { outcome: g.render(q.reward, pid) } : state === 'closed' && q.failText ? { outcome: g.render(q.failText, pid) } : {}),
+    });
+  }
+  // open ones first, newest last within each
+  return [...out.filter((q) => q.state === 'on'), ...out.filter((q) => q.state !== 'on')];
 }

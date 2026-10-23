@@ -168,9 +168,14 @@ export function validateContent(c: Content): Report {
   };
   /** Resources something asks for (outside fights, where every cost is optional): resource → where. */
   const required = new Map<string, string>();
+  /** Errands may be skipped: what the rest asks for must come back without them. */
+  const questOwned = new Set([...c.actions.filter((a) => a.quest).map((a) => a.id), ...c.scenes.filter((s) => s.quest).map((s) => s.id)]);
+  const mainNeed = new Set<string>();
   const checkCost = (where: string, cost: Record<string, number> | undefined) => {
     checkRes(where, cost);
     if (!where.startsWith('encounter')) for (const k of Object.keys(cost ?? {})) if (!required.has(k)) required.set(k, where);
+    const owner = /^\S+ ([a-z]_\d+)/.exec(where)?.[1];
+    if (!where.startsWith('encounter') && !(owner && questOwned.has(owner))) for (const k of Object.keys(cost ?? {})) mainNeed.add(k);
     for (const [k, n] of Object.entries(cost ?? {})) {
       if (!Number.isInteger(n) || n <= 0) err(`${where}: bad cost ${k}=${n}`);
       if (n > maxCap(k)) err(`${where}: cost ${k}=${n} exceeds storage cap ${maxCap(k)}`);
@@ -178,7 +183,9 @@ export function validateContent(c: Content): Report {
   };
 
   // Flags written anywhere (the engine itself writes a few).
-  const written = new Set<string>(['bag_full']);
+  // the engine writes: an overflowed bag, the first soaking in a wet place
+  const written = new Set<string>(['bag_full', ...(c.areas.some((a) => a.wet) ? ['wet_feet'] : [])]);
+  for (const d of c.daily ?? []) if (d.flag) written.add(d.flag);
   const pwritten = new Set<string>();
   const collectWrites = (effs: Effect[]) => {
     for (const e of effs) {
@@ -191,6 +198,7 @@ export function validateContent(c: Content): Report {
     collectWrites(actionEffects(a));
     if (a.once) written.add(`built:${a.id}`);
     if (a.oncePerPlayer) pwritten.add(`built:${a.id}`);
+    if (a.kind === 'craft' || a.kind === 'build') written.add(`made:${a.id}`);
   }
   for (const s of c.scenes) {
     collectWrites(sceneEffects(s));
@@ -252,6 +260,7 @@ export function validateContent(c: Content): Report {
       if ('resident' in e && !residentIds.has(e.resident)) err(`${where}: unknown resident ${e.resident}`);
       if ('give' in e) checkRes(where, e.give);
       if ('wear' in e && !res.has(e.wear)) err(`${where}: unknown item ${e.wear}`);
+      if ('eat' in e && !c.resources.find((r) => r.id === e.eat)?.meal) err(`${where}: ${e.eat} is not a dish`);
       if ('fight' in e) for (const f of e.fight) if (!enemies.has(f.enemy)) err(`${where}: unknown enemy ${f.enemy}`);
     }
   };
@@ -268,6 +277,12 @@ export function validateContent(c: Content): Report {
   for (const r of c.resources) for (const b of r.capBonus ?? []) checkCond(`resource ${r.id}`, b.if);
   for (const r of c.resources) if (r.ware) checkCond(`resource ${r.id} ware`, r.ware);
   for (const [k] of Object.entries(c.start.resources)) if (!res.has(k)) err(`start: unknown resource ${k}`);
+  if (c.needs) {
+    const n = c.needs;
+    if (n.snack && !c.resources.find((r) => r.id === n.snack)?.meal) err(`needs: snack ${n.snack} is not a dish`);
+    if (!res.has(n.campWood)) err(`needs: unknown resource ${n.campWood}`);
+    if (n.campLight && !res.has(n.campLight)) err(`needs: unknown resource ${n.campLight}`);
+  }
 
   // Locations
   for (const l of c.locations) {
@@ -410,6 +425,8 @@ export function validateContent(c: Content): Report {
     if (r.kind === 'gear' && !r.gear) err(`${w}: kind gear without gear stats`);
     if (r.gear?.ammo && !res.has(r.gear.ammo)) err(`${w}: unknown ammo ${r.gear.ammo}`);
     if (r.use && r.kind !== 'use' && r.kind !== 'food') err(`${w}: a consumable must be of kind use or food`);
+    if (r.meal && (r.meal.hp <= 0 || r.meal.minutes <= 0)) err(`${w}: a dish must give health for some time`);
+    if (r.meal && r.kind !== 'use' && r.kind !== 'food') err(`${w}: a dish must be of kind use or food`);
   }
 
   // Residents
@@ -627,6 +644,29 @@ export function validateContent(c: Content): Report {
     cs.forEach((x) => checkCond(`npc ${n.id}`, x));
   }
 
+  // Errands
+  const questIds = new Set<string>();
+  for (const q of c.quests ?? []) {
+    if (questIds.has(q.id)) err(`quest ${q.id}: duplicate id`);
+    questIds.add(q.id);
+    checkCond(`quest ${q.id} start`, q.start);
+    if (q.fail) checkCond(`quest ${q.id} fail`, q.fail);
+    if (!q.steps.length) err(`quest ${q.id}: no steps`);
+    q.steps.forEach((st, i) => checkCond(`quest ${q.id} step ${i + 1}`, st.done));
+  }
+  for (const s of c.scenes) if (s.quest && !questIds.has(s.quest)) err(`scene ${s.id}: unknown quest ${s.quest}`);
+  for (const a of c.actions) if (a.quest && !questIds.has(a.quest)) err(`action ${a.id}: unknown quest ${a.quest}`);
+  const perkIds = new Set(c.perks.map((p) => p.id));
+  const perkEffects = (effs: Effect[]) => {
+    for (const e of effs) if ('perk' in e && !perkIds.has(e.perk)) err(`unknown perk ${e.perk}`);
+  };
+  for (const s of c.scenes) perkEffects(sceneEffects(s));
+  for (const a of c.actions) perkEffects(actionEffects(a));
+  for (const a of c.areas) for (const l of a.links ?? []) if (l.if) checkCond(`area ${a.id} link ${l.to}`, l.if);
+  for (const b of c.workBonus ?? []) checkCond('workBonus', b.if);
+  if (c.dog?.trained) checkCond('dog trained', c.dog.trained);
+  if (c.dog?.collar) checkCond('dog collar', c.dog.collar);
+
   // Ambience (visual only)
   if (c.ambient) {
     const actionIds = new Set(c.actions.map((a) => a.id));
@@ -643,6 +683,7 @@ export function validateContent(c: Content): Report {
   for (const l of c.locations) if (!reachable.locations.has(l.id)) err(`location ${l.id} is never visible`);
   for (const x of c.clues) if (!reachable.clues.has(x.id)) err(`clue ${x.id} is never granted`);
   for (const act of Object.keys(c.actEnd)) if (!reachable.flags.has(`act:${act}`)) err(`act ${act} cannot be finished`);
+  for (const gap of reachable.questGaps) err(gap);
 
   // Nothing a player may need can run out for good: everything asked for must have a renewable
   // source — a repeatable, reachable action that yields it and is itself fed by renewable things.
@@ -650,10 +691,12 @@ export function validateContent(c: Content): Report {
   // Hidden reservoirs (a cellar, a scrap heap) are finite on purpose; what they hold must be
   // renewable elsewhere, and that is checked for the visible resource itself.
   const renew = renewable(c, reachable.actions, reachable.areas);
+  const renewMain = renewable(c, new Set([...reachable.actions].filter((id) => !questOwned.has(id))), reachable.areas);
   for (const [r, where] of required) {
     const def = c.resources.find((x) => x.id === r);
     if (!def || def.kind === 'tool' || def.kind === 'people' || def.hidden) continue;
-    if (!renew.has(r)) err(`resource ${r} (needed by ${where}) has no renewable source: a careless player could run out for good`);
+    if (mainNeed.has(r) && renew.has(r) && !renewMain.has(r)) err(`resource ${r} is renewable only through errands, which may be skipped`);
+    else if (!renew.has(r)) err(`resource ${r} (needed by ${where}) has no renewable source: a careless player could run out for good`);
   }
 
   return { errors, warnings, reachable };
@@ -779,9 +822,11 @@ function simulate(c: Content) {
       const open = a.home || (a.scout ? flags.has(`done:${a.scout}`) : ok(a.visible));
       if (!open || areas.has(a.id)) continue;
       mark(areas, a.id);
+      if (a.wet) mark(flags, 'wet_feet');
       if (a.ambush) for (const f of a.foes ?? []) if (ok(f.if)) changed = meetEnemy(f.enemy) || changed;
     }
     for (const l of c.locations) if (ok(l.visible) && areas.has(l.area ?? homeArea!)) mark(locations, l.id);
+    for (const d of c.daily ?? []) if (d.flag && ok(d.if)) mark(flags, d.flag);
     for (const a of c.actions) {
       if (!locations.has(a.group) || !ok(a.visible) || !ok(a.enabled) || !canPay(a.cost)) continue;
       if (a.tool && !toolOf(a.tool)) continue;
@@ -790,6 +835,7 @@ function simulate(c: Content) {
       for (const ch of a.chance ?? []) for (const [k, n] of Object.entries(ch.add ?? {})) if (n > 0) mark(have, k);
       if (a.once) mark(flags, `built:${a.id}`);
       if (a.oncePerPlayer) mark(pflags, `built:${a.id}`);
+      if (a.kind === 'craft' || a.kind === 'build') mark(flags, `made:${a.id}`);
       if (absorb(actionEffects(a))) changed = true;
     }
     const poolOpen = new Set<string>();
@@ -827,5 +873,13 @@ function simulate(c: Content) {
     }
     void areaOf;
   }
-  return { scenes, actions, locations, clues: gotClues, flags, areas };
+  // every errand can begin and every step of it can be done
+  const questGaps: string[] = [];
+  for (const q of c.quests ?? []) {
+    if (!ok(q.start)) questGaps.push(`quest ${q.id} can never begin`);
+    q.steps.forEach((st, i) => {
+      if (!ok(st.done)) questGaps.push(`quest ${q.id} step ${i + 1} can never be done`);
+    });
+  }
+  return { scenes, actions, locations, clues: gotClues, flags, areas, questGaps };
 }

@@ -173,6 +173,42 @@ const DRAW: Record<PortraitId, () => JSX.Element> = {
       <path class="mark" d="M12 30l3 2M12 33l3 1" />
     </Ink>
   ),
+  matka: () => (
+    <Ink>
+      <path class="thick" d="M11 13c3-5 11-5 13 0" />
+      <path class="thick" d="M24 13c2 5-3 8-8 9-6 2-9 6-6 10 3 4 12 4 18 2 7-2 12 0 13 4" />
+      <path d="M11 13c-2 2-1 5 2 5" />
+      <Eye x={13.8} y={12.8} r={1.2} />
+      <path class="thin" d="M8 15l-3 .5M5 15.5l-1.5-1.5M5 15.5l-1 1.8" />
+      <path class="mark" d="M18 24l2-1M14 30l2-1.5M22 36l2-.5M31 35l2 .5" />
+      <ellipse cx="33" cy="22" rx="2.2" ry="1.6" />
+      <ellipse cx="37.5" cy="24.5" rx="2.2" ry="1.6" />
+      <ellipse cx="34" cy="27" rx="2.2" ry="1.6" />
+    </Ink>
+  ),
+  elder: () => (
+    <Ink>
+      <path class="thick" d="M5 24c4-8 14-11 24-10 6 1 9 4 11 7l5-4v14l-5-4c-2 4-5 6-11 7-10 1-20-2-24-10z" />
+      <path d="M5 24c3 1 7 1 10 0" />
+      <Eye x={12} y={20.5} />
+      <path class="thin" d="M7 26c-3 4-4 9-1 13M11 27c-1 5 0 9 3 11M7 22c-3-3-6-3-8-1" />
+      <path class="mark" d="M20 18l1 2M26 17l.6 2.2M32 18l0 2" />
+      <path class="thin" d="M22 26l6 3M24 30l5-1" />
+      <path d="M40 21l3-1M40 29l3 1" />
+    </Ink>
+  ),
+  shewolf: () => (
+    <Ink>
+      <path d="M14 13l-2-8 7 5M30 12l3-7 1 9" />
+      <path class="thick" d="M14 13c-3 3-4 8-3 12l-5 6c-1 2 0 3 2 3h7c2 3 5 5 9 5s7-2 9-5c3-4 4-11 1-17-3-5-8-7-13-6-3 0-5 1-7 2z" />
+      <Eye x={18} y={21} />
+      <Eye x={28} y={20} />
+      <path d="M6 34l3-1" />
+      <path class="thin" d="M31 7l2 3" />
+      <path class="mark" d="M22 14l3 5M25 13l2 4" />
+      <path class="thin" d="M33 30c3 1 6 0 8-2M34 25c3 0 6-1 8-3M35 34c3 1 6 1 8 0" />
+    </Ink>
+  ),
 };
 
 /** A foe's portrait in its round seal. Unknown names fall back to a mark of a beast. */

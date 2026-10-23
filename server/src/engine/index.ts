@@ -1,4 +1,4 @@
-import type {
+import type { QuestDef,
   ActionDef,
   ChoiceNode,
   CombatNode,
@@ -53,6 +53,7 @@ import {
 } from './hero.js';
 import { activeFoes, dropFight, fightChoose, fightOf, help, maybeResolve, startFight } from './fight.js';
 import { ambush, areaDef, areaKnown, go, linkTime, setJob, settleTravel, settleWork } from './travel.js';
+import { camp, drink, eat, feed, nightRest, paceOf, rest, settleNeeds, soak } from './needs.js';
 
 /** How long a player must have been gone to get a summary on return. */
 export const WELCOME_AFTER = 3 * 60 * 1000;
@@ -166,6 +167,7 @@ export class Game {
   commit(): void {
     if (!this.s.scene && this.chain.length) this.startScene(this.chain.shift()!);
     this.updateGoal();
+    this.updateQuests();
     this.s.meta.rng = this.rng.state;
   }
 
@@ -183,6 +185,37 @@ export class Game {
     const text: Partial<Record<PlayerId, string>> = {};
     for (const pid of this.joinedIds()) text[pid] = `${this.ix.ui('goal_prefix')} ${this.render(g.text, pid)}`;
     this.logRaw('system', text);
+  }
+
+  /** Errands begin, end, or close as their conditions come to hold. */
+  private updateQuests(): void {
+    const qs = this.ix.c.quests;
+    if (!qs?.length) return;
+    const st = (this.s.quests ??= {});
+    const say = (text: (pid: PlayerId) => string) => {
+      const out: Partial<Record<PlayerId, string>> = {};
+      for (const pid of this.joinedIds()) out[pid] = text(pid);
+      this.logRaw('find', out);
+    };
+    for (const q of qs) {
+      const now = st[q.id];
+      if (now === 'done' || now === 'closed') continue;
+      if (!now) {
+        if (!this.test(q.start)) continue;
+        st[q.id] = 'on';
+        say(() => `${this.ix.ui('quest_new')} «${q.title}».`);
+      }
+      if (q.fail && this.test(q.fail)) {
+        st[q.id] = 'closed';
+        say((pid) => `${this.ix.ui('quest_closed')} «${q.title}».${q.failText ? ' ' + this.render(q.failText, pid) : ''}`);
+        continue;
+      }
+      if (questProgress(this, q) >= q.steps.length) {
+        st[q.id] = 'done';
+        say((pid) => `${this.ix.ui('quest_done')} «${q.title}». ${this.render(q.reward, pid)}`);
+        for (const pid of this.joinedIds()) gainXp(this, pid, 15);
+      }
+    }
   }
 
   fail(key: string): Result {
@@ -231,8 +264,9 @@ export class Game {
   settle(): boolean {
     const a = settleTravel(this);
     const b = settleWork(this);
+    const n = settleNeeds(this);
     const c = settleHealth(this);
-    return a || b || c;
+    return a || b || c || n;
   }
 
   // ----- conditions ----------------------------------------------------------
@@ -527,6 +561,11 @@ export class Game {
       for (const pid of this.joinedIds()) text[pid] = `${this.ix.ui('new_day')} ${this.s.meta.day}.`;
       this.logRaw('system', text);
       this.applyDaily();
+      nightRest(this);
+      return;
+    }
+    if ('eat' in e) {
+      for (const pid of this.targets(e.who ?? 'actor', actor)) feed(this, pid, e.eat);
       return;
     }
     if ('heal' in e) {
@@ -556,6 +595,7 @@ export class Game {
         const p = this.p(pid);
         p.at = e.moveTo;
         p.travel = null;
+        if (p.busy?.action.startsWith('go:')) p.busy = null;
         if (areaDef(this, e.moveTo)?.home) this.unloadQuiet(pid);
       }
       this.s.proposal = null;
@@ -563,6 +603,17 @@ export class Game {
     }
     if ('xp' in e) {
       for (const pid of this.targets(e.who ?? 'both', actor)) gainXp(this, pid, e.xp);
+      return;
+    }
+    if ('perk' in e) {
+      for (const pid of this.targets(e.who ?? 'both', actor)) {
+        const p = this.p(pid);
+        if (!p.joined || p.perks.includes(e.perk)) continue;
+        p.perks.push(e.perk);
+        refreshHero(this, pid);
+        const def = this.ix.c.perks.find((x) => x.id === e.perk);
+        this.logRaw('find', { [pid]: `${this.ix.ui('perk_got')} «${def?.name ?? e.perk}».` }, pid);
+      }
       return;
     }
     if ('resident' in e) {
@@ -676,7 +727,7 @@ export class Game {
 
   /** How long the action keeps this hero busy. */
   actionTime(a: ActionDef, pid: PlayerId): number {
-    let t = a.cooldown * this.cooldownMult(this.ix.areaOf(a.group));
+    let t = a.cooldown * this.cooldownMult(this.ix.areaOf(a.group)) * paceOf(this, pid);
     if (a.skill) {
       const h = heroOf(this, pid);
       const knack = a.knack && a.knack.role === this.p(pid).role ? a.knack.x : 1;
@@ -762,6 +813,7 @@ export class Game {
     if (a.kind === 'craft') st.crafted += 1;
     if ((a.effects ?? []).some((e) => 'moveTo' in e)) st.trips += 1;
 
+    if (a.wet) soak(this, pid);
     if (a.once) this.s.flags[`built:${a.id}`] = 1;
     if (a.oncePerPlayer) p.flags[`built:${a.id}`] = 1;
     const cd = this.actionTime(a, pid);
@@ -1453,11 +1505,14 @@ export class Game {
     const u = def?.use;
     if (!def || !u || !u.anywhere) return this.fail('err_not_now');
     if (p.fight !== null) return this.fail('err_in_fight');
+    // a dish goes into a meal slot (once the needs count)
+    if (def.meal && p.needs) return eat(this, pid, id);
     if (this.stockOf(pid, id) <= 0) return this.fail('err_cost');
-    if (u.heal && p.hp >= p.hpMax && !(u.cure ?? []).length) return this.fail('err_full_hp');
+    if (u.heal && p.hp >= p.hpMax && !(u.cure ?? []).length && !(u.warm && p.needs)) return this.fail('err_full_hp');
     this.payCostFor(pid, { [id]: 1 });
     if (u.heal) p.hp = Math.min(p.hpMax, p.hp + u.heal);
     if (u.cure?.includes('poison')) p.poison = 0;
+    if (u.warm) drink(this, pid, u.warm, u.warmFor ?? 0);
     this.log(u.log, pid);
     return OK;
   }
@@ -1504,6 +1559,15 @@ export class Game {
       case 'job':
         r = setJob(this, cmd.who, cmd.id);
         break;
+      case 'eat':
+        r = eat(this, pid, cmd.id);
+        break;
+      case 'camp':
+        r = camp(this, pid);
+        break;
+      case 'rest':
+        r = rest(this, pid);
+        break;
       case 'act': {
         const e = this.ix.entry(cmd.id);
         if (!e) r = this.fail('err_not_now');
@@ -1546,6 +1610,8 @@ export class Game {
   setOnline(pid: PlayerId, online: boolean): void {
     const p = this.p(pid);
     if (p.online === online) return;
+    // the needs count up to now as they were (in the game or not)
+    settleNeeds(this);
     p.online = online;
     p.lastSeen = this.now;
     if (!online) {
@@ -1669,6 +1735,15 @@ export function newWorld(content: Content, seed: number, now: number): WorldStat
 }
 
 /** Ensure a loaded world has entries for content added after it was created. */
+/**
+ * How many steps of an errand are done. A step counts as done when it, or any later one, holds:
+ * what a step gathers is often spent by the next one.
+ */
+export function questProgress(g: Game, q: QuestDef, pid?: PlayerId): number {
+  for (let i = q.steps.length - 1; i >= 0; i--) if (g.test(q.steps[i]!.done, pid)) return i + 1;
+  return 0;
+}
+
 export function normalizeWorld(content: Content, s: WorldState, now: number): WorldState {
   for (const r of content.resources) if (s.res[r.id] === undefined) s.res[r.id] = 0;
   const areas = new Set(content.areas.map((a) => a.id));

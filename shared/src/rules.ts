@@ -53,7 +53,15 @@ export interface Derived {
 /** Fists and a belt knife-less start. */
 const BARE: [number, number] = [1, 2];
 
-export function derive(h: HeroLike, gear: (id: string) => GearDef | undefined): Derived {
+/** What hunger, cold and food add to the hero (see NEED). */
+export interface BodyMods {
+  hp: number;
+  dmg: number;
+  hit: number;
+  dodge: number;
+}
+
+export function derive(h: HeroLike, gear: (id: string) => GearDef | undefined, body?: BodyMods): Derived {
   const s = h.stats;
   let hp = 0;
   let carry = 0;
@@ -97,13 +105,14 @@ export function derive(h: HeroLike, gear: (id: string) => GearDef | undefined): 
   const skill = skillLevel(h.skills[ranged ? 'ranged' : 'melee'] ?? 0);
   const skillDmg = Math.floor(skill / 3);
   const perkCarry = h.perks.includes('steady') ? 4 : 0;
+  const b = body ?? { hp: 0, dmg: 0, hit: 0, dodge: 0 };
   return {
-    hpMax: 10 + 3 * s.end + 2 * (h.level - 1) + hp,
+    hpMax: Math.max(4, 10 + 3 * s.end + 2 * (h.level - 1) + hp + b.hp),
     carry: 8 + 2 * s.str + carry + perkCarry,
     armor,
-    dodge: Math.min(0.3, 0.025 * s.agi + dodge),
-    hit: 0.7 + 0.03 * s.agi + acc + 0.03 * skill,
-    dmg: [Math.max(1, wdmg[0] + bonus + skillDmg), Math.max(1, wdmg[1] + bonus + skillDmg)],
+    dodge: Math.max(0, Math.min(0.3, 0.025 * s.agi + dodge) + b.dodge),
+    hit: 0.7 + 0.03 * s.agi + acc + 0.03 * skill + b.hit,
+    dmg: [Math.max(1, wdmg[0] + bonus + skillDmg + b.dmg), Math.max(1, wdmg[1] + bonus + skillDmg + b.dmg)],
     ranged,
     ammo,
     tags,
@@ -128,4 +137,81 @@ export function gatherMult(o: { skill: number; toolSpeed: number; heavy: boolean
 
 export function travelMult(o: { trail: number; load: number; heavy: boolean }): number {
   return Math.max(0.4, (1 - 0.04 * Math.min(10, o.trail)) * (o.load > 0.75 ? 1.25 : 1) * (o.heavy ? 1.1 : 1));
+}
+
+// ----- needs: hunger, warmth, rest ------------------------------------------------
+
+const MIN = 60_000;
+
+/** Numbers of the needs. Rates of chill are points per minute of play. */
+export const NEED = {
+  /** Dishes at once. */
+  slots: 3,
+  /** The last part of a dish's time: half the bonus, and it may be eaten again. */
+  fade: 0.25,
+  hunger: { hp: -3, dmg: -1 },
+  chill: { evening: 8, wet: 15, homeEvening: 4, resist: 0.5, fire: 40, low: 20, drink: 0.5 },
+  /** Chill at or below: warmed through (wounds heal faster). */
+  warmAt: 15,
+  /** Chill at or above: cold; at the top: frozen stiff. */
+  coldAt: 60,
+  freezeAt: 100,
+  /** At home, under the roof, the chill stops here (cold, never frozen). */
+  homeMaxChill: 80,
+  cold: { hit: -0.08, dodge: -0.04 },
+  /** Frozen stiff: one health point lost this often. */
+  biteEvery: MIN,
+  warmRegen: 1.5,
+  /** Hungry or cold: wounds close this much slower. */
+  slowRegen: 0.5,
+  wetFor: 4 * MIN,
+  /** By a fire clothes dry this many times faster. */
+  dryByFire: 4,
+  tiredAfter: 40 * MIN,
+  /** Rested for base + per comfort point, minutes. */
+  restBase: 4,
+  restPer: 2,
+  restBusy: 12_000,
+  rested: { pace: 0.9, skill: 1.5 },
+  tired: { pace: 1.2, skill: 0.5 },
+  campFor: 5 * MIN,
+  campWood: 2,
+  campBusy: 6_000,
+} as const;
+
+export type ColdLevel = 'warm' | 'ok' | 'cold' | 'frozen';
+
+export function coldLevel(chill: number): ColdLevel {
+  if (chill >= NEED.freezeAt) return 'frozen';
+  if (chill >= NEED.coldAt) return 'cold';
+  if (chill <= NEED.warmAt) return 'warm';
+  return 'ok';
+}
+
+/** A dish in its last quarter gives half and may be eaten again. */
+export function mealFading(left: number, minutes: number): boolean {
+  return left < minutes * MIN * NEED.fade;
+}
+
+/** Health and strike from the dishes in the slots (or hunger, when none), and the cold's bite. */
+export function bodyMods(
+  meals: Array<{ left: number; hp: number; dmg?: number; minutes: number }>,
+  chill: number,
+): BodyMods {
+  const m: BodyMods = { hp: 0, dmg: 0, hit: 0, dodge: 0 };
+  if (!meals.length) {
+    m.hp += NEED.hunger.hp;
+    m.dmg += NEED.hunger.dmg;
+  }
+  for (const x of meals) {
+    const half = mealFading(x.left, x.minutes);
+    m.hp += half ? Math.ceil(x.hp / 2) : x.hp;
+    if (x.dmg && !half) m.dmg += x.dmg;
+  }
+  const lvl = coldLevel(chill);
+  if (lvl === 'cold' || lvl === 'frozen') {
+    m.hit += NEED.cold.hit;
+    m.dodge += NEED.cold.dodge;
+  }
+  return m;
 }

@@ -87,6 +87,7 @@ export const actions2: ActionDef[] = [
   },
   {
     id: 'x_74',
+    wet: true,
     group: L2.camp,
     spot: 'ford',
     label: 'Ловити рибу на броді',
@@ -345,6 +346,7 @@ export const actions2: ActionDef[] = [
   // ------------------------------------------------------------------ the rusty marsh
   {
     id: 'x_90',
+    wet: true,
     group: L2.bog,
     spot: 'ore',
     label: 'Копати болотяну руду',
@@ -364,6 +366,7 @@ export const actions2: ActionDef[] = [
   },
   {
     id: 'x_91',
+    wet: true,
     group: L2.bog,
     spot: 'peat',
     label: 'Різати торф',
@@ -379,6 +382,7 @@ export const actions2: ActionDef[] = [
   },
   {
     id: 'x_92',
+    wet: true,
     group: L2.bog,
     spot: 'berry',
     label: 'Збирати журавлину',

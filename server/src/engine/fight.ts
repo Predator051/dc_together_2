@@ -408,7 +408,10 @@ function foeStrikes(g: Game, f: FightState, foe: FoeState, target: PlayerId, mul
     reveal(g, f, foe.enemy, 'night');
   }
   n = Math.round(n * mult);
-  n = Math.max(1, n - h.armor);
+  // shoulder to shoulder: while the other one stands too, each takes a blow better
+  const mate = f.party.find((x) => x !== t);
+  const shoulder = g.p(t).perks.includes('shoulder') && !!mate && up(g, f, mate) ? 1 : 0;
+  n = Math.max(1, n - h.armor - shoulder);
   if (ctx.guard.has(t)) n = Math.max(0, Math.round(n * 0.4));
   if (coverer === t && g.p(t).perks.includes('shield')) n = Math.round(n * 0.7);
   if (n <= 0) {
@@ -626,7 +629,7 @@ function dogActs(g: Game, f: FightState, ctx: RoundCtx): void {
   if (!f.dog) return;
   const dog = g.ix.c.dog!;
   const danger = activeFoes(f).find((x) => x.intent && ['charge', 'grab', 'drag'].includes(x.intent.move));
-  if (danger && g.rng.chance(0.3)) {
+  if (danger && g.rng.chance(dog.trained && g.test(dog.trained) ? 0.55 : 0.3)) {
     danger.intent = { move: 'none' };
     say(g, f, 'fight_dog_stops', null, { ...foeVars(g, danger, f), item: dog.name });
     return;
@@ -634,7 +637,7 @@ function dogActs(g: Game, f: FightState, ctx: RoundCtx): void {
   const foes = activeFoes(f);
   if (!foes.length) return;
   const foe = g.rng.pick(foes);
-  const n = g.rng.int(1, 2);
+  const n = g.rng.int(1, 2) + (dog.collar && g.test(dog.collar) ? 1 : 0);
   say(g, f, 'fight_dog_bites', null, { ...foeVars(g, foe, f), n, item: dog.name });
   damageFoe(g, f, foe, n, ctx);
   if (enemyOf(g, foe.enemy).morale !== undefined) foe.fear += 1;
@@ -762,6 +765,11 @@ export function defeat(g: Game, pid: PlayerId): void {
   p.poison = 0;
   p.at = g.ix.homeArea;
   p.travel = null;
+  // brought home and laid by the fire: warm and dry, if weak
+  if (p.needs) {
+    p.needs.chill = 0;
+    p.needs.wet = 0;
+  }
   p.fight = null;
   p.busy = { action: 'rest:defeat', until: g.now + DEFEAT_BUSY };
   g.log({ self: g.ix.ui('defeat_self'), other: g.ix.ui('defeat_other'), kind: 'warn' }, pid);

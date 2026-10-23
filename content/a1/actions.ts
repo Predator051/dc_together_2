@@ -64,6 +64,7 @@ export const actions: ActionDef[] = [
   },
   {
     id: 'x_03',
+    wet: true,
     group: L.shore,
     spot: 'water',
     label: 'Ловити раків',
@@ -95,6 +96,7 @@ export const actions: ActionDef[] = [
   },
   {
     id: 'x_05',
+    wet: true,
     group: L.shore,
     spot: 'water',
     label: 'Бити рибу остенем',
@@ -234,7 +236,7 @@ export const actions: ActionDef[] = [
     label: 'Поїсти біля вогню',
     visible: hut,
     cost: { [R.food]: 1 },
-    effects: [{ heal: 8, who: 'actor' }],
+    effects: [{ heal: 8, who: 'actor' }, { eat: R.food }],
     cooldown: 5 * SEC,
     kind: 'home',
     gives: 'Сили +8',

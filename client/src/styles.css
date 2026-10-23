@@ -398,6 +398,9 @@ b {
 .pill.mine {
   color: var(--faded);
 }
+.pill.errand {
+  color: var(--verdigris);
+}
 .pill.new {
   color: var(--cinnabar-ink);
   font-weight: 600;
@@ -1337,6 +1340,43 @@ b {
   color: var(--ink-2);
   font-size: 0.97rem;
   line-height: 1.6;
+}
+/* errands: where it came from, the steps behind, the one now */
+.quest p,
+.quest ol {
+  margin: 2px 0 0;
+  color: var(--ink-2);
+  font-size: 0.97rem;
+  line-height: 1.6;
+}
+.quest .quest-from {
+  color: var(--faded);
+  font-style: italic;
+}
+.quest-steps {
+  padding-left: 1.2em;
+}
+.quest-steps .did {
+  color: var(--faded);
+  text-decoration: line-through;
+  text-decoration-color: rgba(140, 120, 90, 0.5);
+}
+.quest-now {
+  color: var(--ochre-ink);
+  font-weight: 600;
+}
+.quest.done .clue-head b,
+.quest.closed .clue-head b {
+  color: var(--faded);
+}
+.quest .quest-outcome {
+  color: var(--ink);
+}
+.pill.done {
+  color: var(--verdigris);
+}
+.pill.closed {
+  color: var(--faded);
 }
 mark {
   padding: 0 1px;
@@ -2733,32 +2773,32 @@ mark {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.map-node circle:first-child {
+.map-node > circle:first-child {
   fill: var(--leaf-2);
   stroke: var(--ink-2);
   stroke-width: 1.5;
   transition: stroke 0.15s;
 }
-.map-node.unknown circle:first-child {
+.map-node.unknown > circle:first-child {
   fill: transparent;
   stroke: var(--pale);
   stroke-dasharray: 3 3;
 }
-.map-node.home circle:first-child {
+.map-node.home > circle:first-child {
   fill: var(--ochre-wash);
   stroke: var(--ochre);
 }
-.map-node.can circle:first-child {
+.map-node.can > circle:first-child {
   stroke: var(--ochre-ink);
 }
-.map-node.sel circle:first-child {
+.map-node.sel > circle:first-child {
   stroke: var(--cinnabar-ink);
   stroke-width: 2.5;
 }
 .map-node:focus-visible {
   outline: none;
 }
-.map-node:focus-visible circle:first-child {
+.map-node:focus-visible > circle:first-child {
   stroke: var(--cinnabar-ink);
 }
 .map-name {
@@ -2770,13 +2810,54 @@ mark {
   stroke-width: 3px;
   text-anchor: middle;
 }
-.map-danger,
 .map-q {
   fill: var(--ink);
   font-family: var(--sans);
   font-size: 12px;
   font-weight: 700;
   text-anchor: middle;
+}
+.map-ico {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.map-ico .thin {
+  stroke-width: 1.3;
+}
+.map-ico .fill {
+  fill: currentColor;
+  fill-opacity: 0.3;
+}
+.map-node.home .map-ico {
+  stroke: var(--ochre-ink);
+}
+.map-node.sel .map-ico {
+  stroke: var(--ink);
+}
+.map-danger circle {
+  fill: var(--page);
+  stroke: var(--cinnabar-ink);
+  stroke-width: 1.2;
+}
+.map-danger text {
+  fill: var(--ink);
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+.map-link.way {
+  stroke: var(--ochre);
+  stroke-dasharray: none;
+  stroke-width: 2.5;
+}
+.map-via {
+  flex-basis: 100%;
+  margin: 2px 0 0;
 }
 .map-q {
   fill: var(--faded);
@@ -2898,6 +2979,297 @@ mark {
   color: var(--faded);
   font-family: var(--sans);
   font-size: 0.8rem;
+}
+
+/* ---------- needs ---------- */
+.needs-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.needs-bar .need {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--rule-2);
+  border-radius: 8px;
+  background: var(--leaf);
+  color: var(--ink-2);
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: border-color 0.15s;
+}
+.needs-bar:hover .need,
+.needs-bar.on .need {
+  border-color: rgba(196, 154, 69, 0.55);
+}
+.needs-bar .need-food,
+.needs-bar .need-rest {
+  flex: none;
+}
+.needs-bar .need.good {
+  color: var(--verdigris);
+}
+.needs-bar .need.soon {
+  color: var(--ochre-ink);
+}
+.needs-bar .need.bad {
+  border-color: rgba(216, 105, 76, 0.6);
+  color: var(--cinnabar-ink);
+}
+.need-pic {
+  flex: none;
+  width: 17px;
+  height: 17px;
+}
+.need-drop {
+  flex: none;
+  width: 11px;
+  height: 11px;
+  color: var(--gall);
+}
+.need-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.need-pips {
+  display: inline-flex;
+  gap: 3px;
+}
+.need-pips i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid var(--pale);
+}
+.need-pips i.full {
+  border-color: var(--ochre);
+  background: var(--ochre);
+}
+.need-pips i.half {
+  border-color: var(--ochre);
+  background: linear-gradient(90deg, var(--ochre) 50%, transparent 50%);
+}
+.need-meter {
+  position: relative;
+  flex: 1;
+  min-width: 18px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(142, 165, 179, 0.25);
+  overflow: hidden;
+}
+.need-meter i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+  background: var(--ochre);
+  transition: width 0.6s ease;
+}
+.need.bad .need-meter i,
+.warm-meter.cold .need-meter i,
+.warm-meter.frozen .need-meter i {
+  background: var(--gall);
+}
+.need-meter.big {
+  flex: none;
+  width: 100%;
+  height: 8px;
+}
+.needs-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.need-block h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+}
+.need-block h3 .need-pic {
+  color: var(--ochre-ink);
+}
+.need-effects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--sans);
+  font-size: 0.84rem;
+}
+.need-effects li {
+  padding: 4px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--rule-2);
+  color: var(--ink-2);
+}
+.need-effects li.good {
+  border-color: rgba(141, 176, 143, 0.5);
+}
+.need-effects li.good b {
+  color: var(--verdigris);
+}
+.need-effects li.bad {
+  border-color: rgba(216, 105, 76, 0.5);
+}
+.need-effects li.bad b {
+  color: var(--cinnabar-ink);
+}
+.meal-slots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.meal-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid rgba(196, 154, 69, 0.45);
+  border-radius: 8px;
+  background: var(--ochre-wash);
+  font-family: var(--sans);
+}
+.meal-slot.half {
+  border-style: dashed;
+  background: transparent;
+}
+.meal-slot.empty {
+  align-items: center;
+  justify-content: center;
+  min-height: 62px;
+  border: 1px dashed var(--rule-2);
+  background: transparent;
+  color: var(--pale);
+  font-size: 0.82rem;
+}
+.meal-name {
+  overflow: hidden;
+  font-size: 0.86rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.meal-slot small {
+  color: var(--faded);
+  font-size: 0.74rem;
+}
+.meal-time {
+  position: relative;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--rule);
+  overflow: hidden;
+}
+.meal-time i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--ochre);
+}
+.need-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.need-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.need-list li:last-child {
+  border-bottom: none;
+}
+.need-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.need-item small {
+  color: var(--faded);
+  font-family: var(--sans);
+  font-size: 0.8rem;
+}
+.need-item small.reason {
+  color: var(--pale);
+}
+.warm-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.warm-text {
+  margin: 0 0 8px;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+.warm-meter.cold b,
+.warm-meter.frozen b,
+.warm-text b.bad {
+  color: var(--cinnabar-ink);
+}
+.warm-meter.warm b {
+  color: var(--verdigris);
+}
+.need-act {
+  margin: 8px 0;
+}
+.need-act .reason {
+  margin-top: 4px;
+}
+.need-hint {
+  margin: 8px 0 0;
+  color: var(--faded);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+.sheet-title {
+  flex: 1;
+  margin: 0;
+  font-size: 1.05rem;
+}
+.need-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 10px 0 0;
+}
+.need-chip {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-family: var(--sans);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+.need-chip.good {
+  background: rgba(141, 176, 143, 0.14);
+  color: var(--verdigris);
+}
+.need-chip.bad {
+  background: rgba(216, 105, 76, 0.14);
+  color: var(--cinnabar-ink);
 }
 
 /* ---------- marks of things ---------- */
@@ -3478,6 +3850,46 @@ mark {
   animation-name: spot-run;
   animation-timing-function: linear;
   animation-fill-mode: both;
+}
+.spot-fill {
+  position: absolute;
+  inset: -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+.spot-fill circle {
+  fill: none;
+  stroke: var(--gall);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 100px;
+  transition: stroke-dashoffset 0.5s ease;
+}
+.spot-fill.high circle {
+  stroke: var(--ochre);
+}
+.spot-fill.full circle {
+  stroke: var(--cinnabar-ink);
+}
+.spot-name small.spot-free {
+  color: var(--gall);
+  font-weight: 600;
+}
+.spot-name small.spot-free.full,
+.chip-free.full {
+  color: var(--cinnabar-ink);
+}
+.chip-free {
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--gall-wash);
+  color: var(--gall);
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 @keyframes spot-run {
   from {

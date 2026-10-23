@@ -435,6 +435,209 @@ const DRAW: Record<ItemIcon, () => JSX.Element> = {
       <path class="thin" d="M4 11.5h16M4 15.5h16M8 7.5V20M16 7.5V20" />
     </Ink>
   ),
+
+  // ----- needs -----
+  thyme: () => (
+    <Ink>
+      <path d="M12 21V9M12 15c-2-1-4-1-5.5.5M12 12c2-1 4-1 5.5.5" />
+      <circle class="dot" cx="12" cy="7.5" r="1.2" />
+      <circle class="dot" cx="9.5" cy="9" r="1" />
+      <circle class="dot" cx="14.5" cy="9" r="1" />
+      <circle class="dot" cx="6.5" cy="14.5" r=".9" />
+      <circle class="dot" cx="17.5" cy="11.5" r=".9" />
+    </Ink>
+  ),
+  soup: () => (
+    <Ink>
+      <path d="M4 11h16c0 5-3.6 8-8 8s-8-3-8-8z" />
+      <path d="M3 11h18" />
+      <path class="thin" d="M8 8c-1-1.3 1-2.2 0-3.8M12 8c-1-1.3 1-2.2 0-3.8M16 8c-1-1.3 1-2.2 0-3.8" />
+    </Ink>
+  ),
+  driedfish: () => (
+    <Ink>
+      <path d="M12 3v3" />
+      <path d="M12 6c3 2 4 5 3.5 8.5L12 21l-3.5-6.5C8 11 9 8 12 6z" />
+      <path class="thin" d="M10 11h4M9.8 14h4.4" />
+    </Ink>
+  ),
+  tea: () => (
+    <Ink>
+      <path d="M5 9h11v6a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5z" />
+      <path d="M16 11h1.5a2.5 2.5 0 0 1 0 5H16" />
+      <path class="thin" d="M8.5 6.5c-.8-1 .8-1.8 0-3M12.5 6.5c-.8-1 .8-1.8 0-3" />
+    </Ink>
+  ),
+  tarboots: () => (
+    <Ink>
+      <path d="M8 3.5V14l-4 3v3h13.5v-3c0-2-2-3-5-3V3.5z" />
+      <path class="fill" d="M8 8h4.5v6c3 0 5 1 5 3v3H4v-3l4-3z" />
+    </Ink>
+  ),
+  millet: () => (
+    <Ink>
+      <path d="M6 20c0-5 2-8 6-9.5M18 20c0-5-2-8-6-9.5" />
+      <path d="M5 20h14" />
+      <circle class="dot" cx="12" cy="7" r="1" />
+      <circle class="dot" cx="10" cy="8.5" r=".9" />
+      <circle class="dot" cx="14" cy="8.5" r=".9" />
+      <circle class="dot" cx="12" cy="4.5" r=".8" />
+    </Ink>
+  ),
+  porridge: () => (
+    <Ink>
+      <path d="M4 12h16c0 4-3.6 7-8 7s-8-3-8-7z" />
+      <path class="fill" d="M5 12c1.5-2.5 4-3.5 7-3.5s5.5 1 7 3.5z" />
+      <path d="M15 9.5L20 3" />
+    </Ink>
+  ),
+  // ----- errands -----
+  feather: () => (
+    <Ink>
+      <path d="M5 21L17 6" />
+      <path class="fill" d="M17 3c-6 1-10 6-10 13 6-1 11-5 12-12z" />
+      <path class="thin" d="M10 13l4 .5M12 10l3.5.5" />
+    </Ink>
+  ),
+  osier: () => (
+    <Ink>
+      <path d="M5 21c1-6 3-11 7-17M12 21c0-6 1-11 5-16M18 21c-1-5 0-10 2-13" />
+      <path class="thin" d="M3 15c3-1 15-1 18 0M3.5 18c3-.8 14-.8 17 0" />
+    </Ink>
+  ),
+  viperskin: () => (
+    <Ink>
+      <path d="M4 18c3 2 6 0 6-3s-4-3-4-6 4-5 7-4 4 4 7 3" />
+      <path class="thin" d="M7.5 15.5l1 1M7 10.5l1.2-.5M11 6.5l.6 1.2M15 6.5l.2 1.3" />
+    </Ink>
+  ),
+  fat: () => (
+    <Ink>
+      <path d="M5 10h14v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z" />
+      <path class="fill" d="M5 13c2-1 4 0 7-1s5 0 7 0v5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z" />
+      <path d="M4 10h16M8 7c1-2 3-3 4-3s3 1 4 3" />
+    </Ink>
+  ),
+  oar: () => (
+    <Ink>
+      <path d="M4 20L15 9" />
+      <path class="fill" d="M15 9c0-3 2-6 5-6 0 3-2 6-5 6z" />
+      <path d="M6 15.5l2.5 2.5" />
+    </Ink>
+  ),
+  boat: () => (
+    <Ink>
+      <path class="fill" d="M3 13h18l-3 5H6z" />
+      <path d="M3 13h18M8 13l4-8 4 8" />
+      <path class="thin" d="M2 21c2-1 4 1 6 0s4 1 6 0 4 1 6 0" />
+    </Ink>
+  ),
+  block: () => (
+    <Ink>
+      <circle cx="12" cy="10" r="5" />
+      <circle class="dot" cx="12" cy="10" r="1.2" />
+      <path d="M12 2v3M7 10v11M17 10v6" />
+    </Ink>
+  ),
+  mark: () => (
+    <Ink>
+      <path d="M12 3v18M8 21h8" />
+      <path class="fill" d="M12 4h7l-2 3 2 3h-7z" />
+    </Ink>
+  ),
+  level: () => (
+    <Ink>
+      <path d="M4 20L12 4l8 16" />
+      <path d="M7 14h10" />
+      <path class="thin" d="M12 4v13" />
+      <circle class="dot" cx="12" cy="17.5" r="1.2" />
+    </Ink>
+  ),
+  grapnel: () => (
+    <Ink>
+      <path d="M12 3v14" />
+      <circle cx="12" cy="3.5" r="1.5" />
+      <path d="M12 17c-3 0-5-2-6-5M12 17c3 0 5-2 6-5M6 12l-1.5 1.5M18 12l1.5 1.5" />
+    </Ink>
+  ),
+  buckle: () => (
+    <Ink>
+      <rect x="5" y="6" width="14" height="12" rx="3" />
+      <path d="M12 6v12M2 12h3M19 12h3" />
+    </Ink>
+  ),
+  bighook: () => (
+    <Ink>
+      <path d="M12 3v11a5 5 0 0 1-10 0" />
+      <path d="M2 14l2.5-2" />
+      <circle cx="12" cy="3.5" r="1.3" />
+      <path class="thin" d="M12 3c3 0 6 1 9 3" />
+    </Ink>
+  ),
+  lamp: () => (
+    <Ink>
+      <path d="M8 6h8l1 12H7z" />
+      <path d="M6 20h12M10 3h4M12 3v3" />
+      <path class="fill" d="M12 9c1.5 2 1.5 4 0 5.5-1.5-1.5-1.5-3.5 0-5.5z" />
+    </Ink>
+  ),
+  key: () => (
+    <Ink>
+      <circle cx="7" cy="12" r="4" />
+      <path d="M11 12h10M17 12v3M20 12v2.5" />
+    </Ink>
+  ),
+  lyre: () => (
+    <Ink>
+      <path d="M6 20h12l-1-3H7z" />
+      <path class="fill" d="M7 17c-2-4-2-9 3-12h4c5 3 5 8 3 12z" />
+      <path d="M9 5v12M12 4v13M15 5v12" />
+      <path class="thin" d="M17 8l3-3" />
+    </Ink>
+  ),
+  paw: () => (
+    <Ink>
+      <path class="fill" d="M12 12c3 0 5 3 5 5s-2 3-5 3-5-1-5-3 2-5 5-5z" />
+      <circle class="dot" cx="6" cy="10" r="1.6" />
+      <circle class="dot" cx="9.5" cy="6" r="1.6" />
+      <circle class="dot" cx="14.5" cy="6" r="1.6" />
+      <circle class="dot" cx="18" cy="10" r="1.6" />
+    </Ink>
+  ),
+  bag: () => (
+    <Ink>
+      <path class="fill" d="M8 8h8c3 3 4 7 3 10-1 2-3 3-7 3s-6-1-7-3c-1-3 0-7 3-10z" />
+      <path d="M8 8l-1-4h10l-1 4M8 8h8" />
+    </Ink>
+  ),
+  book: () => (
+    <Ink>
+      <path d="M12 6c-2-1.5-5-2-8-1.5V19c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V4.5c-3-.5-6 0-8 1.5z" />
+      <path d="M12 6v14.5" />
+      <path class="thin" d="M6 9h3.5M6 12h3.5M14.5 9H18M14.5 12H18" />
+    </Ink>
+  ),
+  ladle: () => (
+    <Ink>
+      <path d="M14 3l-3 10" />
+      <path class="fill" d="M6 13h10c0 4-2 7-5 7s-5-3-5-7z" />
+      <path d="M5 13h12" />
+    </Ink>
+  ),
+  whistle: () => (
+    <Ink>
+      <path d="M3 10h10l3-2v8l-3-2H3z" />
+      <circle class="dot" cx="8" cy="12" r="1.2" />
+      <path class="thin" d="M18 9l3-1.5M18 12h3M18 15l3 1.5" />
+    </Ink>
+  ),
+  honey: () => (
+    <Ink>
+      <path d="M7 8h10l1 10a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z" />
+      <path class="fill" d="M6.6 12h10.8l.6 6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z" />
+      <path d="M6 8h12M9 5h6v3H9z" />
+    </Ink>
+  ),
 };
 
 /** A thing's small mark; nothing at all when the thing has none. */

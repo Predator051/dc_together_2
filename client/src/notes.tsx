@@ -186,6 +186,13 @@ export function Notes({
     .filter((t) => !filtering || t.shown.length > 0 || (t.titleHit && filter === 'all'));
   const people =
     filter === 'all' ? j.people.filter((p) => !needle || norm(`${p.name} ${p.desc}`).includes(needle)) : [];
+  const quests =
+    filter === 'all'
+      ? [...j.quests]
+          .filter((q) => !needle || norm(`${q.title} ${q.from} ${q.now ?? ''} ${q.done.join(' ')}`).includes(needle))
+          .sort((a, b) => Number(a.state !== 'on') - Number(b.state !== 'on'))
+      : [];
+  const questsOpen = filtering || !open.has('_quests_shut');
   const beasts = filter === 'all' ? v.bestiary.filter((b) => !needle || norm(`${b.name} ${b.desc}`).includes(needle)) : [];
   const isOpen = (id: string) => filtering || open.has(id);
 
@@ -220,7 +227,7 @@ export function Notes({
       return next;
     });
 
-  if (!j.clues.length && !j.questions.length && !j.people.length && !v.bestiary.length) return <p class="empty">{T.emptyNotes}</p>;
+  if (!j.clues.length && !j.questions.length && !j.people.length && !j.quests.length && !v.bestiary.length) return <p class="empty">{T.emptyNotes}</p>;
 
   const newCount = j.clues.filter(isNew).length;
   const mineCount = j.clues.filter((c) => c.personal).length;
@@ -277,9 +284,60 @@ export function Notes({
 
       {help && <NotesHelp onClose={closeHelp} />}
 
-      {shown.length === 0 && people.length === 0 && beasts.length === 0 && <p class="empty">{T.nothingFound}</p>}
+      {shown.length === 0 && people.length === 0 && beasts.length === 0 && quests.length === 0 && <p class="empty">{T.nothingFound}</p>}
 
       <div class="topics">
+        {quests.length > 0 && (
+          <section class={`topic quests-topic ${questsOpen ? 'open' : ''}`}>
+            <button
+              type="button"
+              class="topic-head"
+              aria-expanded={questsOpen}
+              disabled={filtering}
+              onClick={() => toggle('_quests_shut')}
+            >
+              <span class="topic-main">
+                <span class="topic-q">{T.quests}</span>
+                <span class="topic-sub">
+                  <span>
+                    {quests.filter((q) => q.state === 'on').length} {T.questsOpen} ·{' '}
+                    {quests.filter((q) => q.state === 'done').length} {T.questsDone}
+                  </span>
+                </span>
+              </span>
+              {!filtering && <IconDown class="topic-chev" />}
+            </button>
+            {questsOpen && (
+              <div class="topic-body">
+                {quests.map((q) => (
+                  <article key={q.id} class={`quest ${q.state}`}>
+                    <div class="clue-head">
+                      <b>{hl(q.title, needle)}</b>
+                      {q.state !== 'on' && (
+                        <span class={`pill ${q.state}`}>{q.state === 'done' ? T.questDone : T.questClosed}</span>
+                      )}
+                    </div>
+                    {q.state === 'on' && <p class="quest-from">{hl(q.from, needle)}</p>}
+                    {q.state === 'on' && (q.done.length > 0 || q.now) && (
+                      <ol class="quest-steps">
+                        {q.done.map((st) => (
+                          <li class="did">{hl(st, needle)}</li>
+                        ))}
+                        {q.now && (
+                          <li class="now">
+                            <span class="quest-now">{T.questNow}:</span> {hl(q.now, needle)}
+                          </li>
+                        )}
+                      </ol>
+                    )}
+                    {q.outcome && <p class="quest-outcome">{hl(q.outcome, needle)}</p>}
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
         {shown.map((t) => {
           const opened = isOpen(t.id) && t.shown.length > 0;
           const fresh = t.clues.filter(isNew).length;

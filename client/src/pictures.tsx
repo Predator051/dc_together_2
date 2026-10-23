@@ -669,6 +669,63 @@ function Bog() {
   );
 }
 
+function Isle() {
+  return (
+    <>
+      {/* a hump of sand and willow in the open water; the boat is pulled up at the bottom */}
+      <rect class="water" x="0" y="0" width="400" height="350" />
+      <path class="wave" d="M20 30c20-6 40 6 60 0M300 24c20-6 40 6 60 0M330 300c20-6 40 6 60 0M10 320c20-6 40 6 60 0" />
+      <path class="wet" d="M64 196c-6-70 50-130 136-136s150 50 140 130c-8 70-70 110-140 110S70 260 64 196z" />
+      <ellipse class="floor bog" cx="204" cy="190" rx="120" ry="104" />
+      <path class="mud" d="M20 206c14-16 40-20 58-8 6 14-8 30-30 30s-34-8-28-22z" />
+      <Ripple x={40} y={230} r={8} />
+      <g class="stone">
+        <ellipse cx="190" cy="98" rx="14" ry="8" />
+        <ellipse cx="214" cy="92" rx="10" ry="6" />
+      </g>
+      <path class="wood" d="M180 96l-12-14M208 88l10-16M196 100l4 12" />
+      <path class="path" d="M200 330c-4-30 8-60 0-100" />
+      <path class="wood" d="M184 330l32 0M188 338l24 0" />
+      <Tuft x={330} y={180} />
+      <Tuft x={352} y={200} s={1.1} />
+      <Tuft x={370} y={176} s={0.9} />
+      <Tuft x={340} y={220} s={0.8} />
+      <Tuft x={120} y={260} s={0.8} />
+    </>
+  );
+}
+
+function Willow() {
+  const willows: Array<[number, number, number]> = [
+    [40, 70, 1],
+    [110, 50, 0.9],
+    [70, 140, 1.1],
+    [160, 110, 0.8],
+    [30, 220, 0.9],
+  ];
+  return (
+    <>
+      <Floor tone="bog" />
+      {/* old willows on the left, cut for withies; the water comes in on the right */}
+      <path class="water" d="M400 160c-40 0-70 20-80 50s0 70 20 90 50 40 60 50z" />
+      <Ripple x={360} y={240} r={9} />
+      {willows.map(([x, y, s]) => (
+        <g class="tree" transform={`translate(${x} ${y}) scale(${s})`}>
+          <circle r="7" />
+          <path d="M0-7c-6-10-14-14-22-12M0-7c6-10 14-14 22-12M-6 4c-8 6-12 14-12 22M6 4c8 6 12 14 12 22M-8-2c-12 0-20 6-24 14M8-2c12 0 20 6 24 14" />
+        </g>
+      ))}
+      {/* the old post with a rag on it */}
+      <path class="log" d="M344 70v50M336 120h16" />
+      <path class="log thin" d="M344 78l14 6-14 6" />
+      <path class="path" d="M200 350c-10-50 20-100 0-160s-40-80-30-140" />
+      <Tuft x={240} y={320} s={0.8} />
+      <Tuft x={290} y={130} s={0.9} />
+      <Tuft x={110} y={300} />
+    </>
+  );
+}
+
 const GROUNDS: Record<SceneId, (p: { warm: boolean }) => JSX.Element> = {
   yard: Yard,
   shore: Shore,
@@ -681,6 +738,8 @@ const GROUNDS: Record<SceneId, (p: { warm: boolean }) => JSX.Element> = {
   road: Road,
   town: Town,
   bog: Bog,
+  isle: Isle,
+  willow: Willow,
 };
 
 /** The drawn ground of a plan. */

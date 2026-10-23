@@ -13,6 +13,7 @@ const SEES: StealthNode['sees'] = {
 const NIGHT_BONUS: NonNullable<StealthNode['bonus']> = [
   { if: { worn: G2.softboots }, alarm: 1 },
   { if: { owns: T2.mask }, time: 4 },
+  { if: { worn: 'g_32' }, alarm: 1 },
 ];
 
 /** Act two, parts two and three: the girl, the marsh, the night, the way out, the price. */
@@ -499,7 +500,11 @@ export const scenesA2b: SceneDef[] = [
             label: 'Будити: чиста сіль на язик і тихо — пісню',
             cost: { [R.salt]: 1 },
             delta: { awake: 2 },
-            bonus: [{ if: { flag: 'p2_song' }, delta: { awake: 1 } }],
+            bonus: [
+              { if: { flag: 'p2_song' }, delta: { awake: 1 } },
+              { if: { flag: 'built:x_137' }, delta: { awake: 1 } },
+              { if: { flag: 'q16_stay' }, delta: { awake: 1 } },
+            ],
             log: { self: 'Щіпка чистої солі на язик, долоня на плече, Остапова пісня пошепки. Очі прояснюються.', other: '{name} будить людей на нарах.' },
           },
           {
