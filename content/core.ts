@@ -25,6 +25,7 @@ export const perks: Content['perks'] = [
   { id: 'steady', name: 'Твердий крок', text: 'Торба на 4 більша, важке не сповільнює.' },
   { id: 'eye', name: 'Пильне око', text: 'Усе про звіра видно з першої зустрічі.' },
   { id: 'shield', name: 'Щит для двох', text: 'Коли прикриваєш напарника, удар слабшає ще на третину.' },
+  { id: 'shoulder', name: 'Плече до плеча', text: 'Поки ви обоє в бою на ногах, кожен тримає удар на 1 краще.', quest: true },
 ];
 
 export const hero: Content['hero'] = {

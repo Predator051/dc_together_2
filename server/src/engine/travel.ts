@@ -26,15 +26,15 @@ export function areaOnMap(g: Game, id: string): boolean {
   if (a.visible && !g.test(a.visible)) return false;
   if (areaKnown(g, id)) return true;
   // an unexplored place is seen only from an explored neighbour
-  return g.ix.c.areas.some((b) => areaKnown(g, b.id) && (b.links ?? []).some((l) => l.to === id));
+  return g.ix.c.areas.some((b) => areaKnown(g, b.id) && (b.links ?? []).some((l) => l.to === id && (!l.if || g.test(l.if))));
 }
 
 export function linkTime(g: Game, from: string, to: string): number | null {
   const a = areaDef(g, from);
-  const l = a?.links?.find((x) => x.to === to);
+  const l = a?.links?.find((x) => x.to === to && (!x.if || g.test(x.if)));
   if (l) return l.time;
   const b = areaDef(g, to);
-  const back = b?.links?.find((x) => x.to === from);
+  const back = b?.links?.find((x) => x.to === from && (!x.if || g.test(x.if)));
   return back ? back.time : null;
 }
 
@@ -50,6 +50,7 @@ export function routeTo(g: Game, from: string, to: string): string[] | null {
     near.get(a)!.push([b, t]);
   };
   for (const a of g.ix.c.areas) for (const l of a.links ?? []) {
+    if (l.if && !g.test(l.if)) continue;
     link(a.id, l.to, l.time);
     link(l.to, a.id, l.time);
   }
@@ -174,9 +175,9 @@ function ambushRoll(g: Game, pid: PlayerId, area: string, base: number): Array<{
   const p = g.p(pid);
   if (p.fight !== null || !p.online) return null;
   let chance = base * (1 - 0.05 * skillOf(g, pid, 'trail'));
-  if (g.isEvening()) chance *= 1.5;
+  if (g.isEvening()) chance *= heroOf(g, pid).tools.has('light') ? 0.75 : 1.5;
   const dog = g.ix.c.dog;
-  if (dog && g.flag(dog.flag) && p.role === 'hunter') chance *= 0.8;
+  if (dog && g.flag(dog.flag) && p.role === 'hunter') chance *= dog.trained && g.test(dog.trained) ? 0.6 : 0.8;
   if (!g.rng.chance(Math.min(0.6, chance))) return null;
   const pool = a.foes.filter((e) => (!e.night || g.isEvening()) && (!e.if || g.test(e.if, pid)));
   if (!pool.length) return null;
@@ -252,6 +253,7 @@ export function settleWork(g: Game): boolean {
       if (a.skill) mult *= t.mult?.[`skill:${a.skill}`] ?? 1;
     }
     if (r.hungry) mult *= 0.5;
+    for (const b of g.ix.c.workBonus ?? []) if (g.test(b.if)) mult *= b.mult;
     const units = a.job.rate * hours * mult;
     for (const [res, y] of Object.entries(a.yield ?? {})) {
       const per = Array.isArray(y) ? (y[0] + y[1]) / 2 : y;

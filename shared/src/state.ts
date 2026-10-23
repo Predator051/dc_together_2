@@ -283,6 +283,8 @@ export interface WorldState {
   mysteries: Record<string, number>;
   npcs: Record<string, { met: boolean; rel: number }>;
   goal: string | null;
+  /** Side errands: begun, done, or closed another way. */
+  quests?: Record<string, 'on' | 'done' | 'closed'>;
   stats: Stats;
 
   // ----- part two -----

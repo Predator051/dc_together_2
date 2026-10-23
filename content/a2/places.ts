@@ -17,9 +17,9 @@ export const areas2: AreaDef[] = [
     scout: S2.tracks,
     visible: act2,
     foes: [
-      { enemy: E2.wolf, n: [2, 3], w: 2 },
+      { enemy: E2.wolf, n: [2, 3], w: 2, if: { noFlag: 'q13_driven' } },
       { enemy: E2.snatcher, w: 2 },
-      { enemy: E2.wolf, n: [2, 4], w: 3, night: true },
+      { enemy: E2.wolf, n: [2, 4], w: 3, night: true, if: { noFlag: 'q13_driven' } },
     ],
     desc: 'Битий шлях на схід, колії по коліно. Тут ходять чумацькі обози — і ті, хто на них полює.',
     links: [
@@ -38,6 +38,7 @@ export const areas2: AreaDef[] = [
     scout: S2.gate,
     visible: act2,
     foes: [{ enemy: E2.snatcher, n: [1, 2], w: 1, if: { all: [{ flag: 'p2_bounty' }, { not: { tool: 'disguise' } }] } }],
+    links: [{ to: A.shore, time: 16 * SEC, if: { flag: 'built:x_186' } }],
     desc: [
       { if: { flag: 'p2_bounty' }, text: 'Місто цеху. На воротах — біла грамота з вашими прикметами.' },
       { text: 'Місто цеху над гирлом. Гори солі під навісами, управа зі знаком, торг, пристань.' },

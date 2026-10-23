@@ -109,6 +109,8 @@ export type Effect =
   | { wear: string; who?: EffectTarget }
   /** Start a fight in the actor's area (outside scenes). */
   | { fight: Array<{ enemy: string; n?: number }> }
+  /** A perk (usually an errand's) for the target(s). */
+  | { perk: string; who?: EffectTarget }
   | { if: Cond; then: Effect[]; else?: Effect[] };
 
 export interface ResourceDef {
@@ -261,6 +263,8 @@ export interface ActionDef {
   kind?: 'gather' | 'craft' | 'build' | 'home' | 'train' | 'trade';
   /** Why this recipe exists (the need it answers), shown with it. */
   why?: Text;
+  /** Part of this side errand (players see it like any other; the test bots leave it alone unless told). */
+  quest?: string;
   /** Hide when this many of the yielded gear exist (stored + worn + carried). Default for gear: 2. */
   limit?: number;
   /** Needs a tool of this kind on (shown disabled with the reason otherwise). */
@@ -347,8 +351,8 @@ export interface AreaDef {
   scene?: SceneId;
   /** Map position (grid units). */
   pos?: [number, number];
-  /** Ways to neighbouring places: base travel time, ms. */
-  links?: Array<{ to: string; time: number }>;
+  /** Ways to neighbouring places: base travel time, ms; some open only when a condition holds. */
+  links?: Array<{ to: string; time: number; if?: Cond }>;
   /** Recommended hero level. */
   danger?: number;
   /** Who may jump at you here (weighted). */
@@ -441,6 +445,26 @@ export interface PerkDef {
   id: string;
   name: string;
   text: string;
+  /** Earned on an errand only, never offered on a level. */
+  quest?: boolean;
+}
+
+/**
+ * A side errand. It appears in the journal once `start` holds; its current step is the first one
+ * whose `done` fails; it is done when every step is. `fail` closes it another way (a choice).
+ */
+export interface QuestDef {
+  id: string;
+  title: string;
+  act: number;
+  /** Who asked, or where it began (one line). */
+  from: Text;
+  start: Cond;
+  steps: Array<{ text: Text; done: Cond }>;
+  /** What came of it (shown once done). */
+  reward: Text;
+  fail?: Cond;
+  failText?: Text;
 }
 
 export interface OptionDef {
@@ -670,6 +694,8 @@ export interface SceneDef {
   gives?: Text;
   /** Default true: once completed it disappears. */
   once?: boolean;
+  /** Part of this side errand. */
+  quest?: string;
   /** Completing this scene marks the location as explored. */
   explores?: string;
   pool?: string;
@@ -858,7 +884,18 @@ export interface Content {
   /** What residents eat (one an hour each). */
   food?: string;
   /** The dog that follows the hunter (once this flag is set). */
-  dog?: { flag: string; name: string };
+  dog?: {
+    flag: string;
+    name: string;
+    /** Taught by the pack: stops a charge or a grab more often, smells ambushes on the road. */
+    trained?: Cond;
+    /** Bites harder. */
+    collar?: Cond;
+  };
+  /** Side errands. */
+  quests?: QuestDef[];
+  /** Residents work faster while these hold (multipliers). */
+  workBonus?: Array<{ if: Cond; mult: number }>;
   /** Flag prefixes / names that mark story progress (solo play must never change them). */
   storyFlags: string[];
   actEnd: Record<number, string>;

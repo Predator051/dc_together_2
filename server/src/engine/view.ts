@@ -1,6 +1,7 @@
 import type { ActionDef, ChoiceNode, DelveNode, Effect, PlayerId, PoolActionDef, SceneDef, StealthNode } from '../../../shared/src/content.js';
 import type {
   NeedsView,
+  QuestView,
   ClueView,
   CostView,
   DeltaItem,
@@ -20,6 +21,7 @@ import type {
   WelcomeView,
 } from '../../../shared/src/protocol.js';
 import type { Game } from './index.js';
+import { questProgress } from './index.js';
 import { resolveParas } from './text.js';
 import { SKILLS, SLOTS, STATS } from '../../../shared/src/content.js';
 import type { BagView, BeastView, FightView, HeroView, MapView, ResidentView } from '../../../shared/src/protocol.js';
@@ -127,6 +129,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         gain: sceneGains(g, sc, pid),
         together: true,
         ...(sc.spot ? { spot: sc.spot } : {}),
+        ...(sc.quest ? { quest: true } : {}),
       });
     }
     for (const pool of g.ix.c.pools) {
@@ -163,6 +166,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         readyAt: cd > g.now ? cd : undefined,
         cooldown: g.actionTime(a, pid),
         ...(a.spot ? { spot: a.spot } : {}),
+        ...(a.quest ? { quest: true } : {}),
       });
     }
     const partner = mateEntries(g, pid, loc.id);
@@ -678,6 +682,7 @@ function mapView(g: Game, pid: PlayerId): MapView {
     }
     nodes.push(node);
     for (const l of a.links ?? []) {
+      if (l.if && !g.test(l.if)) continue;
       if (!areaOnMap(g, l.to) || !(known || areaKnown(g, l.to))) continue;
       // a way written down at both ends is still one way
       if (!links.some(([x, y]) => (x === a.id && y === l.to) || (x === l.to && y === a.id))) links.push([a.id, l.to]);
@@ -1010,7 +1015,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     proposal,
     scene: sceneView(g, pid),
     log,
-    journal: { clues, questions, people },
+    journal: { clues, questions, people, quests: questsView(g, pid) },
     actDone,
     busyUntil: me.busy && me.busy.until > g.now ? me.busy.until : 0,
     busyFrom: busyFrom(g, pid),
@@ -1188,4 +1193,27 @@ function needsView(g: Game, pid: PlayerId): NeedsView | null {
     rest: { can: !restB, ...(restB ? { reason: restB } : {}), minutes: restLength(g, pid) },
     comfort: home ? comfortOf(g, pid).filter((x) => x.on).map((x) => x.name) : [],
   };
+}
+
+function questsView(g: Game, pid: PlayerId): QuestView[] {
+  const st = g.s.quests ?? {};
+  const out: QuestView[] = [];
+  for (const q of g.ix.c.quests ?? []) {
+    const state = st[q.id];
+    if (!state) continue;
+    const k = questProgress(g, q, pid);
+    const done = q.steps.slice(0, k).map((s) => g.render(s.text, pid));
+    const now = k < q.steps.length ? g.render(q.steps[k]!.text, pid) : null;
+    out.push({
+      id: q.id,
+      title: q.title,
+      from: g.render(q.from, pid),
+      state,
+      done,
+      now: state === 'on' ? now : null,
+      ...(state === 'done' ? { outcome: g.render(q.reward, pid) } : state === 'closed' && q.failText ? { outcome: g.render(q.failText, pid) } : {}),
+    });
+  }
+  // open ones first, newest last within each
+  return [...out.filter((q) => q.state === 'on'), ...out.filter((q) => q.state !== 'on')];
 }

@@ -112,6 +112,8 @@ export interface EntryView {
   fresh?: boolean;
   /** Named spot of its place on the plan. */
   spot?: string;
+  /** Part of a side errand. */
+  quest?: boolean;
 }
 
 export interface GroupView {
@@ -397,6 +399,19 @@ export interface NeedsView {
   comfort: string[];
 }
 
+/** A side errand in the journal. */
+export interface QuestView {
+  id: string;
+  title: string;
+  from: string;
+  state: 'on' | 'done' | 'closed';
+  /** Steps done so far, and the one to do now (while it is open). */
+  done: string[];
+  now: string | null;
+  /** What came of it (done or closed). */
+  outcome?: string;
+}
+
 export interface MapNodeView {
   id: string;
   name: string;
@@ -571,7 +586,7 @@ export interface PlayerView {
   proposal: ProposalView | null;
   scene: SceneView | null;
   log: LogView[];
-  journal: { clues: ClueView[]; questions: QuestionView[]; people: PersonView[] };
+  journal: { clues: ClueView[]; questions: QuestionView[]; people: PersonView[]; quests: QuestView[] };
   actDone: { act: number; text: string } | null;
   welcome: WelcomeView | null;
   summary: SummaryView | null;

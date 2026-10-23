@@ -141,12 +141,15 @@ function Entry({ e, c }: { e: EntryView; c: Ctx }) {
         {mine ? (
           <span class="tile-secs">{secsLeft(v.busyUntil, now)}</span>
         ) : (
-          e.together && (
-            <span class="pill pair">
-              <IconPair />
-              {T.together}
-            </span>
-          )
+          <>
+            {e.quest && <span class="pill errand">{T.questTag}</span>}
+            {e.together && (
+              <span class="pill pair">
+                <IconPair />
+                {T.together}
+              </span>
+            )}
+          </>
         )}
       </span>
       {meta && (

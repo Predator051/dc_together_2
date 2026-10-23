@@ -90,6 +90,21 @@ const DRAW: Record<SceneId, () => JSX.Element> = {
       <path class="thin" d="M5 20c1.5-.8 3-.8 4.5 0s3 .8 4.5 0" />
     </>
   ),
+  isle: () => (
+    <>
+      <path class="fill" d="M5 14c1-3 4-4.5 7-4.5s6 1.5 7 4.5z" />
+      <path d="M9 10V5M9 5c1.5 0 2.5 1 3 2" />
+      <path class="thin" d="M3 17.5c2-1.2 4-1.2 6 0s4 1.2 6 0 4-1.2 6 0M5 20.5c1.5-.8 3-.8 4.5 0s3 .8 4.5 0" />
+    </>
+  ),
+  willow: () => (
+    <>
+      <path d="M12 20V9" />
+      <path d="M12 9c-2-3-5-4-7-3M12 9c2-3 5-4 7-3M12 11c-3 0-5 2-6 6M12 11c3 0 5 2 6 6" />
+      <path class="thin" d="M5 6v6M19 6v6M8 7.5v5M16 7.5v5" />
+      <path class="thin" d="M3 20.5h18" />
+    </>
+  ),
 };
 
 /** A place's mark, scaled to fit a node of radius `r`. */

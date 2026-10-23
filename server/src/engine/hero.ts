@@ -62,7 +62,7 @@ export function gainXp(g: Game, pid: PlayerId, n: number): void {
 function offerPerks(g: Game, pid: PlayerId): void {
   const p = g.p(pid);
   if (p.perkChoice) return;
-  const free = g.ix.c.perks.filter((x) => !p.perks.includes(x.id));
+  const free = g.ix.c.perks.filter((x) => !x.quest && !p.perks.includes(x.id));
   if (!free.length) return;
   const pick: string[] = [];
   const pool = [...free];

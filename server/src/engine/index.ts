@@ -1,4 +1,4 @@
-import type {
+import type { QuestDef,
   ActionDef,
   ChoiceNode,
   CombatNode,
@@ -167,6 +167,7 @@ export class Game {
   commit(): void {
     if (!this.s.scene && this.chain.length) this.startScene(this.chain.shift()!);
     this.updateGoal();
+    this.updateQuests();
     this.s.meta.rng = this.rng.state;
   }
 
@@ -184,6 +185,37 @@ export class Game {
     const text: Partial<Record<PlayerId, string>> = {};
     for (const pid of this.joinedIds()) text[pid] = `${this.ix.ui('goal_prefix')} ${this.render(g.text, pid)}`;
     this.logRaw('system', text);
+  }
+
+  /** Errands begin, end, or close as their conditions come to hold. */
+  private updateQuests(): void {
+    const qs = this.ix.c.quests;
+    if (!qs?.length) return;
+    const st = (this.s.quests ??= {});
+    const say = (text: (pid: PlayerId) => string) => {
+      const out: Partial<Record<PlayerId, string>> = {};
+      for (const pid of this.joinedIds()) out[pid] = text(pid);
+      this.logRaw('find', out);
+    };
+    for (const q of qs) {
+      const now = st[q.id];
+      if (now === 'done' || now === 'closed') continue;
+      if (!now) {
+        if (!this.test(q.start)) continue;
+        st[q.id] = 'on';
+        say(() => `${this.ix.ui('quest_new')} «${q.title}».`);
+      }
+      if (q.fail && this.test(q.fail)) {
+        st[q.id] = 'closed';
+        say((pid) => `${this.ix.ui('quest_closed')} «${q.title}».${q.failText ? ' ' + this.render(q.failText, pid) : ''}`);
+        continue;
+      }
+      if (questProgress(this, q) >= q.steps.length) {
+        st[q.id] = 'done';
+        say((pid) => `${this.ix.ui('quest_done')} «${q.title}». ${this.render(q.reward, pid)}`);
+        for (const pid of this.joinedIds()) gainXp(this, pid, 15);
+      }
+    }
   }
 
   fail(key: string): Result {
@@ -571,6 +603,17 @@ export class Game {
     }
     if ('xp' in e) {
       for (const pid of this.targets(e.who ?? 'both', actor)) gainXp(this, pid, e.xp);
+      return;
+    }
+    if ('perk' in e) {
+      for (const pid of this.targets(e.who ?? 'both', actor)) {
+        const p = this.p(pid);
+        if (!p.joined || p.perks.includes(e.perk)) continue;
+        p.perks.push(e.perk);
+        refreshHero(this, pid);
+        const def = this.ix.c.perks.find((x) => x.id === e.perk);
+        this.logRaw('find', { [pid]: `${this.ix.ui('perk_got')} «${def?.name ?? e.perk}».` }, pid);
+      }
       return;
     }
     if ('resident' in e) {
@@ -1692,6 +1735,15 @@ export function newWorld(content: Content, seed: number, now: number): WorldStat
 }
 
 /** Ensure a loaded world has entries for content added after it was created. */
+/**
+ * How many steps of an errand are done. A step counts as done when it, or any later one, holds:
+ * what a step gathers is often spent by the next one.
+ */
+export function questProgress(g: Game, q: QuestDef, pid?: PlayerId): number {
+  for (let i = q.steps.length - 1; i >= 0; i--) if (g.test(q.steps[i]!.done, pid)) return i + 1;
+  return 0;
+}
+
 export function normalizeWorld(content: Content, s: WorldState, now: number): WorldState {
   for (const r of content.resources) if (s.res[r.id] === undefined) s.res[r.id] = 0;
   const areas = new Set(content.areas.map((a) => a.id));

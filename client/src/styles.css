@@ -398,6 +398,9 @@ b {
 .pill.mine {
   color: var(--faded);
 }
+.pill.errand {
+  color: var(--verdigris);
+}
 .pill.new {
   color: var(--cinnabar-ink);
   font-weight: 600;
@@ -1337,6 +1340,43 @@ b {
   color: var(--ink-2);
   font-size: 0.97rem;
   line-height: 1.6;
+}
+/* errands: where it came from, the steps behind, the one now */
+.quest p,
+.quest ol {
+  margin: 2px 0 0;
+  color: var(--ink-2);
+  font-size: 0.97rem;
+  line-height: 1.6;
+}
+.quest .quest-from {
+  color: var(--faded);
+  font-style: italic;
+}
+.quest-steps {
+  padding-left: 1.2em;
+}
+.quest-steps .did {
+  color: var(--faded);
+  text-decoration: line-through;
+  text-decoration-color: rgba(140, 120, 90, 0.5);
+}
+.quest-now {
+  color: var(--ochre-ink);
+  font-weight: 600;
+}
+.quest.done .clue-head b,
+.quest.closed .clue-head b {
+  color: var(--faded);
+}
+.quest .quest-outcome {
+  color: var(--ink);
+}
+.pill.done {
+  color: var(--verdigris);
+}
+.pill.closed {
+  color: var(--faded);
 }
 mark {
   padding: 0 1px;
