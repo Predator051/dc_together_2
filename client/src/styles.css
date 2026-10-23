@@ -2900,6 +2900,90 @@ mark {
   font-size: 0.8rem;
 }
 
+/* ---------- marks of things ---------- */
+.item-icon {
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
+  margin-right: 0.38em;
+  vertical-align: -0.2em;
+  color: var(--faded);
+  opacity: 0.9;
+}
+.item-icon .thin {
+  stroke-width: 1.1;
+}
+.item-icon .thick {
+  stroke-width: 2.4;
+}
+.item-icon .fill {
+  fill: currentColor;
+  fill-opacity: 0.28;
+}
+.item-icon .dot {
+  fill: currentColor;
+  stroke: none;
+}
+.item-icon .dash {
+  stroke-dasharray: 1.4 1.8;
+}
+.ledger-row dt .item-icon {
+  align-self: center;
+}
+.ledger-row.empty .item-icon {
+  opacity: 0.55;
+}
+.il-thing {
+  white-space: nowrap;
+}
+.il-thing .item-icon {
+  margin-right: 0.25em;
+}
+.bag-title {
+  display: flex;
+  align-items: flex-start;
+}
+.bag-title .item-icon {
+  margin-top: 0.15em;
+  color: var(--ink-2);
+  opacity: 0.75;
+}
+.delta .item-icon,
+.sheet-deltas .item-icon {
+  margin-right: 0.25em;
+  color: inherit;
+  opacity: 0.75;
+}
+.tile-label .item-icon {
+  vertical-align: -0.17em;
+}
+.spot-medal .item-icon {
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  color: inherit;
+  opacity: 1;
+}
+.spot-medal .item-icon .thin {
+  stroke-width: 1.2;
+}
+.gear-now-pic {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(196, 154, 69, 0.45);
+}
+.gear-now-pic .item-icon {
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  color: var(--ochre-ink);
+  opacity: 1;
+}
+
 /* ---------- fights ---------- */
 .fight-wrap {
   z-index: 34;
@@ -3439,6 +3523,8 @@ mark {
   z-index: 14;
   display: flex;
   flex-direction: column;
+  /* one height for every place: switching between them never makes the top jump */
+  height: 74dvh;
   max-height: calc(100dvh - 96px);
   padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
   background:
@@ -3533,6 +3619,7 @@ body.sheet-open {
 /* on a computer the open place stands where the plan was; the × goes back to the plan */
 .station-sheet.docked {
   position: static;
+  height: auto;
   max-height: none;
   padding-bottom: 0;
   border: 1px solid var(--rule-2);
@@ -4635,4 +4722,64 @@ body.sheet-open {
   .notes-help {
     animation: none;
   }
+}
+.plan-ground .rut,
+.plan-ground .street {
+  fill: none;
+  stroke: rgba(230, 217, 188, 0.1);
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+.plan-ground .street {
+  stroke-width: 14;
+  stroke: rgba(230, 217, 188, 0.08);
+}
+.plan-ground .wagons rect,
+.plan-ground .house {
+  fill: rgba(42, 34, 25, 0.85);
+  stroke: rgba(196, 154, 69, 0.4);
+  stroke-width: 1.5;
+}
+.plan-ground .house {
+  stroke: rgba(230, 217, 188, 0.24);
+}
+.plan-ground .hall-b {
+  fill: rgba(52, 44, 34, 0.9);
+  stroke: rgba(230, 217, 188, 0.34);
+  stroke-width: 2;
+}
+.plan-ground .square {
+  fill: rgba(230, 217, 188, 0.05);
+  stroke: rgba(230, 217, 188, 0.14);
+  stroke-dasharray: 3 4;
+}
+.plan-ground .saltpile path {
+  fill: rgba(230, 217, 188, 0.2);
+  stroke: rgba(230, 217, 188, 0.35);
+}
+.plan-ground .plank {
+  fill: none;
+  stroke: rgba(196, 154, 69, 0.5);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.plan-ground .ember {
+  fill: rgba(216, 105, 76, 0.5);
+}
+.plan-ground .rust {
+  fill: rgba(158, 84, 42, 0.22);
+  stroke: rgba(196, 120, 69, 0.3);
+  stroke-width: 1.2;
+}
+.plan-ground .sheen {
+  fill: none;
+  stroke: rgba(142, 165, 179, 0.35);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+.plan-ground .pit {
+  fill: none;
+  stroke: rgba(10, 8, 6, 0.6);
+  stroke-width: 6;
+  stroke-linecap: round;
 }

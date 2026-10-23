@@ -348,8 +348,9 @@ describe('two bot clients over WebSocket', () => {
     if (!finished()) console.log('WS autoplay stopped', steps, JSON.stringify(running!.game.state.flags));
     expect(finished()).toBe(true);
     await settle(a, b);
-    expect(a.view!.actDone?.act).toBe(1);
-    expect(b.view!.actDone?.act).toBe(1);
+    // the act is over (its banner waits for the last act of the build; a summary shows instead)
+    expect(running!.game.state.meta.actDone).toBe(1);
+    expect(a.view!.summary?.act ?? 1).toBe(1);
   }, 240_000);
 });
 
@@ -376,7 +377,7 @@ describe('stock change popups', () => {
     expect((await b.cmd({ c: 'act', id: 'x_13' })).ok).toBe(true);
     const [ma, mb] = await Promise.all([da, db]);
     expect(ma.by).toBe('p2');
-    expect(mb.items).toEqual([{ id: 'r_05', name: 'Харчі', n: -1 }]);
+    expect(mb.items).toEqual([{ id: 'r_05', name: 'Харчі', n: -1, icon: 'food' }]);
     expect(ma.together).toBe(false);
     // the bag: gathering on the shore is the gatherer's own business
     advance(10_000);

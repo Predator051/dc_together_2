@@ -251,6 +251,79 @@ const PICS: Record<SpotIcon, () => JSX.Element> = {
       <path d="M3 18h26M3 23h26" />
     </Pic>
   ),
+  cart: () => (
+    <Pic>
+      <path d="M3 17h20l3-6M5 17l2-6h16" />
+      <circle cx="8" cy="22" r="4" />
+      <circle cx="21" cy="22" r="4" />
+      <path d="M8 22h.01M21 22h.01M26 11l3-2" />
+    </Pic>
+  ),
+  ford: () => (
+    <Pic>
+      <path class="steam" d="M3 12c3-1.5 5 1.5 8 0s5 1.5 8 0 5 1.5 8 0M3 24c3-1.5 5 1.5 8 0s5 1.5 8 0 5 1.5 8 0" />
+      <ellipse cx="9" cy="18" rx="3" ry="2" />
+      <ellipse cx="16" cy="18" rx="3" ry="2" />
+      <ellipse cx="23" cy="18" rx="3" ry="2" />
+    </Pic>
+  ),
+  grass: () => (
+    <Pic>
+      <path d="M4 26c3-2 5-2 8 0s5 2 8 0 5-2 8 0" />
+      <path d="M9 24c-1-5 0-9 3-13M13 24c0-5 2-8 5-10M18 24c1-4 0-8-2-12M22 24c1-3 3-6 6-7" />
+    </Pic>
+  ),
+  scales: () => (
+    <Pic>
+      <path d="M16 5v21M9 27h14M6 9h20" />
+      <path d="M6 9l-3 8h6zM26 9l-3 8h6z" />
+      <path d="M3 17a3 2 0 0 0 6 0M23 17a3 2 0 0 0 6 0" />
+    </Pic>
+  ),
+  hall: () => (
+    <Pic>
+      <path d="M4 13L16 5l12 8M6 13h20v14H6z" />
+      <path d="M13 27v-7h6v7M9 17h2M21 17h2" />
+      <circle cx="16" cy="10" r="1.6" />
+    </Pic>
+  ),
+  mug: () => (
+    <Pic>
+      <path d="M8 10h13v15a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2z" />
+      <path d="M21 13h3a3 3 0 0 1 0 6h-3M12 14v9M17 14v9" />
+      <path class="steam" d="M10 7c0-2 2-2 2-4M15 7c0-2 2-2 2-4" />
+    </Pic>
+  ),
+  pier: () => (
+    <Pic>
+      <path d="M3 14h20M6 14v10M12 14v10M18 14v10" />
+      <path d="M21 20h9l-2 4h-5z" />
+      <path class="steam" d="M3 27c3-1 5 1 8 0s5 1 8 0 5 1 8 0" />
+    </Pic>
+  ),
+  ore: () => (
+    <Pic>
+      <path d="M5 22l4-7 6 1 3 6-5 4z" />
+      <path d="M17 16l5-5 6 3-1 6-6 1z" />
+      <path class="steam" d="M9 19h2M22 14h2M3 27h26" />
+    </Pic>
+  ),
+  peat: () => (
+    <Pic>
+      <path d="M4 20h10v6H4zM14 20h10v6H14zM9 14h10v6H9z" />
+      <path class="steam" d="M7 23h3M18 23h3M13 17h3" />
+      <path d="M24 14l3-6M27 8l1 3" />
+    </Pic>
+  ),
+  berry: () => (
+    <Pic>
+      <path d="M16 4c-1 4-4 7-8 9M16 4c2 4 5 6 8 7M16 4v9" />
+      <circle cx="9" cy="18" r="3" />
+      <circle cx="16" cy="21" r="3.2" />
+      <circle cx="23" cy="17" r="3" />
+      <circle cx="13" cy="26" r="2.4" />
+    </Pic>
+  ),
 };
 
 export function picture(icon: string): JSX.Element {
@@ -505,6 +578,97 @@ function Causeway() {
   );
 }
 
+function Road() {
+  return (
+    <>
+      <Floor />
+      {/* the beaten road with deep ruts, a ford on the right, wagons in a ring on the left */}
+      <path class="rut" d="M0 196c70-12 120-40 190-44s140 26 210 10M0 214c70-12 120-40 190-44s140 26 210 10" />
+      <path class="path" d="M200 350c-10-60 6-120-6-176" />
+      <path class="water" d="M330 0c-20 60 10 110-6 170s20 120 4 180h72V0z" />
+      <path class="wave" d="M350 60c8-4 16 4 24 0M346 150c8-4 16 4 24 0M352 250c8-4 16 4 24 0" />
+      <g class="stone">
+        <ellipse cx="338" cy="96" rx="9" ry="5" />
+        <ellipse cx="356" cy="104" rx="8" ry="5" />
+        <ellipse cx="374" cy="98" rx="9" ry="5" />
+      </g>
+      <g class="wagons">
+        <rect x="26" y="40" width="40" height="22" rx="3" transform="rotate(-20 46 51)" />
+        <rect x="74" y="24" width="40" height="22" rx="3" transform="rotate(10 94 35)" />
+        <rect x="18" y="96" width="40" height="22" rx="3" transform="rotate(30 38 107)" />
+      </g>
+      <path class="smoke" d="M70 76c-6-8 6-12 0-20" />
+      <circle class="ember" cx="70" cy="82" r="5" />
+      <Tuft x={20} y={250} s={1} cls="reed dry" />
+      <Tuft x={60} y={300} s={0.8} cls="reed dry" />
+      <Tuft x={150} y={320} s={0.9} cls="reed dry" />
+      <Tuft x={260} y={300} s={1} cls="reed dry" />
+      <Tuft x={240} y={70} s={0.7} cls="reed dry" />
+    </>
+  );
+}
+
+function Town() {
+  const houses: Array<[number, number, number, number]> = [
+    [150, 40, 40, 26],
+    [200, 34, 34, 24],
+    [130, 150, 34, 26],
+    [250, 150, 40, 24],
+    [300, 110, 30, 22],
+    [110, 210, 30, 22],
+    [270, 210, 36, 24],
+  ];
+  return (
+    <>
+      <Floor />
+      {/* the river mouth along the bottom, a creek by the tavern, streets meeting at the market */}
+      <path class="water" d="M0 280c60-14 120 4 190-6s140-22 210-8v84H0z" />
+      <path class="water" d="M400 0v120c-20-10-30-40-26-70s-4-40 6-50z" />
+      <path class="wave" d="M40 310c10-4 20 4 30 0M180 300c10-4 20 4 30 0M300 300c10-4 20 4 30 0" />
+      <path class="street" d="M200 350c0-80 0-150 0-246M40 80c60 10 110 24 160 24s110-10 170-30M200 104c-40 40-90 70-150 110" />
+      <rect class="square" x="160" y="84" width="80" height="44" rx="4" />
+      <rect class="hall-b" x="20" y="40" width="70" height="44" />
+      <path class="hall-b" d="M16 40l39-18 39 18" />
+      {houses.map(([x, y, w, h]) => (
+        <rect class="house" x={x} y={y} width={w} height={h} rx="2" />
+      ))}
+      <g class="saltpile">
+        <path d="M120 120l14-18 14 18zM300 64l12-16 12 16zM330 70l10-13 10 13z" />
+      </g>
+      <path class="plank" d="M30 250h40M40 250v40M60 250v40" />
+    </>
+  );
+}
+
+function Bog() {
+  const pools: Array<[number, number, number]> = [
+    [70, 120, 26],
+    [200, 160, 32],
+    [320, 130, 24],
+    [120, 260, 22],
+    [290, 260, 28],
+  ];
+  return (
+    <>
+      <Floor tone="bog" />
+      {pools.map(([x, y, r]) => (
+        <ellipse class="rust" cx={x} cy={y} rx={r} ry={r * 0.55} />
+      ))}
+      <path class="sheen" d="M190 154c8-3 16-3 22 0M60 116c6-3 12-3 18 0M282 254c6-3 12-3 18 0" />
+      <g class="stone">
+        <path d="M40 60l10-8 12 4 2 10-12 6zM60 70l8-4 6 6-6 6z" />
+      </g>
+      <path class="pit" d="M150 40c10-8 30-8 40 0M250 50c8-6 22-6 30 0" />
+      <path class="path" d="M200 350c10-50-20-90 0-140s-10-90 0-150" />
+      <Tuft x={30} y={200} cls="reed dry" />
+      <Tuft x={380} y={210} s={0.9} cls="reed dry" />
+      <Tuft x={250} y={330} s={0.8} />
+      <Tuft x={60} y={330} />
+      <Tuft x={350} y={40} s={0.8} cls="reed dry" />
+    </>
+  );
+}
+
 const GROUNDS: Record<SceneId, (p: { warm: boolean }) => JSX.Element> = {
   yard: Yard,
   shore: Shore,
@@ -514,6 +678,9 @@ const GROUNDS: Record<SceneId, (p: { warm: boolean }) => JSX.Element> = {
   grove: Grove,
   dyke: Dyke,
   causeway: Causeway,
+  road: Road,
+  town: Town,
+  bog: Bog,
 };
 
 /** The drawn ground of a plan. */

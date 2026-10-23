@@ -556,13 +556,13 @@ function heroView(g: Game, pid: PlayerId): HeroView {
     if (atHome) {
       for (const r of g.ix.c.resources) {
         if (r.gear?.slot !== slot || (g.s.res[r.id] ?? 0) <= 0 || r.id === id) continue;
-        options.push({ id: r.id, name: r.name, note: gearNote(g, r.id), n: g.s.res[r.id] ?? 0 });
+        options.push({ id: r.id, name: r.name, note: gearNote(g, r.id), n: g.s.res[r.id] ?? 0, icon: r.icon });
       }
     }
     return {
       slot,
       name: ui(`slot_${slot}`),
-      item: id ? { id, name: g.ix.res.get(id)?.name ?? id, note: gearNote(g, id) } : null,
+      item: id ? { id, name: g.ix.res.get(id)?.name ?? id, note: gearNote(g, id), icon: g.ix.res.get(id)?.icon } : null,
       options,
     };
   });
@@ -616,6 +616,7 @@ function bagView(g: Game, pid: PlayerId): BagView {
         kind: def?.kind ?? 'res',
         usable: !!def?.use?.anywhere,
         ...(note ? { note } : {}),
+        ...(def?.icon ? { icon: def.icon } : {}),
       };
     });
   return { items, load: bagLoad(g, pid), cap: bagCap(g, pid) };
@@ -855,6 +856,8 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
         kind: r.kind ?? 'res',
         ...(r.weight !== undefined ? { weight: r.weight } : {}),
         ...(note ? { note } : {}),
+        ...(r.ware && g.test(r.ware, pid) ? { ware: true } : {}),
+        ...(r.icon ? { icon: r.icon } : {}),
       };
     });
 
@@ -1029,7 +1032,7 @@ function visibleDelta(g: Game, before: Record<string, number>, after: Record<str
   for (const r of g.ix.c.resources) {
     if (r.hidden || r.kind === 'tool') continue;
     const n = (after[r.id] ?? 0) - (before[r.id] ?? 0);
-    if (n !== 0) out.push({ id: r.id, name: r.name, n });
+    if (n !== 0) out.push({ id: r.id, name: r.name, n, icon: r.icon });
   }
   return out;
 }
@@ -1059,7 +1062,7 @@ function summaryView(g: Game, pid: PlayerId): SummaryView | null {
     .filter((x) => x.def && !x.def.hidden && x.n > 0)
     .sort((a, b) => b.n - a.n)
     .slice(0, 6)
-    .map(({ id, name, n }) => ({ id, name, n }));
+    .map(({ id, name, n, def }) => ({ id, name, n, icon: def?.icon }));
   return {
     act,
     final: f.some((k) => k.startsWith('ending_')),

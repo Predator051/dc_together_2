@@ -1,7 +1,7 @@
 // A test player: looks at its own view (and, for planning, at what the world offers) and sends
 // commands like a person would. Two of them play act one together.
 
-import type { ActionDef, Content, PlayerId, Role } from '../shared/src/content.js';
+import type { ActionDef, Cond, Content, PlayerId, Role } from '../shared/src/content.js';
 import type { Command, PlayerView } from '../shared/src/protocol.js';
 import { Rng } from '../shared/src/rng.js';
 import type { Game } from '../server/src/engine/index.js';
@@ -13,6 +13,9 @@ export interface BotOptions {
   careless?: boolean;
   seed?: number;
 }
+
+/** Shillings of act two. */
+const COIN = 'r_22';
 
 const STAT_PLAN: Record<Role, string[]> = {
   hunter: ['agi', 'end', 'per', 'agi', 'end'],
@@ -70,8 +73,8 @@ export class Bot {
     }
 
     if (v.atHome) {
-      // what did not fit into the store stays in the bag: throw it out
-      const stuck = v.bag.items.find((i) => i.kind !== 'use' && i.kind !== 'food');
+      // what did not fit into the store stays in the bag: throw it out (goods to sell excepted)
+      const stuck = v.bag.items.find((i) => i.kind !== 'use' && i.kind !== 'food' && !this.isWare(g, i.id));
       if (stuck) return { c: 'drop', id: stuck.id, n: stuck.n };
       const gear = this.gear(v, g);
       if (gear) return gear;
@@ -79,6 +82,8 @@ export class Bot {
       if (pack) return pack;
     }
 
+    const trade = this.trade(v, g);
+    if (trade) return trade;
     const story = this.story(v, g);
     if (story) return story;
     // waiting for the partner at the place of the story: work here, do not wander off
@@ -154,12 +159,10 @@ export class Bot {
     const theirs = sc.signs?.fresh ? sc.signs.partner : undefined;
     if (v.me.role === 'hunter') {
       const want = st.look?.now ? 'stop' : 'go';
-      if (sc.signs?.mine !== want || !sc.signs?.fresh) {
-        // show the sign every turn (it counts for the turn it was shown)
-        if (this.lastSign !== `${st.pos}:${st.time}:${want}`) {
-          this.lastSign = `${st.pos}:${st.time}:${want}`;
-          return { c: 'sign', id: want };
-        }
+      // show the sign every turn (it counts for the turn it was shown)
+      if (this.lastSign !== `${st.length}:${st.pos}:${st.time}:${want}`) {
+        this.lastSign = `${st.length}:${st.pos}:${st.time}:${want}`;
+        return { c: 'sign', id: want };
       }
       if (st.look?.now) return { c: 'choose', id: 'freeze' };
       return { c: 'choose', id: theirs === 'quiet' ? 'sneak' : 'step' };
@@ -167,8 +170,8 @@ export class Bot {
     // the maker waits for the hunter's sign, and tells about loose ground
     const loose = st.loose?.[st.pos];
     const want = loose ? 'quiet' : 'go';
-    if (this.lastSign !== `${st.pos}:${st.time}:${want}`) {
-      this.lastSign = `${st.pos}:${st.time}:${want}`;
+    if (this.lastSign !== `${st.length}:${st.pos}:${st.time}:${want}`) {
+      this.lastSign = `${st.length}:${st.pos}:${st.time}:${want}`;
       return { c: 'sign', id: want };
     }
     if (!theirs) return null;
@@ -177,13 +180,35 @@ export class Bot {
   }
   private lastSign = '';
 
+  /**
+   * Two fronts: push the win bar (directly or by moving people onto it), feed what feeds it, and
+   * pull a bad bar down when it is close to the top.
+   */
   private operation(v: PlayerView): Command | null {
     const op = v.scene!.operation!;
     if (op.myPick) return null;
-    const t = (id: string) => op.tracks.find((x) => x.id === id)?.value ?? 0;
-    const can = (id: string) => op.moves.find((m) => m.id === id && m.enabled);
-    if (v.me.role === 'hunter') return { c: 'choose', id: t('alarm') >= 4 && can('hide') ? 'hide' : can('lead') ? 'lead' : op.moves[0]!.id };
-    return { c: 'choose', id: t('alarm') >= 1 && can('noise') ? 'noise' : can('help') ? 'help' : op.moves[0]!.id };
+    const val = new Map(op.tracks.map((t) => [t.id, t.value]));
+    const max = new Map(op.tracks.map((t) => [t.id, t.max]));
+    const win = op.tracks.find((t) => t.goal !== undefined)?.id ?? op.tracks.find((t) => !t.bad)?.id;
+    const feeds = new Set(op.moves.flatMap((m) => (m.transfer ? [m.transfer.from] : [])));
+    const room = (id: string) => (max.get(id) ?? 0) - (val.get(id) ?? 0);
+    let best: { id: string; s: number } | null = null;
+    for (const m of op.moves) {
+      if (!m.enabled) continue;
+      let s = 0;
+      for (const [k, d] of Object.entries(m.delta)) {
+        const t = op.tracks.find((x) => x.id === k);
+        if (!t) continue;
+        if (t.bad) {
+          const risky = (val.get(k) ?? 0) + 3 >= t.max;
+          s -= d * (risky ? 8 : 1.5);
+        } else if (k === win) s += Math.min(d, room(k)) * 6;
+        else if (feeds.has(k)) s += Math.min(d, room(k)) * 3;
+      }
+      if (m.transfer && m.transfer.to === win) s += Math.min(m.transfer.n, val.get(m.transfer.from) ?? 0, room(win)) * 6;
+      if (!best || s > best.s) best = { id: m.id, s };
+    }
+    return { c: 'choose', id: best?.id ?? op.moves[0]!.id };
   }
 
   // ------------------------------------------------------------------ the story
@@ -242,6 +267,125 @@ export class Bot {
     return null;
   }
 
+  // ------------------------------------------------------------------ trade
+
+  private isWare(g: Game, id: string): boolean {
+    const def = g.ix.res.get(id);
+    return !!def?.ware && g.test(def.ware, this.pid);
+  }
+
+  /** Flags that trading raises (trust), and how far the story needs them. */
+  private trustNeed(g: Game): { flag: string; n: number } | null {
+    // how high trading alone can raise each flag
+    const raised = new Map<string, number>();
+    for (const a of this.c.actions)
+      for (const e of a.effects ?? [])
+        if ('inc' in e && (a.kind === 'trade' || a.kind === 'home')) raised.set(e.inc, Math.max(raised.get(e.inc) ?? 0, e.max ?? Infinity));
+    const flat = (c: Cond | undefined): Cond[] => (!c ? [] : 'all' in c ? c.all.flatMap(flat) : 'any' in c ? c.any.flatMap(flat) : [c]);
+    for (const sc of this.c.scenes) {
+      if (sc.pool || (sc.once !== false && g.flag(`done:${sc.id}`))) continue;
+      if (sc.visible && !g.test(sc.visible, this.pid)) continue;
+      for (const c of flat(sc.enabled)) {
+        if (!('flag' in c) || c.gte === undefined || !raised.has(c.flag)) continue;
+        // beyond what trade can give, the story (an errand) has to raise it
+        const reach = Math.min(c.gte, raised.get(c.flag)!);
+        if (g.flag(c.flag) < reach) return { flag: c.flag, n: reach - g.flag(c.flag) };
+      }
+    }
+    return null;
+  }
+
+  private storyNeedsCoins(g: Game): boolean {
+    return this.c.scenes.some(
+      (sc) => !!sc.cost?.[COIN] && !(sc.once !== false && g.flag(`done:${sc.id}`)) && (!sc.visible || g.test(sc.visible, this.pid)) && g.stockAll(COIN) < sc.cost[COIN]!,
+    );
+  }
+
+  /** Buy actions this hero could use: what they give, for how much. */
+  private buys(g: Game): ActionDef[] {
+    return this.c.actions.filter((a) => a.kind === 'trade' && a.cost?.[COIN] && !Object.keys(a.yield ?? {}).includes(COIN));
+  }
+
+  /** Shillings the plans call for (to buy what cannot be gathered, and for the story's prices). */
+  private coinNeed(g: Game, want: Map<string, number>): number {
+    let need = want.get(COIN) ?? 0;
+    for (const [r, short] of want) {
+      if (r === COIN) continue;
+      const gathered = this.c.actions.some((a) => a.kind === 'gather' && Object.keys(a.yield ?? {}).includes(r));
+      if (gathered) continue;
+      const buy = this.buys(g).find((a) => Object.keys(a.yield ?? {}).includes(r) && (!a.visible || g.test(a.visible, this.pid)));
+      if (!buy) continue;
+      const per = Number(buy.yield![r]) || 1;
+      need += buy.cost![COIN]! * Math.ceil(short / per);
+    }
+    return Math.max(0, need - g.stockAll(COIN));
+  }
+
+  /** Carry goods to a buyer when the story or the shopping list asks for shillings or trust. */
+  private trade(v: PlayerView, g: Game): Command | null {
+    // careless players work at random, but money they earn and spend with a plan (or they never would)
+    const want = this.wanted(g, true);
+    const coins = this.coinNeed(g, want);
+    const trust = this.trustNeed(g);
+    const here = v.groups.flatMap((gr) => gr.entries);
+    // buy what is wanted, if we stand where it is sold
+    for (const a of this.buys(g)) {
+      const e = here.find((x) => x.id === a.id);
+      if (!e?.enabled) continue;
+      if (Object.keys(a.yield ?? {}).some((r) => want.has(r))) return { c: 'act', id: a.id };
+    }
+    // go and buy what is wanted and cannot be gathered, with shillings in the bag
+    const myCoins = g.p(this.pid).bag[COIN] ?? 0;
+    for (const b of this.buys(g)) {
+      if (b.visible && !g.test(b.visible, this.pid)) continue;
+      const area = g.ix.areaOf(b.group);
+      if (!areaKnown(g, area)) continue;
+      const r = Object.keys(b.yield ?? {}).find((x) => want.has(x));
+      if (!r || this.c.actions.some((a) => a.kind === 'gather' && Object.keys(a.yield ?? {}).includes(r))) continue;
+      const price = b.cost![COIN]!;
+      if (myCoins < price) {
+        // money split between two purses: pool it in the store, then one of us takes it all
+        const stored = g.s.res[COIN] ?? 0;
+        if (v.atHome && stored + myCoins >= price && stored > 0) return { c: 'pack', id: COIN, n: stored };
+        if (v.atHome && myCoins > 0 && g.stockAll(COIN) >= price) return { c: 'pack', id: COIN, n: -myCoins };
+        continue;
+      }
+      if (v.me.area !== area) return this.goTowards(v, g, area);
+    }
+    if (coins <= 0 && !trust) return null;
+    const sells = this.c.actions.filter((a) => {
+      if (a.kind !== 'trade' || !a.yield?.[COIN]) return false;
+      if (a.visible && !g.test(a.visible, this.pid)) return false;
+      if (!areaKnown(g, g.ix.areaOf(a.group))) return false;
+      if (trust && coins <= 0) return (a.effects ?? []).some((e) => 'inc' in e && e.inc === trust.flag);
+      return true;
+    });
+    // sell what is in the bag where we stand
+    for (const a of sells) {
+      const e = here.find((x) => x.id === a.id);
+      if (e?.enabled) return { c: 'act', id: a.id };
+    }
+    // choose a sale: goods we have and do not need ourselves
+    const pick = sells
+      .map((a) => {
+        const [ware, n] = Object.entries(a.cost ?? {})[0] ?? ['', 0];
+        const inBag = g.p(this.pid).bag[ware] ?? 0;
+        const stored = g.s.res[ware] ?? 0;
+        return { a, ware, n, inBag, stored };
+      })
+      .filter((x) => x.ware && !want.has(x.ware) && (x.inBag >= x.n || (v.atHome && x.stored >= x.n)))
+      .sort((x, y) => Number(y.a.yield![COIN]) / y.n - Number(x.a.yield![COIN]) / x.n)[0];
+    if (!pick) return null;
+    const area = g.ix.areaOf(pick.a.group);
+    if (pick.inBag < pick.n) {
+      const n = Math.min(pick.stored, pick.n * 3);
+      if (v.atHome && v.bag.load + n < v.bag.cap) return { c: 'pack', id: pick.ware, n };
+      return null;
+    }
+    if (v.me.area !== area) return this.goTowards(v, g, area);
+    return null;
+  }
+
   // ------------------------------------------------------------------ work
 
   private jobRes(actionId: string): string {
@@ -254,7 +398,7 @@ export class Bot {
   }
 
   /** What the visible-but-too-dear things of the world ask for (resource → how many short). */
-  private wanted(g: Game): Map<string, number> {
+  private wanted(g: Game, noCoins = false): Map<string, number> {
     const out = new Map<string, number>();
     const add = (cost: Record<string, number> | undefined) => {
       for (const [r, n] of Object.entries(cost ?? {})) {
@@ -276,6 +420,16 @@ export class Bot {
     }
     // always keep some food
     if (g.stockAll(this.c.food!) < 6) out.set(this.c.food!, 6);
+    // trust is bought with goods: keep something to sell
+    const trust = this.trustNeed(g);
+    if (trust) {
+      const salt = this.c.resources.find((r) => r.name === 'Сіль')?.id;
+      if (salt && g.stockAll(salt) < 8) out.set(salt, 8 - g.stockAll(salt));
+    }
+    if (!noCoins) {
+      const coins = this.coinNeed(g, out);
+      if (coins > 0) out.set(COIN, coins);
+    }
     return out;
   }
 
@@ -299,10 +453,16 @@ export class Bot {
     const score = (id: string): number => {
       const a = g.ix.actions.get(id);
       if (!a) return 0;
-      if (this.o.careless) return this.rng.next() * 10;
+      if (this.o.careless) {
+        if (a.kind === 'trade') return 0;
+        // at random, but what the story is short of comes to mind more often
+        const short = Object.keys(a.yield ?? {}).some((r) => want.has(r));
+        return this.rng.next() * 10 + (short ? 15 : 0);
+      }
       if (a.kind === 'build') return 120;
       if (a.kind === 'craft') return this.worthMaking(a, g) ? 90 : 0;
       if (a.kind === 'train') return 2;
+      if (a.kind === 'trade') return 0;
       if (a.kind === 'home') return id === 'x_10' && g.stoveState() !== 'warm' ? 30 : 0;
       let s = 0;
       for (const [r] of Object.entries(a.yield ?? {})) {
@@ -331,6 +491,8 @@ export class Bot {
     if (!v.atHome) {
       if (v.bag.load >= v.bag.cap * 0.8) return this.goTowards(v, g, g.ix.homeArea);
       const best = ranked[0];
+      // a careless player, having walked somewhere, mostly does something there
+      if (this.o.careless && best && this.rng.next() < 0.7) return { c: 'act', id: best.e.id };
       if (best && best.s >= 40) return { c: 'act', id: best.e.id };
       if (target && target !== v.me.area) return this.goTowards(v, g, target) ?? this.goTowards(v, g, g.ix.homeArea);
       if (goods) return this.goTowards(v, g, g.ix.homeArea);

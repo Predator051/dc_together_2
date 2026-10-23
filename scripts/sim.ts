@@ -3,6 +3,7 @@
 
 import { content } from '../content/index.js';
 import { E, G, U } from '../content/a1/ids.js';
+import { E2, G2 } from '../content/a2/ids.js';
 import type { PlayerId, Slot } from '../shared/src/content.js';
 import { xpForLevel } from '../shared/src/rules.js';
 import { ContentIndex, Game, newWorld } from '../server/src/engine/index.js';
@@ -51,11 +52,33 @@ export const STAGES: Record<string, Kit> = {
     bag: { [U.bandage]: 2, [U.torch]: 2, [U.rattle]: 1, [U.brew]: 1 },
     dog: true,
   },
+  // act two: the end of act one, then the forge of the second tier and the market
+  E5: {
+    level: 6,
+    hunter: { weapon: G.ironspear, body: G.coat, legs: G.boots, offhand: G.shield, head: G.helm },
+    maker: { weapon: G.axe, body: G.coat, legs: G.boots, offhand: G.shield, head: G.helm },
+    bag: { [U.bandage]: 2, [U.torch]: 2, [U.rattle]: 1, [U.brew]: 1 },
+    dog: true,
+  },
+  E6: {
+    level: 8,
+    hunter: { weapon: G.ironspear, body: G2.quilt, legs: G.boots, offhand: G2.ironshield, head: G.helm, hands: G2.bracers },
+    maker: { weapon: G2.cleaver, body: G.coat, legs: G.boots, offhand: G2.ironshield, head: G.helm, hands: G2.bracers },
+    bag: { [U.bandage]: 2, [U.torch]: 2, [U.rattle]: 1, [U.brew]: 1 },
+    dog: true,
+  },
+  E7: {
+    level: 9,
+    hunter: { weapon: G2.sabre, body: G2.quilt, legs: G.boots, offhand: G2.ironshield, head: G.helm, hands: G2.bracers },
+    maker: { weapon: G2.cleaver, body: G2.quilt, legs: G.boots, offhand: G2.ironshield, head: G.helm, hands: G2.bracers },
+    bag: { [U.bandage]: 3, [U.torch]: 2, [U.rattle]: 1, [U.brew]: 1 },
+    dog: true,
+  },
 };
 
 const LEVEL_UPS: Record<'hunter' | 'maker', string[]> = {
-  hunter: ['agi', 'end', 'per', 'agi', 'end', 'agi'],
-  maker: ['str', 'end', 'end', 'str', 'agi', 'end'],
+  hunter: ['agi', 'end', 'per', 'agi', 'end', 'agi', 'end', 'agi'],
+  maker: ['str', 'end', 'end', 'str', 'agi', 'end', 'str', 'end'],
 };
 
 function makeWorld(kit: Kit, seed: number, who: 'both' | 'hunter' | 'maker'): Game {
@@ -137,6 +160,12 @@ const TABLE: Array<{ name: string; foes: Array<{ enemy: string; n?: number }>; s
   { name: 'Пси Білих ×2', foes: [{ enemy: E.hound, n: 2 }], stages: ['E3', 'E4'], who: ['both', 'maker'] },
   { name: 'Білий', foes: [{ enemy: E.white }], stages: ['E3', 'E4'], who: ['both', 'maker'] },
   { name: 'Фока + 2 пси', foes: [{ enemy: E.foka }, { enemy: E.hound, n: 2 }], stages: ['E3', 'E4'], who: ['both'] },
+  { name: 'Вовки ×3', foes: [{ enemy: E2.wolf, n: 3 }], stages: ['E5', 'E6'], who: ['both', 'hunter', 'maker'] },
+  { name: 'Вовки ×2', foes: [{ enemy: E2.wolf, n: 2 }], stages: ['E5'], who: ['hunter', 'maker'] },
+  { name: 'Хапун', foes: [{ enemy: E2.snatcher }], stages: ['E5', 'E6'], who: ['both', 'hunter', 'maker'] },
+  { name: 'Хапуни ×2', foes: [{ enemy: E2.snatcher, n: 2 }], stages: ['E5', 'E6'], who: ['both', 'maker'] },
+  { name: 'Білий + 2 пси', foes: [{ enemy: E.white }, { enemy: E.hound, n: 2 }], stages: ['E5', 'E6'], who: ['both'] },
+  { name: 'Гак + хапун', foes: [{ enemy: E2.hook }, { enemy: E2.snatcher, n: 1 }], stages: ['E5', 'E6', 'E7'], who: ['both'] },
 ];
 
 if (process.argv[1]?.endsWith('sim.ts')) {

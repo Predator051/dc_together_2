@@ -190,7 +190,7 @@ export class GameServer {
     for (const r of this.opts.content.resources) {
       if (r.hidden) continue;
       const n = (this.state.res[r.id] ?? 0) - (before[r.id] ?? 0);
-      if (n !== 0) items.push({ id: r.id, name: r.name, n });
+      if (n !== 0) items.push({ id: r.id, name: r.name, n, icon: r.icon });
     }
     if (!items.length) return;
     items.sort((a, b) => b.n - a.n);
@@ -207,7 +207,7 @@ export class GameServer {
       if (!n) continue;
       const def = this.opts.content.resources.find((r) => r.id === id);
       if (!def || def.hidden) continue;
-      items.push({ id, name: def.name, n });
+      items.push({ id, name: def.name, n, icon: def.icon });
     }
     if (!items.length) return;
     const msg: ServerMsg = { t: 'delta', by: pid, together: false, items };

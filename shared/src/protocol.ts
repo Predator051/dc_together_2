@@ -68,6 +68,8 @@ export interface DeltaItem {
   id: string;
   name: string;
   n: number;
+  /** Its small mark (see ITEM_ICONS). */
+  icon?: string;
 }
 
 export type ErrCode = 'bad_code' | 'bad_token' | 'slots_full' | 'role_taken' | 'bad_input' | 'rate_limited' | 'not_authed';
@@ -305,6 +307,9 @@ export interface ResView {
   weight?: number;
   /** One line about it (gear stats, what a consumable does). */
   note?: string;
+  /** Goods: can be taken along to sell. */
+  ware?: boolean;
+  icon?: string;
 }
 
 export interface StatView {
@@ -326,9 +331,9 @@ export interface SkillView {
 export interface SlotView {
   slot: string;
   name: string;
-  item: { id: string; name: string; note: string } | null;
+  item: { id: string; name: string; note: string; icon?: string } | null;
   /** What could go here from the home store. */
-  options: Array<{ id: string; name: string; note: string; n: number }>;
+  options: Array<{ id: string; name: string; note: string; n: number; icon?: string }>;
 }
 
 export interface HeroView {
@@ -349,7 +354,7 @@ export interface HeroView {
 }
 
 export interface BagView {
-  items: Array<{ id: string; name: string; n: number; weight: number; kind: string; usable: boolean; note?: string }>;
+  items: Array<{ id: string; name: string; n: number; weight: number; kind: string; usable: boolean; note?: string; icon?: string }>;
   load: number;
   cap: number;
 }

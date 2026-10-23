@@ -4,6 +4,7 @@ import type { ComponentChildren, JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { PlayerView, SlotView } from '../../shared/src/protocol.js';
 import { net } from './net.js';
+import { Thing } from './items.js';
 import { Sheet } from './sheet.js';
 import { T } from './strings.js';
 
@@ -297,6 +298,9 @@ function GearSheet({
       <h3 class="gear-h">{T.heroNow}</h3>
       {s.item ? (
         <div class="gear-now">
+          <span class="gear-now-pic">
+            <Thing icon={s.item.icon} />
+          </span>
           <span class="gear-now-text">
             <b>{s.item.name}</b>
             {s.item.note && <small>{s.item.note}</small>}
@@ -322,7 +326,10 @@ function GearSheet({
                 onClick={() => net.send({ c: 'equip', slot: s.slot, id: o.id })}
               >
                 <span class="tile-top">
-                  <span class="tile-label">{o.name}</span>
+                  <span class="tile-label">
+                    <Thing icon={o.icon} />
+                    {o.name}
+                  </span>
                   {o.n > 1 && <span class="tile-secs">×{o.n}</span>}
                 </span>
                 {o.note && (
@@ -362,7 +369,7 @@ function Gear({ v, locked, desktop }: { v: PlayerView; locked: boolean; desktop:
                 onClick={() => setPick(open === s.slot ? null : s.slot)}
               >
                 <span class="spot-medal">
-                  {slotPic(s.slot)}
+                  {s.item?.icon ? <Thing icon={s.item.icon} /> : slotPic(s.slot)}
                   {more && <span class={`slot-more ${s.item ? '' : 'want'}`}>+{s.options.length}</span>}
                 </span>
                 <span class="slot-label">

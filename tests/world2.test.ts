@@ -245,3 +245,17 @@ describe('playing alone', () => {
     expect(after).toEqual(before);
   });
 });
+
+describe('raising a capped counter', () => {
+  it('a capped rise never pulls down what was raised higher', () => {
+    const { w, h } = pair(3);
+    const g = w.g();
+    g.s.flags.trust = 5;
+    g.apply([{ inc: 'trust', max: 4 }], h);
+    expect(g.s.flags.trust).toBe(5);
+    g.s.flags.trust = 3;
+    g.apply([{ inc: 'trust', max: 4 }], h);
+    g.apply([{ inc: 'trust', max: 4 }], h);
+    expect(g.s.flags.trust).toBe(4);
+  });
+});

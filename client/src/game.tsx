@@ -14,6 +14,7 @@ import { Scene } from './scene.js';
 import { IconBell, IconBellOff, IconDown, IconFlame, IconHero, IconLock, IconLog, IconMap, IconMute, IconNotes, IconPair, IconPin, IconSnow, IconSound, IconWork } from './icons.js';
 import { T } from './strings.js';
 import { BagPanel, FightPanel, MapPanel, NearFight, PackList, ResidentsPanel } from './world.js';
+import { Thing } from './items.js';
 
 type Tab = 'work' | 'map' | 'hero' | 'notes' | 'log';
 
@@ -306,7 +307,10 @@ function Stock({ v, foldable = false }: { v: PlayerView; foldable?: boolean }) {
               <div
                 class={`ledger-row ${r.cap !== undefined && r.n >= r.cap ? 'full' : ''} ${r.n === 0 ? 'empty' : ''}`}
               >
-                <dt>{r.name}</dt>
+                <dt>
+                  <Thing icon={r.icon} />
+                  {r.name}
+                </dt>
                 <dd>
                   {r.n}
                   {r.cap !== undefined && <small>/{r.cap}</small>}
@@ -329,7 +333,15 @@ function Stock({ v, foldable = false }: { v: PlayerView; foldable?: boolean }) {
       )}
       {shown && tools.length > 0 && (
         <p class="inline-list tools">
-          <span class="il-head">{T.items}:</span> {tools.map((r) => (r.n > 1 ? `${r.name} ×${r.n}` : r.name)).join(', ')}.
+          <span class="il-head">{T.items}:</span>{' '}
+          {tools.map((r, i) => (
+            <span class="il-thing">
+              {i > 0 && ', '}
+              <Thing icon={r.icon} />
+              {r.n > 1 ? `${r.name} ×${r.n}` : r.name}
+            </span>
+          ))}
+          .
         </p>
       )}
     </section>
@@ -383,6 +395,7 @@ function Welcome({ w, partner }: { w: WelcomeView; partner: string }) {
             <p class="sheet-deltas">
               {w.res.map((r) => (
                 <span class={r.n > 0 ? 'plus' : 'minus'}>
+                  <Thing icon={r.icon} />
                   {r.name} {plus(r.n)}
                 </span>
               ))}
@@ -471,6 +484,7 @@ function Summary({ s, me, partner }: { s: SummaryView; me: string; partner: stri
             <p class="sheet-deltas">
               {s.gathered.map((r) => (
                 <span class="plus">
+                  <Thing icon={r.icon} />
                   {r.name} {r.n}
                 </span>
               ))}
@@ -887,7 +901,8 @@ export function Game({ s }: { s: NetState }) {
               {d.by !== 'me' && <span class="who">{d.by === 'both' ? T.deltaBoth : v.partner.name}</span>}
               {d.items.map((it) => (
                 <span class={`item ${it.n > 0 ? 'plus' : 'minus'}`}>
-                  {it.n > 0 ? `+${it.n}` : `−${-it.n}`} {it.name}
+                  {it.n > 0 ? `+${it.n}` : `−${-it.n}`} <Thing icon={it.icon} />
+                  {it.name}
                 </span>
               ))}
             </div>

@@ -143,6 +143,36 @@ const DRAW: Record<PortraitId, () => JSX.Element> = {
       <path class="thin" d="M14 34h20" />
     </Ink>
   ),
+  wolf: () => (
+    <Ink>
+      <path d="M14 13l-2-8 7 5M30 12l3-7 1 9" />
+      <path d="M14 13c-3 3-4 8-3 12l-5 6c-1 2 0 3 2 3h7c2 3 5 5 9 5s7-2 9-5c3-4 4-11 1-17-3-5-8-7-13-6-3 0-5 1-7 2z" />
+      <Eye x={18} y={21} />
+      <Eye x={28} y={20} />
+      <path d="M6 34l3-1" />
+      <path class="mark" d="M12 36l2 2M16 37l1 2" />
+      <path class="thin" d="M33 30c3 1 6 0 8-2M34 25c3 0 6-1 8-3" />
+    </Ink>
+  ),
+  snatcher: () => (
+    <Ink>
+      <path d="M24 7c-5 0-8 4-8 9v4l-6 21h28l-6-21v-4c0-5-3-9-8-9z" />
+      <path class="shade" d="M19.5 19.5c1.5 3 7.5 3 9 0" />
+      <path class="thin" d="M8 14c4 6 9 9 16 9M8 14l4 2M8 14l1 5M11 22l3-4M15 25l1-4" />
+      <path d="M38 16l-3 18" />
+      <path class="thin" d="M14 32h20M24 26l-3 4" />
+    </Ink>
+  ),
+  hook: () => (
+    <Ink>
+      <path class="thick" d="M24 6c-6 0-9 4-9 10v4L8 42h32l-7-22v-4c0-6-3-10-9-10z" />
+      <path class="shade" d="M19 19.5c1.5 3.5 8.5 3.5 10 0" />
+      <path class="thin" d="M16 18c2-2 5-3 8-3s6 1 8 3" />
+      <path class="thick" d="M38 22v8a4 4 0 0 1-8 0" />
+      <path d="M38 22v-4" />
+      <path class="mark" d="M12 30l3 2M12 33l3 1" />
+    </Ink>
+  ),
 };
 
 /** A foe's portrait in its round seal. Unknown names fall back to a mark of a beast. */
