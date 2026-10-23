@@ -16,7 +16,7 @@ import type {
   TextVariant,
 } from '../../shared/src/content.js';
 import { PLAN_FIXED } from '../../shared/src/content.js';
-import { PORTRAITS, SCENES, SPOT_ICONS } from '../../shared/src/pictures.js';
+import { ITEM_ICONS, PORTRAITS, SCENES, SPOT_ICONS } from '../../shared/src/pictures.js';
 
 export interface Report {
   errors: string[];
@@ -319,6 +319,11 @@ export function validateContent(c: Content): Report {
   for (const p of c.pools) spotOf(`pool action ${p.id}`, p.group, p.spot);
   for (const sc of c.scenes) if (sc.label !== undefined) spotOf(`scene ${sc.id}`, sc.group, sc.spot);
   for (const e of c.enemies ?? []) if (!(PORTRAITS as readonly string[]).includes(e.icon)) err(`enemy ${e.id}: unknown icon ${e.icon}`);
+  for (const r of c.resources) {
+    if (r.hidden || r.kind === 'people') continue;
+    if (!r.icon) err(`resource ${r.id}: no icon`);
+    else if (!(ITEM_ICONS as readonly string[]).includes(r.icon)) err(`resource ${r.id}: unknown icon ${r.icon}`);
+  }
 
   // Actions
   for (const a of c.actions) {

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { FightView, MapNodeView, PlayerView } from '../../shared/src/protocol.js';
 import { net } from './net.js';
 import { Portrait } from './portraits.js';
+import { Thing } from './items.js';
 import { sound } from './sound.js';
 import { T } from './strings.js';
 
@@ -197,7 +198,12 @@ export function BagPanel({ v, locked }: { v: PlayerView; locked: boolean }) {
         {b.items.map((it) => (
           <li>
             <span class="bag-name">
-              {it.name} <b>{it.n}</b>
+              <span class="bag-title">
+                <Thing icon={it.icon} />
+                <span>
+                  {it.name} <b>{it.n}</b>
+                </span>
+              </span>
               {it.note && <small>{it.note}</small>}
             </span>
             <span class="row">
@@ -235,7 +241,12 @@ export function PackList({ v, locked }: { v: PlayerView; locked: boolean }) {
         {list.map((r) => (
           <li>
             <span class="bag-name">
-              {r.name} <b>{r.n}</b>
+              <span class="bag-title">
+                <Thing icon={r.icon} />
+                <span>
+                  {r.name} <b>{r.n}</b>
+                </span>
+              </span>
               {r.note && <small>{r.note}</small>}
             </span>
             <button class="btn small" disabled={locked} onClick={() => net.send({ c: 'pack', id: r.id, n: r.ware ? Math.min(5, r.n) : r.kind === 'food' ? 2 : 1 })}>

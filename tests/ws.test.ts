@@ -377,7 +377,7 @@ describe('stock change popups', () => {
     expect((await b.cmd({ c: 'act', id: 'x_13' })).ok).toBe(true);
     const [ma, mb] = await Promise.all([da, db]);
     expect(ma.by).toBe('p2');
-    expect(mb.items).toEqual([{ id: 'r_05', name: 'Харчі', n: -1 }]);
+    expect(mb.items).toEqual([{ id: 'r_05', name: 'Харчі', n: -1, icon: 'food' }]);
     expect(ma.together).toBe(false);
     // the bag: gathering on the shore is the gatherer's own business
     advance(10_000);

@@ -6,7 +6,7 @@ export type Gender = 'm' | 'f';
 export type PlayerId = 'p1' | 'p2';
 export const PLAYER_IDS: readonly PlayerId[] = ['p1', 'p2'];
 
-import type { PortraitId, SceneId, SpotIcon } from './pictures.js';
+import type { ItemIcon, PortraitId, SceneId, SpotIcon } from './pictures.js';
 
 /** Condition evaluated against the world (and, where relevant, a viewing/acting player). */
 export type Cond =
@@ -130,6 +130,8 @@ export interface ResourceDef {
   use?: UseDef;
   /** Goods to sell: while this holds, they can be taken from the store along in the bag. */
   ware?: Cond;
+  /** Its small mark in lists (every visible thing has one). */
+  icon?: ItemIcon;
 }
 
 export type Slot = 'head' | 'body' | 'hands' | 'legs' | 'weapon' | 'offhand' | 'belt';
