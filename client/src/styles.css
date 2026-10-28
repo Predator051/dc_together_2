@@ -1281,6 +1281,25 @@ button.bed:focus-visible {
   background: var(--ochre-wash);
 }
 /* Unavailable: no fill, dashed outline — clearly not a button to press right now. */
+/* a long workplace in sections: a quiet name with how many of them can be done now */
+.tile-section + .tile-section {
+  margin-top: 16px;
+}
+.tile-section-name {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--faded);
+}
+.tile-section-count {
+  font-weight: 500;
+  color: var(--pale);
+  font-variant-numeric: tabular-nums;
+}
 .tile:disabled {
   cursor: default;
   background: transparent;

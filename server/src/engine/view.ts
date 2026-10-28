@@ -24,7 +24,7 @@ import type { Game } from './index.js';
 import { questProgress } from './index.js';
 import { resolveParas } from './text.js';
 import { SKILLS, SLOTS, STATS } from '../../../shared/src/content.js';
-import type { BagView, BeastView, FightView, HeroView, MapView, ResidentView, WeatherView } from '../../../shared/src/protocol.js';
+import type { BagView, BeastView, EntrySort, FightView, HeroView, MapView, ResidentView, WeatherView } from '../../../shared/src/protocol.js';
 import { skillLevel, skillXpFor, xpForLevel } from '../../../shared/src/rules.js';
 import { bagCap, bagLoad, gearNote, heroOf, ownsCount, useNote } from './hero.js';
 import { activeFoes, enemyOf, fightMoves, fightOf, holder } from './fight.js';
@@ -131,6 +131,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         cost: costView(g, sc.cost),
         gain: sceneGains(g, sc, pid),
         together: true,
+        sort: 'pair',
         ...(sc.spot ? { spot: sc.spot } : {}),
         ...(sc.quest ? { quest: true } : {}),
       });
@@ -149,6 +150,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         cost: costView(g, pool.cost),
         gain: sceneGains(g, pool, pid),
         together: true,
+        sort: 'pair',
         ...(pool.spot ? { spot: pool.spot } : {}),
       });
     }
@@ -168,6 +170,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         gain: actionGains(g, a, pid),
         readyAt: cd > g.now ? cd : undefined,
         cooldown: g.actionTime(a, pid),
+        sort: actionSort(g, a),
         ...(a.spot ? { spot: a.spot } : {}),
         ...(a.quest ? { quest: true } : {}),
       });
@@ -191,6 +194,35 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
   const paths = pathEntries(g, pid);
   if (paths.length) out.push({ id: 'paths', name: g.ix.ui('paths'), desc: '', base: false, entries: paths });
   return out;
+}
+
+/** What trades are paid in: what one trade gives and another takes. */
+const moneyOf = new WeakMap<Game['ix'], Set<string>>();
+function money(g: Game): Set<string> {
+  let m = moneyOf.get(g.ix);
+  if (!m) {
+    const trades = g.ix.c.actions.filter((a) => a.kind === 'trade');
+    const paid = new Set(trades.flatMap((a) => Object.keys(a.cost ?? {})));
+    m = new Set(trades.flatMap((a) => Object.keys(a.yield ?? {})).filter((id) => paid.has(id)));
+    moneyOf.set(g.ix, m);
+  }
+  return m;
+}
+
+/** What an action is for: building and training by their kind, trade by its side, the rest by what it yields. */
+function actionSort(g: Game, a: ActionDef): EntrySort {
+  if (a.kind === 'build') return 'build';
+  if (a.kind === 'train') return 'train';
+  if (a.kind === 'trade') return Object.keys(a.yield ?? {}).some((id) => money(g).has(id)) ? 'sell' : 'buy';
+  const defs = Object.keys(a.yield ?? {}).map((id) => g.ix.res.get(id));
+  const kinds = new Set(defs.map((d) => d?.kind ?? 'res'));
+  if (kinds.has('tool')) return 'tool';
+  if (kinds.has('gear')) return defs.some((d) => d?.gear?.slot === 'weapon' || d?.gear?.slot === 'offhand') ? 'arms' : 'wear';
+  // a dish is eaten at the fire, even when it is carried like a supply
+  if (kinds.has('food') || defs.some((d) => d?.meal)) return 'food';
+  if (kinds.has('use')) return 'use';
+  if (kinds.has('res')) return 'make';
+  return 'keep';
 }
 
 /** Ways from here: walk to known places, propose scouting unknown ones. */

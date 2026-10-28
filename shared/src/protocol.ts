@@ -119,7 +119,23 @@ export interface EntryView {
   spot?: string;
   /** Part of a side errand. */
   quest?: boolean;
+  /** What it is for, so a long workplace can be laid out in sections: done together, upkeep, or what it makes. */
+  sort?: EntrySort;
 }
+
+export type EntrySort =
+  | 'pair'
+  | 'keep'
+  | 'build'
+  | 'train'
+  | 'sell'
+  | 'buy'
+  | 'arms'
+  | 'wear'
+  | 'tool'
+  | 'food'
+  | 'use'
+  | 'make';
 
 export interface GroupView {
   id: string;

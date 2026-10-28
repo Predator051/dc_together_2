@@ -1,6 +1,6 @@
 import type { JSX } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import type { EntryView, GroupView, MateEntryView, PlayerView, SummaryView, WelcomeView } from '../../shared/src/protocol.js';
+import type { EntrySort, EntryView, GroupView, MateEntryView, PlayerView, SummaryView, WelcomeView } from '../../shared/src/protocol.js';
 import type { NetState } from './net.js';
 import { net } from './net.js';
 import { Ambient } from './ambient.js';
@@ -237,6 +237,69 @@ function MateList({ items, name }: { items: MateEntryView[]; name: string }) {
   );
 }
 
+const SORTS: Array<[EntrySort, string]> = [
+  ['pair', T.sortPair],
+  ['keep', T.sortKeep],
+  ['build', T.sortBuild],
+  ['train', T.sortTrain],
+  ['sell', T.sortSell],
+  ['buy', T.sortBuy],
+  ['arms', T.sortArms],
+  ['wear', T.sortWear],
+  ['tool', T.sortTool],
+  ['food', T.sortFood],
+  ['use', T.sortUse],
+  ['make', T.sortMake],
+];
+
+/**
+ * A workplace's things to do. What can be done now comes first; a long list is split into
+ * sections by what it is for, so a crowded hearth reads as food, supplies and upkeep, not a heap.
+ */
+function Tiles({ g, c }: { g: GroupView; c: Ctx }) {
+  if (g.id === 'paths') {
+    return (
+      <div class="tiles">
+        {g.entries.map((e) => (
+          <Entry key={e.id} e={e} c={c} />
+        ))}
+      </div>
+    );
+  }
+  const ready = (list: EntryView[]) => [...list.filter((e) => e.enabled), ...list.filter((e) => !e.enabled)];
+  const sections = SORTS.map(([id, name]) => ({ id, name, list: g.entries.filter((e) => (e.sort ?? 'keep') === id) })).filter(
+    (s) => s.list.length > 0,
+  );
+  if (g.entries.length < 6 || sections.length < 2) {
+    return (
+      <div class="tiles">
+        {ready(g.entries).map((e) => (
+          <Entry key={e.id} e={e} c={c} />
+        ))}
+      </div>
+    );
+  }
+  return (
+    <>
+      {sections.map((s) => (
+        <section class="tile-section" key={s.id} aria-label={s.name}>
+          <h4 class="tile-section-name">
+            {s.name}
+            <span class="tile-section-count">
+              {s.list.filter((e) => e.enabled).length}/{s.list.length}
+            </span>
+          </h4>
+          <div class="tiles">
+            {ready(s.list).map((e) => (
+              <Entry key={e.id} e={e} c={c} />
+            ))}
+          </div>
+        </section>
+      ))}
+    </>
+  );
+}
+
 function Group({ g, c }: { g: GroupView; c: Ctx }) {
   return (
     <section class={`group ${g.base ? 'base' : ''}`}>
@@ -256,11 +319,7 @@ function Group({ g, c }: { g: GroupView; c: Ctx }) {
         )}
       </header>
       {c.v.garden && c.v.garden.group === g.id && <GardenBeds v={c.v} offset={c.offset} locked={c.locked} />}
-      <div class="tiles">
-        {g.entries.map((e) => (
-          <Entry key={e.id} e={e} c={c} />
-        ))}
-      </div>
+      <Tiles g={g} c={c} />
       {g.partner && g.partner.length > 0 && <MateList items={g.partner} name={c.v.partner.name} />}
     </section>
   );
