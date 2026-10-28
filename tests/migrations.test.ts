@@ -59,6 +59,18 @@ describe('world state migrations', () => {
     expect(state.flags['migrated_twice']).toBe(1);
   });
 
+  it('10 -> 11: old journal lines of a new day and of a goal get their own kind', () => {
+    const s = { ...newWorld(content, 1, 0), version: 10 } as unknown as Record<string, any>;
+    s.log = [
+      { id: 1, t: 0, kind: 'system', text: { p1: 'Ніч минула. Настав день 2.' } },
+      { id: 2, t: 0, kind: 'system', text: { p1: 'Мета: дійти.', p2: 'Мета: дійти.' } },
+      { id: 3, t: 0, kind: 'system', text: { p1: 'Задощило.' } },
+      { id: 4, t: 0, kind: 'story', text: { p1: 'Мета: не рубрика.' } },
+    ];
+    const { state } = migrateState(s, content, 0);
+    expect(state.log.map((e) => e.kind)).toEqual(['day', 'goal', 'system', 'story']);
+  });
+
   it('rejects worlds from a newer server and missing steps', () => {
     const s = { ...newWorld(content, 1, 0), version: STATE_VERSION + 5 };
     expect(() => migrateState(s, content, 0)).toThrow(MigrationError);

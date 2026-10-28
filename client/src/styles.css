@@ -129,6 +129,7 @@ b {
 }
 .row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 .stack {
@@ -594,6 +595,13 @@ b {
   max-width: 1320px;
   margin: 0 auto;
   padding-bottom: calc(var(--nav-h) + 24px + env(safe-area-inset-bottom));
+}
+/* while the link is down nothing can be done: the page says so by stepping back, not by ignoring taps */
+.game.offline .layout {
+  opacity: 0.55;
+  filter: saturate(0.6);
+  pointer-events: none;
+  transition: opacity 0.3s;
 }
 .top {
   position: sticky;
@@ -2118,7 +2126,10 @@ mark {
   color: var(--ink-2);
 }
 .bar {
-  height: 5px;
+  display: block;
+  height: 6px;
+  margin: 6px 0 2px;
+  border-radius: 3px;
   background: rgba(230, 217, 188, 0.08);
   overflow: hidden;
 }
@@ -2622,8 +2633,13 @@ mark {
   background: var(--ochre-wash);
 }
 .sign-glyph {
-  font-size: 1.2rem;
-  line-height: 1;
+  width: 22px;
+  height: 22px;
+  color: var(--ink-2);
+}
+.sign.on .sign-glyph,
+.sign-in.fresh .sign-glyph {
+  color: var(--ochre-ink);
 }
 .sign-label {
   font-family: var(--sans);
@@ -2988,6 +3004,17 @@ mark {
   .col-left .ledger {
     grid-template-columns: 1fr;
   }
+  /* the map takes the ledger's room: the bag and the store wait on the other tabs, as on a phone */
+  .layout.map-open {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+  }
+  .layout.map-open .col-left {
+    display: none;
+  }
+  .layout.map-open .col-mid {
+    border-left: none;
+    padding-left: 0;
+  }
   /* the page scrolls under the header: the middle tabs stick right below it, with no band above */
   .col-mid .side-switch {
     top: 64px;
@@ -3067,22 +3094,11 @@ mark {
    Part two: the map, the hero, the bag, fights, the household
    ========================================================================== */
 
-.muted {
-  color: var(--faded);
-}
 .meta {
   margin: 6px 0;
   font-family: var(--sans);
   font-size: 0.9rem;
   color: var(--ink-2);
-}
-.bar {
-  display: block;
-  height: 6px;
-  margin: 6px 0 2px;
-  border-radius: 3px;
-  background: rgba(230, 217, 188, 0.08);
-  overflow: hidden;
 }
 .bar > span {
   display: block;
@@ -3146,11 +3162,6 @@ mark {
   background: var(--ochre-wash);
   color: var(--ochre-ink);
   opacity: 1;
-}
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 .pill.warn {
   color: var(--cinnabar-ink);
@@ -3244,9 +3255,9 @@ mark {
   text-anchor: middle;
 }
 .map-q {
-  fill: var(--ink);
+  fill: var(--faded);
   font-family: var(--sans);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   text-anchor: middle;
 }
@@ -3291,10 +3302,6 @@ mark {
 .map-via {
   flex-basis: 100%;
   margin: 2px 0 0;
-}
-.map-q {
-  fill: var(--faded);
-  font-size: 14px;
 }
 .map-me {
   fill: var(--verdigris);
@@ -3843,12 +3850,16 @@ mark {
   gap: 8px;
 }
 .foe {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
   padding: 10px 12px;
   border: 1px solid var(--rule-2);
   border-radius: 8px;
   background: var(--leaf-2);
 }
 .foe.out {
+  align-items: center;
   opacity: 0.45;
   padding: 6px 12px;
 }
@@ -3856,6 +3867,7 @@ mark {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  min-height: 22px;
 }
 .foe-lvl {
   font-family: var(--sans);
@@ -4682,20 +4694,9 @@ body.sheet-open {
   filter: grayscale(1);
   opacity: 0.7;
 }
-.foe {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-}
-.foe.out {
-  align-items: center;
-}
 .foe-body {
   flex: 1;
   min-width: 0;
-}
-.foe-top {
-  min-height: 22px;
 }
 .map-foes {
   list-style: none;

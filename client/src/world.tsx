@@ -58,6 +58,11 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
     const br = el.getBoundingClientRect();
     el.scrollLeft += nr.left + nr.width / 2 - (br.left + br.width / 2);
   }, [hereX, width]);
+  // the card of a picked place may fall below the screen under a big map: bring it into view
+  useEffect(() => {
+    if (!sel) return;
+    boxEl.current?.parentElement?.querySelector('.map-card')?.scrollIntoView({ block: 'nearest' });
+  }, [sel]);
   if (!m.nodes.length) return null;
   const xs = m.nodes.map((n) => n.x);
   const ys = m.nodes.map((n) => n.y);
@@ -72,7 +77,7 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
   const w = cols * CELL + 2 * PAD_X;
   const h = rows * CELL + PAD_B;
   // a node is big enough for its mark, yet leaves room for the names on a narrow phone
-  const R = CELL >= 70 ? 17 : 15;
+  const R = CELL >= 96 ? 20 : CELL >= 70 ? 17 : 15;
   const pos = (n: MapNodeView) => ({ x: PAD_X + (n.x - minX + 0.5) * CELL, y: (n.y - minY + 0.5) * CELL });
   const byId = new Map(m.nodes.map((n) => [n.id, n]));
   // the way to a far place goes through the near ones: show it

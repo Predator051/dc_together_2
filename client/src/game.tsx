@@ -757,7 +757,7 @@ export function Game({ s }: { s: NetState }) {
   );
 
   return (
-    <div class="game">
+    <div class={`game ${s.connected ? '' : 'offline'}`}>
       <Ambient
         a={{
           ...v.ambient,
@@ -796,7 +796,7 @@ export function Game({ s }: { s: NetState }) {
         )}
       </header>
 
-      <main class="layout">
+      <main class={`layout ${mid === 'map' ? 'map-open' : ''}`}>
         <aside class="col-left only-desktop">
           <BagPanel v={v} locked={locked} />
           <Stock v={v} />
