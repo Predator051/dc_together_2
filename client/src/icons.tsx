@@ -164,3 +164,37 @@ export const IconHero = (p: P) => (
     <path d="M5 20c.8-4 3.6-6 7-6s6.2 2 7 6" />
   </Svg>
 );
+
+// Hand signs to the partner: the same line as the other marks, not emoji that differ on every phone.
+export const IconSignStop = (p: P) => (
+  <Svg {...p}>
+    <path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V11M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V6.5a1.5 1.5 0 0 1 3 0V14c0 3.6-2.4 6.5-6 6.5-2.6 0-4.2-1.4-5.4-3.6L4.2 14a1.5 1.5 0 0 1 2.6-1.5L8 14" />
+  </Svg>
+);
+
+export const IconSignGo = (p: P) => (
+  <Svg {...p}>
+    <path d="M12 20V5M6 11l6-6 6 6" />
+  </Svg>
+);
+
+export const IconSignQuiet = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" />
+    <path d="M16 9.5l5 5M21 9.5l-5 5" />
+  </Svg>
+);
+
+export const IconSignDanger = (p: P) => (
+  <Svg {...p}>
+    <path d="M12 4l9 16H3z" />
+    <path d="M12 10v4M12 17v.01" />
+  </Svg>
+);
+
+export const IconSignHere = (p: P) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="7.5" />
+    <circle cx="12" cy="12" r="2.5" />
+  </Svg>
+);

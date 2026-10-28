@@ -1,7 +1,8 @@
 // Underground: the map with its light, the ways each role reads differently, slipping past the
 // watchers, and hand signs (with wax in the ears nobody hears anybody).
+import type { JSX } from 'preact';
 import type { DelveView, OperationView, PlayerView, SceneView, StealthView } from '../../shared/src/protocol.js';
-import { IconCheck, IconFlame } from './icons.js';
+import { IconCheck, IconFlame, IconSignDanger, IconSignGo, IconSignHere, IconSignQuiet, IconSignStop } from './icons.js';
 import { net } from './net.js';
 import { T } from './strings.js';
 
@@ -143,12 +144,12 @@ export function DelveFoot({ d, v, locked }: { d: DelveView; v: PlayerView; locke
   );
 }
 
-const SIGNS: Array<{ id: string; glyph: string; label: string }> = [
-  { id: 'stop', glyph: '✋', label: T.signStop },
-  { id: 'go', glyph: '☝', label: T.signGo },
-  { id: 'quiet', glyph: '🤫', label: T.signQuiet },
-  { id: 'danger', glyph: '✊', label: T.signDanger },
-  { id: 'here', glyph: '👋', label: T.signHere },
+const SIGNS: Array<{ id: string; Glyph: (p: { class?: string }) => JSX.Element; label: string }> = [
+  { id: 'stop', Glyph: IconSignStop, label: T.signStop },
+  { id: 'go', Glyph: IconSignGo, label: T.signGo },
+  { id: 'quiet', Glyph: IconSignQuiet, label: T.signQuiet },
+  { id: 'danger', Glyph: IconSignDanger, label: T.signDanger },
+  { id: 'here', Glyph: IconSignHere, label: T.signHere },
 ];
 
 /** Hand signs: show one, see your partner's. */
@@ -160,9 +161,7 @@ export function Signs({ sc, v, locked }: { sc: SceneView; v: PlayerView; locked:
       <div class={`sign-in ${s?.fresh ? 'fresh' : ''}`} aria-live="polite">
         {theirs ? (
           <>
-            <span class="sign-glyph" aria-hidden="true">
-              {theirs.glyph}
-            </span>
+            <theirs.Glyph class="sign-glyph" />
             <span>
               {v.partner.name} {T.signShows}: <b>{theirs.label}</b>
             </span>
@@ -179,9 +178,7 @@ export function Signs({ sc, v, locked }: { sc: SceneView; v: PlayerView; locked:
             onClick={() => net.send({ c: 'sign', id: x.id })}
             title={x.label}
           >
-            <span class="sign-glyph" aria-hidden="true">
-              {x.glyph}
-            </span>
+            <x.Glyph class="sign-glyph" />
             <span class="sign-label">{x.label}</span>
           </button>
         ))}

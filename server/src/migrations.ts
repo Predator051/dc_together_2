@@ -2,6 +2,7 @@ import type { Content } from '../../shared/src/content.js';
 import type { WorldState } from '../../shared/src/state.js';
 import { STATE_VERSION } from '../../shared/src/state.js';
 import { normalizeWorld } from './engine/index.js';
+import { ui } from '../../content/ui.js';
 
 /**
  * World-state migrations. Key N upgrades a state of version N to N+1.
@@ -14,7 +15,18 @@ export type Migration = (s: any) => any;
 
 export const migrations: Record<number, Migration> = {
   // Part two starts at version 10. Part-one worlds (≤ 3) are never migrated: they are read once
-  // as the legacy (see legacy.ts) and a new world begins. Add 10 -> 11 here when the state changes.
+  // as the legacy (see legacy.ts) and a new world begins.
+  // 10 -> 11: the journal tells new days and goals apart from other notes; old entries learn it too.
+  10: (s) => {
+    const starts = (e: { text: Record<string, string> }, p: string | undefined) =>
+      !!p && Object.values(e.text ?? {}).some((t) => typeof t === 'string' && t.startsWith(p));
+    for (const e of s.log ?? []) {
+      if (e.kind !== 'system') continue;
+      if (starts(e, ui.new_day)) e.kind = 'day';
+      else if (starts(e, ui.goal_prefix)) e.kind = 'goal';
+    }
+    return { ...s, version: 11 };
+  },
 };
 
 export class MigrationError extends Error {}

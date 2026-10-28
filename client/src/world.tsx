@@ -58,6 +58,11 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
     const br = el.getBoundingClientRect();
     el.scrollLeft += nr.left + nr.width / 2 - (br.left + br.width / 2);
   }, [hereX, width]);
+  // the card of a picked place may fall below the screen under a big map: bring it into view
+  useEffect(() => {
+    if (!sel) return;
+    boxEl.current?.parentElement?.querySelector('.map-card')?.scrollIntoView({ block: 'nearest' });
+  }, [sel]);
   if (!m.nodes.length) return null;
   const xs = m.nodes.map((n) => n.x);
   const ys = m.nodes.map((n) => n.y);
@@ -72,7 +77,7 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
   const w = cols * CELL + 2 * PAD_X;
   const h = rows * CELL + PAD_B;
   // a node is big enough for its mark, yet leaves room for the names on a narrow phone
-  const R = CELL >= 70 ? 17 : 15;
+  const R = CELL >= 96 ? 20 : CELL >= 70 ? 17 : 15;
   const pos = (n: MapNodeView) => ({ x: PAD_X + (n.x - minX + 0.5) * CELL, y: (n.y - minY + 0.5) * CELL });
   const byId = new Map(m.nodes.map((n) => [n.id, n]));
   // the way to a far place goes through the near ones: show it
@@ -86,7 +91,7 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
         </p>
       )}
       <div
-        class="map-box"
+        class={`map-box ${w > width ? 'scrolls' : ''}`}
         ref={(el) => {
           box(el);
           boxEl.current = el;
@@ -126,6 +131,12 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
               class={`map-node ${n.known ? 'known' : 'unknown'} ${n.here ? 'here' : ''} ${n.home ? 'home' : ''} ${sel === n.id ? 'sel' : ''} ${can ? 'can' : ''}`}
               transform={`translate(${p.x},${p.y})`}
               onClick={() => setSel(n.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSel(n.id);
+                }
+              }}
               role="button"
               tabIndex={0}
               aria-label={n.name}
@@ -459,10 +470,12 @@ export function ResidentsPanel({ v, locked }: { v: PlayerView; locked: boolean }
           </ul>
           <p class="meta">
             {T.residentJob}: <b>{r.jobLabel ?? T.residentRest}</b>
+            {r.hungry && ' '}
             {r.hungry && <span class="pill warn">{T.residentHungry}</span>}
+            {r.hurt && ' '}
             {r.hurt && <span class="pill warn">{T.residentHurt}</span>}
           </p>
-          <div class="slot-options">
+          <div class="slot-options jobs">
             {r.jobs.map((j) => (
               <button
                 class={`chip-btn ${r.job === j.id ? 'on' : ''}`}

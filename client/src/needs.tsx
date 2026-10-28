@@ -83,9 +83,19 @@ export function NeedsBar({ v, offset, open, onOpen }: { v: PlayerView; offset: n
   const s = live(n, el);
   const lvl = warmLevel(s.warmth);
   const restLeft = n.tiredAfter - s.awake;
+  // each chip names itself on hover; a screen reader hears the whole state at once
+  const food = `${T.needFood}: ${s.hungry ? T.needHungry : `+${s.hp} ${T.needHp}`}`;
+  const warm = `${T.needWarm}: ${LEVEL[lvl]}${s.wet > 0 ? `, ${T.needWet}` : ''}`;
+  const rest = `${T.needRest}: ${s.rested > 0 ? `${T.needRested}, ${mins(s.rested)}` : s.tired ? T.needTired : `${T.needFresh}, ${T.needTiredIn} ${mins(restLeft)}`}`;
   return (
-    <button type="button" class={`needs-bar ${open ? 'on' : ''}`} aria-expanded={open} aria-label={T.needsTitle} onClick={onOpen}>
-      <span class={`need need-food ${s.hungry ? 'bad' : ''}`}>
+    <button
+      type="button"
+      class={`needs-bar ${open ? 'on' : ''}`}
+      aria-expanded={open}
+      aria-label={`${T.needsTitle}. ${food}. ${warm}. ${rest}.`}
+      onClick={onOpen}
+    >
+      <span class={`need need-food ${s.hungry ? 'bad' : ''}`} title={food}>
         <PicFood />
         <span class="need-pips" aria-hidden="true">
           {Array.from({ length: n.slots }, (_, i) => {
@@ -95,7 +105,7 @@ export function NeedsBar({ v, offset, open, onOpen }: { v: PlayerView; offset: n
         </span>
         <span class="need-text">{s.hungry ? T.needHungry : `+${s.hp}`}</span>
       </span>
-      <span class={`need ${lvl === 'cold' || lvl === 'frozen' ? 'bad' : lvl === 'warm' ? 'good' : ''}`}>
+      <span class={`need ${lvl === 'cold' || lvl === 'frozen' ? 'bad' : lvl === 'warm' ? 'good' : ''}`} title={warm}>
         <PicWarm />
         <span class="need-meter" aria-hidden="true">
           <i style={{ width: `${s.warmth}%` }} />
@@ -103,7 +113,7 @@ export function NeedsBar({ v, offset, open, onOpen }: { v: PlayerView; offset: n
         {s.wet > 0 && <PicDrop />}
         {(lvl === 'cold' || lvl === 'frozen') && <span class="need-text">{LEVEL[lvl]}</span>}
       </span>
-      <span class={`need need-rest ${s.tired ? 'bad' : s.rested > 0 ? 'good' : restLeft < 10 * MIN ? 'soon' : ''}`}>
+      <span class={`need need-rest ${s.tired ? 'bad' : s.rested > 0 ? 'good' : restLeft < 10 * MIN ? 'soon' : ''}`} title={rest}>
         <PicRest />
         <span class="need-text">{s.rested > 0 ? mins(s.rested) : s.tired ? T.needTiredShort : restLeft < 10 * MIN ? mins(restLeft) : T.needFreshShort}</span>
       </span>

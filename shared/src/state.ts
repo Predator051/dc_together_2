@@ -4,7 +4,7 @@ import type { Gender, PlayerId, Role, LogKind, Slot, StatId, SkillId } from './c
  * Part two starts its own line of world versions at 10 (part one ended at 3): a part-one world is
  * never migrated into part two — it is read once as the legacy and a new world begins.
  */
-export const STATE_VERSION = 10;
+export const STATE_VERSION = 11;
 export const PART = 2;
 
 export interface PlayerState {
