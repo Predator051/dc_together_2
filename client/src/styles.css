@@ -3441,6 +3441,43 @@ mark {
 .land-fog {
   fill: var(--page);
 }
+/* the evening and the weather over the land, under the marks of places */
+.land-tones {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+/* a place explored since the map was last looked at: the fog draws back from it */
+.land-svg .reveal {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: land-reveal 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s backwards;
+}
+@keyframes land-reveal {
+  from {
+    transform: scale(0.05);
+  }
+}
+.land-svg .reveal-way {
+  animation: land-reveal-way 1.5s ease-out 0.2s backwards;
+}
+@keyframes land-reveal-way {
+  from {
+    opacity: 0;
+  }
+}
+.land-pin.fresh .pin-badge {
+  animation: pin-new 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.9s backwards;
+}
+@keyframes pin-new {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  60% {
+    transform: scale(1.15);
+  }
+}
 .land-way path {
   fill: none;
   stroke-linecap: round;
@@ -3664,12 +3701,15 @@ mark {
   .land-tile,
   .land-way.ahead .over,
   .land-hero.me::after,
+  .land-svg .reveal,
+  .land-svg .reveal-way,
+  .land-pin.fresh .pin-badge,
   .plan-paint img,
   .plan-paint-glow {
     animation: none;
   }
-  .plan-paint-sky,
-  .plan-paint-dusk {
+  .tone-sky,
+  .tone-dusk {
     transition: none;
   }
   .land.ready .land-world,
@@ -4686,39 +4726,39 @@ span.item-icon.painted {
   border-radius: inherit;
   box-shadow: inset 0 0 40px 10px rgba(16, 11, 6, 0.7);
 }
-.plan-paint-sky,
-.plan-paint-dusk,
+.tone-sky,
+.tone-dusk,
 .plan-paint-glow {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
-.plan-paint-sky {
+.tone-sky {
   opacity: 0;
   transition: opacity 6s ease;
 }
-.plan-paint.sky-rain .plan-paint-sky {
+.tones.sky-rain .tone-sky {
   opacity: 1;
   background: linear-gradient(to bottom, rgba(40, 55, 70, 0.22), rgba(30, 40, 50, 0.1));
 }
-.plan-paint.sky-storm .plan-paint-sky {
+.tones.sky-storm .tone-sky {
   opacity: 1;
   background: linear-gradient(to bottom, rgba(18, 22, 32, 0.3), rgba(20, 24, 30, 0.14));
 }
-.plan-paint.sky-fog .plan-paint-sky {
+.tones.sky-fog .tone-sky {
   opacity: 1;
   background: radial-gradient(90% 70% at 50% 60%, rgba(205, 205, 195, 0.12), rgba(205, 205, 195, 0.3));
 }
-.plan-paint.sky-frost .plan-paint-sky {
+.tones.sky-frost .tone-sky {
   opacity: 1;
   background: rgba(190, 210, 230, 0.16);
 }
-.plan-paint.sky-heat .plan-paint-sky {
+.tones.sky-heat .tone-sky {
   opacity: 1;
   background: rgba(230, 180, 100, 0.1);
 }
 /* lighter than the page's own evening: the painting is already lit low */
-.plan-paint-dusk {
+.tone-dusk {
   background:
     radial-gradient(140% 100% at 50% 110%, transparent 35%, rgba(8, 10, 22, 0.4)),
     rgba(10, 12, 24, 0.18);
@@ -5366,6 +5406,52 @@ body.sheet-open {
       var(--shadow);
   }
 }
+/* a new day: its number rises over the page for a moment, then the page is the page again */
+.day-card {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  pointer-events: none;
+  background: radial-gradient(70% 44% at 50% 48%, rgba(22, 17, 12, 0.94), rgba(22, 17, 12, 0.5) 45%, rgba(22, 17, 12, 0) 78%);
+  animation: day-card 2.6s ease both;
+}
+.day-card span {
+  font: 600 0.9rem/1 var(--sans);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--faded);
+}
+.day-card b {
+  margin-top: 6px;
+  font: 700 4.2rem/1 var(--serif);
+  color: var(--ochre-ink);
+  animation: day-card-num 2.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes day-card {
+  0% {
+    opacity: 0;
+  }
+  14%,
+  72% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes day-card-num {
+  from {
+    transform: translateY(8px) scale(0.94);
+  }
+  30%,
+  to {
+    transform: none;
+  }
+}
+
 /* the fight is over: its outcome in one word, a breath, and the fight fades away */
 .fight-end {
   margin: 10px 0 4px;
@@ -5405,7 +5491,8 @@ body.sheet-open {
   .fparty li.struck .bar,
   .sheet.fight.hurt,
   .fight-end,
-  .fight-wrap.ended {
+  .fight-wrap.ended,
+  .day-card b {
     animation: none;
   }
   .delta-pop {

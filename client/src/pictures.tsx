@@ -757,6 +757,16 @@ const GROUNDS: Record<SceneId, (p: { warm: boolean }) => JSX.Element> = {
 };
 
 /** The drawn ground of a plan. */
+/** The weather and the evening laid over a painting (its parent carries `tones` and `sky-<kind>`). */
+export function Tones({ dusk }: { dusk: number }) {
+  return (
+    <>
+      <span class="tone-sky" />
+      <span class="tone-dusk" style={{ opacity: String(dusk) }} />
+    </>
+  );
+}
+
 // Painted grounds (scripts/art.ts ground): a place with one shows the painting, the rest keep the ink.
 const PAINTED = new Set(grounds as string[]);
 
@@ -771,11 +781,10 @@ function groundUrl(scene: string): string {
 export function Ground({ scene, warm, dusk = 0, sky }: { scene: string; warm: boolean; dusk?: number; sky?: string }) {
   if (PAINTED.has(scene)) {
     return (
-      <div class={`plan-paint g-${scene} ${sky ? `sky-${sky}` : ''}`} aria-hidden="true">
+      <div class={`plan-paint tones g-${scene} ${sky ? `sky-${sky}` : ''}`} aria-hidden="true">
         <img src={groundUrl(scene)} alt="" draggable={false} decoding="async" />
         {warm && <span class="plan-paint-glow" />}
-        <span class="plan-paint-sky" />
-        <span class="plan-paint-dusk" style={{ opacity: String(dusk) }} />
+        <Tones dusk={dusk} />
       </div>
     );
   }

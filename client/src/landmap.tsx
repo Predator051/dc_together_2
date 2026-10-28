@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { MapLegView, MapNodeView, MapView } from '../../shared/src/protocol.js';
 import sheet1 from './art/map1.json';
 import { MapIcon } from './mapicons.js';
+import { Tones } from './pictures.js';
 import { T } from './strings.js';
 
 type Pt = [number, number];
@@ -135,8 +136,8 @@ function legPoint(leg: MapLegView, now: number): Pt | null {
 // ---------------------------------------------------------------------------- what is seen
 
 interface Seen {
-  /** Clear circles: explored places. */
-  clear: Array<[number, number, number]>;
+  /** Clear circles: explored places (with their ids, to unveil the new ones). */
+  clear: Array<[number, number, number, string]>;
   /** Half-seen circles: places only glimpsed. */
   dim: Array<[number, number, number]>;
   /** Roads cleared along their length. */
@@ -154,7 +155,7 @@ function seenOf(m: MapView): Seen {
   for (const n of m.nodes) {
     const p = SHEET.at[n.id];
     if (!p) continue;
-    if (n.known) clear.push([p[0], p[1], n.home ? CLEAR_R + 40 : CLEAR_R]);
+    if (n.known) clear.push([p[0], p[1], n.home ? CLEAR_R + 40 : CLEAR_R, n.id]);
     else dim.push([p[0], p[1], DIM_R]);
   }
   const ways: Way[] = [];
@@ -169,7 +170,7 @@ function seenOf(m: MapView): Seen {
 function tilesOf(seen: Seen): Array<[number, number]> {
   const tw = SHEET.w / SHEET.cols;
   const th = SHEET.h / SHEET.rows;
-  const spots: Array<[number, number, number]> = [...seen.clear, ...seen.dim];
+  const spots: Array<[number, number, number]> = [...seen.clear.map(([x, y, r]) => [x, y, r] as [number, number, number]), ...seen.dim];
   for (const w of seen.ways) for (let i = 0; i < w.pts.length; i += 6) spots.push([w.pts[i]![0], w.pts[i]![1], 50]);
   const out: Array<[number, number]> = [];
   for (let r = 0; r < SHEET.rows; r++) {
@@ -185,6 +186,36 @@ function tilesOf(seen: Seen): Array<[number, number]> {
     }
   }
   return out;
+}
+
+/** The places explored as this browser last saw the map; null before it ever did. */
+function loadMapSeen(): Set<string> | null {
+  try {
+    const raw = localStorage.getItem('bezgomin.mapSeen');
+    return raw ? new Set(JSON.parse(raw) as string[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Places explored since the map was last looked at: they unveil themselves once, then are remembered. */
+function useFresh(m: MapView): Set<string> {
+  const known = m.nodes.filter((n) => n.known).map((n) => n.id);
+  const before = useRef<Set<string> | null>(loadMapSeen());
+  const prev = before.current;
+  const fresh = new Set(prev ? known.filter((id) => !prev.has(id)) : []);
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      before.current = new Set(known);
+      try {
+        localStorage.setItem('bezgomin.mapSeen', JSON.stringify(known));
+      } catch {
+        // a private window: the unveiling just plays again next time
+      }
+    }, 1800);
+    return () => clearTimeout(t);
+  }, [known.join()]);
+  return fresh;
 }
 
 // ---------------------------------------------------------------------------- the view
@@ -230,11 +261,16 @@ export function LandMap({
   onPick,
   now,
   wayIds,
+  dusk,
+  sky,
 }: {
   m: MapView;
   sel: string | null;
   onPick: (id: string | null) => void;
   now: number;
+  /** How far into the evening (0..1) and the weather, laid over the land. */
+  dusk: number;
+  sky?: string;
   /** The way to the picked place, stop by stop, to light up. */
   wayIds: string[];
 }) {
@@ -247,6 +283,7 @@ export function LandMap({
   const skew = now - Date.now();
 
   const seen = useMemo(() => seenOf(m), [m]);
+  const fresh = useFresh(m);
   const tiles = useMemo(() => tilesOf(seen), [seen]);
   const here = m.nodes.find((n) => n.here);
   const mate = m.nodes.find((n) => n.partner);
@@ -439,10 +476,17 @@ export function LandMap({
                     <circle cx={x} cy={y} r={r} fill="#777" />
                   ))}
                   {seen.ways.map((w) => (
-                    <path d={w.d} fill="none" stroke="#000" stroke-width={70} stroke-linecap="round" />
+                    <path
+                      class={fresh.has(w.a) || fresh.has(w.b) ? 'reveal-way' : ''}
+                      d={w.d}
+                      fill="none"
+                      stroke="#000"
+                      stroke-width={70}
+                      stroke-linecap="round"
+                    />
                   ))}
-                  {seen.clear.map(([x, y, r]) => (
-                    <circle cx={x} cy={y} r={r} fill="#000" />
+                  {seen.clear.map(([x, y, r, id]) => (
+                    <circle class={fresh.has(id) ? 'reveal' : ''} cx={x} cy={y} r={r} fill="#000" />
                   ))}
                 </g>
               </mask>
@@ -460,9 +504,12 @@ export function LandMap({
             })}
             <rect class="land-fog" width={SHEET.w} height={SHEET.h} mask="url(#land-fog)" />
           </svg>
+          <div class={`land-tones tones ${sky ? `sky-${sky}` : ''}`}>
+            <Tones dusk={dusk} />
+          </div>
         </div>
         {m.nodes.map((n) => (
-          <Pin key={n.id} n={n} sel={sel === n.id} onPick={onPick} />
+          <Pin key={n.id} n={n} sel={sel === n.id} fresh={fresh.has(n.id)} onPick={onPick} />
         ))}
         {(here || mePoint) && (
           <span
@@ -501,12 +548,12 @@ function pinStyle(p: Pt, side: number | null): Record<string, string> {
   return { left: `${p[0]}px`, top: `${p[1]}px`, ...(side === null ? {} : { '--side': String(side) }) };
 }
 
-function Pin({ n, sel, onPick }: { n: MapNodeView; sel: boolean; onPick: (id: string) => void }) {
+function Pin({ n, sel, fresh, onPick }: { n: MapNodeView; sel: boolean; fresh: boolean; onPick: (id: string) => void }) {
   const p = SHEET.at[n.id]!;
   const can = !!n.go?.enabled || !!n.scout;
   return (
     <button
-      class={`land-pin ${n.known ? 'known' : 'unknown'} ${n.home ? 'home' : ''} ${n.here ? 'here' : ''} ${sel ? 'sel' : ''} ${can ? 'can' : ''}`}
+      class={`land-pin ${n.known ? 'known' : 'unknown'} ${n.home ? 'home' : ''} ${n.here ? 'here' : ''} ${sel ? 'sel' : ''} ${can ? 'can' : ''} ${fresh ? 'fresh' : ''}`}
       style={{ left: `${p[0]}px`, top: `${p[1]}px` }}
       onClick={() => onPick(n.id)}
       aria-label={n.known ? n.name : `${n.name} — ${T.mapUnknownShort}`}

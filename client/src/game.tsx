@@ -636,6 +636,17 @@ export function Game({ s }: { s: NetState }) {
   const [needsOpen, setNeedsOpen] = useState(false);
   const needsShown = needsOpen && !!v.needs;
   useEffect(() => store('bezgomin.homeView', homeView), [homeView]);
+  // a new day: its number shows a moment over the page, as the chronicle turns a leaf
+  const [dayCard, setDayCard] = useState<number | null>(null);
+  const lastDay = useRef(v.day);
+  useEffect(() => {
+    const before = lastDay.current;
+    lastDay.current = v.day;
+    if (before <= 0 || v.day <= before) return;
+    setDayCard(v.day);
+    const t = window.setTimeout(() => setDayCard(null), 2600);
+    return () => clearTimeout(t);
+  }, [v.day]);
   // a fight that has just ended stays a moment, so its last blow is seen; then it goes for good
   const [goneFight, setGoneFight] = useState<number | null>(null);
   const shownFight = v.fight ?? (v.fightEnd && v.fightEnd.id !== goneFight ? v.fightEnd : null);
@@ -965,6 +976,12 @@ export function Game({ s }: { s: NetState }) {
       {shownFight && <FightPanel f={shownFight} v={v} locked={locked || !!shownFight.ended} onGone={() => setGoneFight(shownFight.id)} />}
       {!v.scene && !shownFight && v.summary && <Summary s={v.summary} me={v.me.name} partner={v.partner.name} />}
       {!v.scene && !shownFight && !v.summary && v.welcome && <Welcome w={v.welcome} partner={v.partner.name} />}
+      {dayCard !== null && (
+        <div class="day-card" key={dayCard} aria-hidden="true">
+          <span>{T.day}</span>
+          <b>{dayCard}</b>
+        </div>
+      )}
       {s.toast && <div class="toast">{s.toast.text}</div>}
       {s.deltas.length > 0 && (
         <div class="deltas" aria-live="polite">

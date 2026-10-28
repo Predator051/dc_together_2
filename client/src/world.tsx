@@ -4,6 +4,7 @@ import type { FightView, MapNodeView, PlayerView } from '../../shared/src/protoc
 import { net } from './net.js';
 import { MapIcon } from './mapicons.js';
 import { LandMap, paintedFits } from './landmap.js';
+import { duskOf } from './ambient.js';
 import { Portrait } from './portraits.js';
 import { Thing } from './items.js';
 import { Cell } from './cells.js';
@@ -95,7 +96,7 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
         </p>
       )}
       {painted ? (
-        <LandMap m={m} sel={sel} onPick={setSel} now={now} wayIds={way} />
+        <LandMap m={m} sel={sel} onPick={setSel} now={now} wayIds={way} dusk={duskOf(v.dayAt, now)} sky={v.ambient.sky ?? undefined} />
       ) : (
       <div
         class={`map-box ${w > width ? 'scrolls' : ''}`}
