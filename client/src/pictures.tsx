@@ -1,8 +1,10 @@
 // Pictures of the plans: small seals for spots and the grounds they stand on, drawn in ink.
 
 import type { ComponentChildren, JSX } from 'preact';
-import { SCENES, type SceneId, type SpotIcon } from '../../shared/src/pictures.js';
+import { SCENES, VIEWS, type SceneId, type SpotIcon } from '../../shared/src/pictures.js';
 import grounds from './art/grounds.json';
+import views from './art/views.json';
+import marks from './art/marks.json';
 
 // ---------------------------------------------------------------------------- spot seals
 
@@ -335,7 +337,32 @@ const PICS: Record<SpotIcon, () => JSX.Element> = {
   ),
 };
 
+// Eye-level views of places (scripts/art.ts view): the head of a scene, the card of a place on the map.
+const PAINTED_VIEWS = new Set(views as string[]);
+
+/** The picture of a place seen at eye level, or null while it is not painted. */
+export function viewUrl(key: string | undefined): string | null {
+  if (!key || !PAINTED_VIEWS.has(key)) return null;
+  return new URL(`./art/views/w${(VIEWS as readonly string[]).indexOf(key) + 1}.webp`, import.meta.url).href;
+}
+
+// Painted marks: atlases of 4×3 cells (scripts/art.ts marks) — spot icons, and '@' + scene for the map.
+const MARKS = marks as unknown as Record<string, [number, number]>;
+
+/** The painted mark under a key as the style of its atlas cell; null while it is not painted. */
+export function markStyle(key: string): Record<string, string> | null {
+  const p = MARKS[key];
+  if (!p) return null;
+  const [n, i] = p;
+  return {
+    backgroundImage: `url(${new URL(`./art/marks/m${n}.webp`, import.meta.url).href})`,
+    backgroundPosition: `${((i % 4) / 3) * 100}% ${(Math.floor(i / 4) / 2) * 100}%`,
+  };
+}
+
 export function picture(icon: string): JSX.Element {
+  const m = markStyle(icon);
+  if (m) return <span class="spot-pic painted" style={m} aria-hidden="true" />;
   return ((PICS as Record<string, () => JSX.Element>)[icon] ?? PICS.home)();
 }
 
@@ -774,6 +801,58 @@ function groundUrl(scene: string): string {
   return new URL(`./art/grounds/g${(SCENES as readonly string[]).indexOf(scene) + 1}.webp`, import.meta.url).href;
 }
 
+// Life on a painted ground: glints on water, smoke, drifting mist, now and then a pair of birds.
+// Boxes are per cent of the plan, matched to each painting by eye.
+type Life =
+  | { kind: 'water'; x: number; y: number; w: number; h: number }
+  | { kind: 'smoke'; x: number; y: number; warm?: boolean }
+  | { kind: 'mist'; y: number; h: number }
+  | { kind: 'birds'; y: number };
+
+const LIFE: Record<SceneId, Life[]> = {
+  yard: [{ kind: 'smoke', x: 37, y: 26, warm: true }],
+  shore: [{ kind: 'water', x: 0, y: 0, w: 100, h: 30 }, { kind: 'birds', y: 14 }],
+  reeds: [{ kind: 'water', x: 70, y: 34, w: 30, h: 34 }, { kind: 'water', x: 0, y: 50, w: 46, h: 10 }, { kind: 'birds', y: 12 }],
+  saltflat: [{ kind: 'birds', y: 22 }],
+  brine: [{ kind: 'water', x: 40, y: 10, w: 22, h: 22 }],
+  grove: [{ kind: 'water', x: 0, y: 0, w: 100, h: 100 }, { kind: 'mist', y: 40, h: 45 }],
+  dyke: [{ kind: 'water', x: 0, y: 0, w: 100, h: 9 }, { kind: 'water', x: 34, y: 20, w: 32, h: 26 }],
+  causeway: [{ kind: 'water', x: 0, y: 20, w: 34, h: 70 }, { kind: 'water', x: 66, y: 15, w: 34, h: 70 }, { kind: 'mist', y: 25, h: 50 }],
+  road: [{ kind: 'water', x: 80, y: 0, w: 20, h: 100 }, { kind: 'birds', y: 18 }],
+  town: [{ kind: 'water', x: 0, y: 0, w: 15, h: 100 }, { kind: 'smoke', x: 26, y: 6 }, { kind: 'smoke', x: 74, y: 10 }, { kind: 'smoke', x: 62, y: 62 }],
+  bog: [{ kind: 'water', x: 0, y: 20, w: 100, h: 60 }, { kind: 'mist', y: 15, h: 60 }],
+  isle: [{ kind: 'water', x: 0, y: 0, w: 22, h: 100 }, { kind: 'water', x: 80, y: 0, w: 20, h: 100 }, { kind: 'birds', y: 10 }],
+  willow: [{ kind: 'water', x: 74, y: 40, w: 26, h: 60 }, { kind: 'mist', y: 55, h: 35 }],
+};
+
+function LifeLayer({ scene, warm }: { scene: string; warm: boolean }) {
+  const life = (LIFE as Record<string, Life[]>)[scene] ?? [];
+  return (
+    <>
+      {life.map((l, i) => {
+        if (l.kind === 'water') return <span key={i} class="life-water" style={{ left: `${l.x}%`, top: `${l.y}%`, width: `${l.w}%`, height: `${l.h}%` }} />;
+        if (l.kind === 'smoke') {
+          if (l.warm && !warm) return null;
+          return (
+            <span key={i} class="life-smoke" style={{ left: `${l.x}%`, top: `${l.y}%` }}>
+              <i />
+              <i />
+              <i />
+            </span>
+          );
+        }
+        if (l.kind === 'mist') return <span key={i} class="life-mist" style={{ top: `${l.y}%`, height: `${l.h}%` }} />;
+        return (
+          <svg key={i} class="life-birds" style={{ top: `${l.y}%` }} viewBox="0 0 40 16" aria-hidden="true">
+            <path d="M2 8q4-5 8 0q4-5 8 0" />
+            <path d="M22 4q3-4 6 0q3-4 6 0" />
+          </svg>
+        );
+      })}
+    </>
+  );
+}
+
 /**
  * The ground a plan is drawn on. A painting takes the evening (`dusk`, 0..1) and the weather (`sky`)
  * as tones laid over it; the ink plans have them from the page behind.
@@ -783,6 +862,7 @@ export function Ground({ scene, warm, dusk = 0, sky }: { scene: string; warm: bo
     return (
       <div class={`plan-paint tones g-${scene} ${sky ? `sky-${sky}` : ''}`} aria-hidden="true">
         <img src={groundUrl(scene)} alt="" draggable={false} decoding="async" />
+        <LifeLayer scene={scene} warm={warm} />
         {warm && <span class="plan-paint-glow" />}
         <Tones dusk={dusk} />
       </div>

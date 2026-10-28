@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { PlayerView, SlotView } from '../../shared/src/protocol.js';
 import { net } from './net.js';
 import { Thing } from './items.js';
+import { heroFace, heroFigure } from './portraits.js';
 import { NeedChips } from './needs.js';
 import { Sheet } from './sheet.js';
 import { T } from './strings.js';
@@ -139,10 +140,11 @@ const NUM_PICS: Record<string, () => JSX.Element> = {
 
 // ---------------------------------------------------------------------------- the card
 
-/** Level in a seal whose rim fills with experience. */
-function LevelSeal({ level, p }: { level: number; p: number }) {
+/** Level in a seal whose rim fills with experience; the hero's face inside it once painted. */
+function LevelSeal({ level, p, face }: { level: number; p: number; face: string | null }) {
   return (
-    <span class="level-seal" aria-hidden="true">
+    <span class={`level-seal ${face ? 'with-face' : ''}`} aria-hidden="true">
+      {face && <span class="seal-face" style={{ backgroundImage: `url(${face})` }} />}
       <svg viewBox="0 0 64 64">
         <circle class="rim" cx="32" cy="32" r="29" />
         <circle class="fill" cx="32" cy="32" r="29" pathLength={100} style={{ strokeDasharray: `${Math.round(p * 100)} 100` }} />
@@ -167,7 +169,7 @@ function HeroCard({ v, onGrowth }: { v: PlayerView; onGrowth: () => void }) {
   return (
     <section class="hero-card">
       <div class="hero-id">
-        <LevelSeal level={h.level} p={(h.xp - h.xpPrev) / span} />
+        <LevelSeal level={h.level} p={(h.xp - h.xpPrev) / span} face={heroFace(v.me.role, v.me.gender)} />
         <div class="hero-who">
           <b class="hero-name">{v.me.name}</b>
           <span class="hero-role">
@@ -231,22 +233,25 @@ const SLOT_AT: Record<string, { x: number; y: number; to: [number, number] }> = 
   belt: { x: 87, y: 74, to: [56, 54] },
 };
 
-function Figure({ slots }: { slots: SlotView[] }) {
+function Figure({ slots, figure }: { slots: SlotView[]; figure: string | null }) {
   return (
-    <svg class="doll-figure" viewBox="0 0 200 220" preserveAspectRatio="none" aria-hidden="true">
-      {slots.map((s) => {
-        const at = SLOT_AT[s.slot];
-        if (!at) return null;
-        const x1 = at.x * 2 + (at.x < 50 ? 16 : -16);
-        return <path class={`lead ${s.item ? 'on' : ''}`} d={`M${x1} ${at.y * 2.2}L${at.to[0] * 2} ${at.to[1] * 2.2}`} />;
-      })}
-      <g class="body">
-        <ellipse cx="100" cy="27" rx="13" ry="15" />
-        <path d="M93 42C93 46 92 48 90 50C80 51 72 54 68 60C64 76 62 96 60 118C59 124 60 128 63 130C66 129 67 125 66 120C67 100 70 82 74 70C76 90 78 104 80 118C78 128 78 136 80 142C80 160 82 182 84 200C78 202 74 204 74 207L92 207C92 204 91 202 90 200C94 178 96 160 99 142L100 141" />
-        <path transform="translate(200 0) scale(-1 1)" d="M93 42C93 46 92 48 90 50C80 51 72 54 68 60C64 76 62 96 60 118C59 124 60 128 63 130C66 129 67 125 66 120C67 100 70 82 74 70C76 90 78 104 80 118C78 128 78 136 80 142C80 160 82 182 84 200C78 202 74 204 74 207L92 207C92 204 91 202 90 200C94 178 96 160 99 142L100 141" />
-        <path class="seam" d="M80 118c13 3 27 3 40 0M90 50c3 4 7 6 10 6s7-2 10-6M100 56v60" />
-      </g>
-    </svg>
+    <>
+      {figure && <span class="doll-paint" style={{ backgroundImage: `url(${figure})` }} aria-hidden="true" />}
+      <svg class={`doll-figure ${figure ? 'painted' : ''}`} viewBox="0 0 200 220" preserveAspectRatio="none" aria-hidden="true">
+        {slots.map((s) => {
+          const at = SLOT_AT[s.slot];
+          if (!at) return null;
+          const x1 = at.x * 2 + (at.x < 50 ? 16 : -16);
+          return <path class={`lead ${s.item ? 'on' : ''}`} d={`M${x1} ${at.y * 2.2}L${at.to[0] * 2} ${at.to[1] * 2.2}`} />;
+        })}
+        <g class="body">
+          <ellipse cx="100" cy="27" rx="13" ry="15" />
+          <path d="M93 42C93 46 92 48 90 50C80 51 72 54 68 60C64 76 62 96 60 118C59 124 60 128 63 130C66 129 67 125 66 120C67 100 70 82 74 70C76 90 78 104 80 118C78 128 78 136 80 142C80 160 82 182 84 200C78 202 74 204 74 207L92 207C92 204 91 202 90 200C94 178 96 160 99 142L100 141" />
+          <path transform="translate(200 0) scale(-1 1)" d="M93 42C93 46 92 48 90 50C80 51 72 54 68 60C64 76 62 96 60 118C59 124 60 128 63 130C66 129 67 125 66 120C67 100 70 82 74 70C76 90 78 104 80 118C78 128 78 136 80 142C80 160 82 182 84 200C78 202 74 204 74 207L92 207C92 204 91 202 90 200C94 178 96 160 99 142L100 141" />
+          <path class="seam" d="M80 118c13 3 27 3 40 0M90 50c3 4 7 6 10 6s7-2 10-6M100 56v60" />
+        </g>
+      </svg>
+    </>
   );
 }
 
@@ -357,7 +362,7 @@ function Gear({ v, locked, desktop }: { v: PlayerView; locked: boolean; desktop:
     <>
       {!(desktop && open) && (
         <div class="doll" role="group" aria-label={T.gear}>
-          <Figure slots={h.slots} />
+          <Figure slots={h.slots} figure={heroFigure(v.me.role, v.me.gender)} />
           {h.slots.map((s, i) => {
             const at = SLOT_AT[s.slot];
             if (!at) return null;

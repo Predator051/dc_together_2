@@ -5,6 +5,12 @@
 export const SCENES = ['yard', 'shore', 'reeds', 'saltflat', 'brine', 'grove', 'dyke', 'causeway', 'road', 'town', 'bog', 'isle', 'willow'] as const;
 export type SceneId = (typeof SCENES)[number];
 
+/** The heroes as the players see them: role and gender (a look for each pair the game may meet). */
+export const HEROES = ['maker-m', 'hunter-f', 'maker-f', 'hunter-m'] as const;
+
+/** Places seen at eye level (the head of a scene, the card of a place): every ground, and suppers by the fire. */
+export const VIEWS = [...SCENES, 'hearth1', 'hearth2'] as const;
+
 /** Small pictures of spots on a plan. */
 export const SPOT_ICONS = [
   'home',

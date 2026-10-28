@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { MapLegView, MapNodeView, MapView } from '../../shared/src/protocol.js';
 import sheet1 from './art/map1.json';
 import { MapIcon } from './mapicons.js';
-import { Tones } from './pictures.js';
+import { Tones, markStyle } from './pictures.js';
 import { T } from './strings.js';
 
 type Pt = [number, number];
@@ -551,6 +551,7 @@ function pinStyle(p: Pt, side: number | null): Record<string, string> {
 function Pin({ n, sel, fresh, onPick }: { n: MapNodeView; sel: boolean; fresh: boolean; onPick: (id: string) => void }) {
   const p = SHEET.at[n.id]!;
   const can = !!n.go?.enabled || !!n.scout;
+  const mark = n.known && n.icon ? markStyle(`@${n.icon}`) : null;
   return (
     <button
       class={`land-pin ${n.known ? 'known' : 'unknown'} ${n.home ? 'home' : ''} ${n.here ? 'here' : ''} ${sel ? 'sel' : ''} ${can ? 'can' : ''} ${fresh ? 'fresh' : ''}`}
@@ -560,7 +561,9 @@ function Pin({ n, sel, fresh, onPick }: { n: MapNodeView; sel: boolean; fresh: b
       aria-pressed={sel}
     >
       <span class="pin-badge">
-        {n.known ? (
+        {mark ? (
+          <span class="pin-paint" style={mark} aria-hidden="true" />
+        ) : n.known ? (
           <svg viewBox="-16 -16 32 32" aria-hidden="true">
             <MapIcon scene={n.icon} r={13} />
           </svg>

@@ -5,7 +5,8 @@ import { net } from './net.js';
 import { MapIcon } from './mapicons.js';
 import { LandMap, paintedFits } from './landmap.js';
 import { duskOf } from './ambient.js';
-import { Portrait } from './portraits.js';
+import { viewUrl } from './pictures.js';
+import { Portrait, heroFace } from './portraits.js';
 import { Thing } from './items.js';
 import { Cell } from './cells.js';
 import { sound } from './sound.js';
@@ -185,6 +186,9 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
       </div>
       {picked ? (
         <section class="map-card" key={picked.id}>
+          {picked.known && viewUrl(picked.icon) && (
+            <div class="map-card-art" style={{ backgroundImage: `url(${viewUrl(picked.icon)})` }} aria-hidden="true" />
+          )}
           <h3>{picked.name}</h3>
           {picked.desc && <p class="desc">{picked.desc}</p>}
           {!picked.known && <p class="desc">{T.mapUnknown}</p>}
@@ -420,10 +424,11 @@ function FoeCard({ x, i }: { x: FightView['foes'][number]; i: number }) {
   );
 }
 
-function PartyRow({ p }: { p: FightView['party'][number] }) {
+function PartyRow({ p, face }: { p: FightView['party'][number]; face: string | null }) {
   const hp = useChange(p.hp);
   return (
     <li class={`${p.me ? 'me' : ''} ${p.down ? 'down' : ''} ${hp && hp.d < 0 ? 'struck' : ''}`}>
+      {face && <span class="fparty-face" style={{ backgroundImage: `url(${face})` }} aria-hidden="true" />}
       <span class="fparty-name">
         {p.name}
         {p.picked && !p.me && <span class="tick"> ✓</span>}
@@ -479,7 +484,11 @@ export function FightPanel({ f, v, locked, onGone }: { f: FightView; v: PlayerVi
         </ul>
         <ul class="fparty">
           {f.party.map((p) => (
-            <PartyRow key={p.pid} p={p} />
+            <PartyRow
+              key={p.pid}
+              p={p}
+              face={p.pid === v.me.pid ? heroFace(v.me.role, v.me.gender) : p.pid === v.partner.pid ? heroFace(v.partner.role, v.partner.gender) : null}
+            />
           ))}
           {f.dog && (
             <li class="dog">

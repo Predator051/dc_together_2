@@ -213,6 +213,8 @@ export interface SceneView {
   title: string;
   /** Sound and light of the scene: by the fire, a fight, or the story itself. */
   mood: 'hearth' | 'fight' | 'story' | 'deep';
+  /** The ground of the place it happens at (its picture). */
+  place?: string;
   paused: boolean;
   pausedText?: string;
   blocks: SceneBlock[];

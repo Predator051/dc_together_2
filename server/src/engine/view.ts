@@ -358,6 +358,8 @@ function sceneView(g: Game, pid: PlayerId): SceneView | null {
     partnerPicked: false,
     waiting: false,
   };
+  const place = scenePlace(g, def, pid);
+  if (place) view.place = place;
 
   if (n.type === 'choice') {
     const cn = n as ChoiceNode;
@@ -870,6 +872,14 @@ function residentsView(g: Game, pid: PlayerId): ResidentView[] {
 }
 
 /** The ground of the plan where the player stands (none on the road). */
+/** The ground of the place a scene happens at: the place it scouts, the place it is offered at, or where you stand. */
+function scenePlace(g: Game, def: SceneDef, pid: PlayerId): string | undefined {
+  const scouted = g.ix.c.areas.find((a) => a.scout === def.id);
+  const loc = def.group ? g.ix.c.locations.find((l) => l.id === def.group) : undefined;
+  const area = scouted?.id ?? (loc ? (loc.area ?? g.ix.c.areas[0]?.id) : g.p(pid).at);
+  return area ? areaDef(g, area)?.scene : undefined;
+}
+
 function sceneOf(g: Game, pid: PlayerId): string | undefined {
   const p = g.p(pid);
   if (p.travel) return undefined;

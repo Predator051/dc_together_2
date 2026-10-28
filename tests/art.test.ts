@@ -1,8 +1,11 @@
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { ITEM_ICONS, PORTRAITS, SCENES } from '../shared/src/pictures.js';
+import { HEROES, ITEM_ICONS, PORTRAITS, SCENES, SPOT_ICONS, VIEWS } from '../shared/src/pictures.js';
 import painted from '../client/src/art/things.json';
 import foes from '../client/src/art/foes.json';
+import marks from '../client/src/art/marks.json';
+import views from '../client/src/art/views.json';
+import heroes from '../client/src/art/heroes.json';
 import grounds from '../client/src/art/grounds.json';
 
 // Every mark of a thing is painted; a new mark needs its cell in an atlas (scripts/art.ts things).
@@ -43,6 +46,45 @@ describe('painted foes', () => {
     for (const [k, [n, i]] of Object.entries(cells)) {
       expect(existsSync(new URL(`../client/src/art/foes/f${n}.webp`, import.meta.url)), k).toBe(true);
       expect(i).toBeLessThan(9);
+    }
+  });
+});
+
+// Every spot on a plan and every place on the map has a painted mark (scripts/art.ts marks).
+describe('painted marks', () => {
+  it('every spot icon and every scene has a cell in an atlas that exists', () => {
+    const cells = marks as unknown as Record<string, [number, number]>;
+    expect(SPOT_ICONS.filter((k) => !cells[k])).toEqual([]);
+    expect(SCENES.filter((k) => !cells[`@${k}`])).toEqual([]);
+    for (const [k, [n, i]] of Object.entries(cells)) {
+      expect(existsSync(new URL(`../client/src/art/marks/m${n}.webp`, import.meta.url)), k).toBe(true);
+      expect(i).toBeLessThan(12);
+    }
+  });
+});
+
+// Every place seen at eye level, and the suppers by the fire (scripts/art.ts view).
+describe('painted views', () => {
+  it('every view key has its picture', () => {
+    const list = views as string[];
+    expect(VIEWS.filter((k) => !list.includes(k))).toEqual([]);
+    for (const k of list) {
+      const i = (VIEWS as readonly string[]).indexOf(k) + 1;
+      expect(i, k).toBeGreaterThan(0);
+      expect(existsSync(new URL(`../client/src/art/views/w${i}.webp`, import.meta.url)), k).toBe(true);
+    }
+  });
+});
+
+// The players' heroes as they see them: the maker a man, the hunter a woman (scripts/art.ts hero).
+describe('painted heroes', () => {
+  it("the players' looks are painted, each with a figure and a face", () => {
+    const list = heroes as string[];
+    expect(list).toEqual(expect.arrayContaining(['maker-m', 'hunter-f']));
+    for (const k of list) {
+      const i = (HEROES as readonly string[]).indexOf(k) + 1;
+      expect(i, k).toBeGreaterThan(0);
+      for (const f of [`p${i}`, `q${i}`]) expect(existsSync(new URL(`../client/src/art/heroes/${f}.webp`, import.meta.url)), `${k} ${f}`).toBe(true);
     }
   });
 });

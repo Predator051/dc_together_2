@@ -149,6 +149,8 @@ describe('the map', () => {
     w.state.players[m].online = true;
     expect(w.cmd(h, { c: 'act', id: 's_04' }).ok).toBe(true);
     w.cmd(m, { c: 'accept' });
+    // the scene is pictured by the place it scouts
+    expect(w.view(h).scene?.place).toBe(w.g().ix.c.areas.find((a) => a.id === 'a_04')!.scene);
     for (let i = 0; i < 6 && w.state.scene; i++) for (const pid of [h, m]) w.cmd(pid, { c: 'next' });
     expect(w.state.players[h].at).toBe('a_04');
     w.cmd(h, { c: 'go', to: 'a_01' });

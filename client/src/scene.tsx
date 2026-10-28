@@ -3,6 +3,7 @@ import type { PlayerView, SceneView } from '../../shared/src/protocol.js';
 import { net } from './net.js';
 import { DelveBody, DelveFoot, OperationBody, OperationFoot, StealthBody, StealthFoot } from './delve.js';
 import { IconCheck, IconChevron } from './icons.js';
+import { viewUrl } from './pictures.js';
 import { sound } from './sound.js';
 import { T } from './strings.js';
 
@@ -62,6 +63,10 @@ export function Scene({ v, sc, locked }: { v: PlayerView; sc: SceneView; locked:
 
   const options = sc.options ?? [];
   const canAct = !sc.paused && !sc.waiting && !locked;
+  // the place it happens at, seen at eye level; a supper by the fire (a wet evening outside in the rain);
+  // nothing for fights and below ground
+  const wet = v.ambient.sky === 'rain' || v.ambient.sky === 'storm';
+  const art = sc.mood === 'hearth' ? viewUrl(wet ? 'hearth2' : 'hearth1') : sc.mood === 'story' ? viewUrl(sc.place) : null;
 
   return (
     <div class="scene-wrap">
@@ -74,6 +79,7 @@ export function Scene({ v, sc, locked }: { v: PlayerView; sc: SceneView; locked:
             </button>
           )}
         </header>
+        {art && <div class="scene-art" key={art} style={{ backgroundImage: `url(${art})` }} aria-hidden="true" />}
         <div class="scene-body" ref={bodyRef}>
           {sc.blocks.map((b, i) => {
             if (!b.text.length && !b.own.length && !b.combat?.length && !b.picks) return null;
