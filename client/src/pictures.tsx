@@ -1,8 +1,10 @@
 // Pictures of the plans: small seals for spots and the grounds they stand on, drawn in ink.
 
 import type { ComponentChildren, JSX } from 'preact';
-import { SCENES, VIEWS, type SceneId, type SpotIcon } from '../../shared/src/pictures.js';
+import { SCENES, SPOT_ICONS, VIEWS, type SceneId, type SpotIcon } from '../../shared/src/pictures.js';
 import grounds from './art/grounds.json';
+import stations from './art/stations.json';
+import stationSlotsJson from './art/station-slots.json';
 import views from './art/views.json';
 import marks from './art/marks.json';
 
@@ -344,6 +346,26 @@ const PAINTED_VIEWS = new Set(views as string[]);
 export function viewUrl(key: string | undefined): string | null {
   if (!key || !PAINTED_VIEWS.has(key)) return null;
   return new URL(`./art/views/w${(VIEWS as readonly string[]).indexOf(key) + 1}.webp`, import.meta.url).href;
+}
+
+// Close views of workplaces (scripts/art.ts stations): the stage a spot opens on.
+const PAINTED_STATIONS = new Set(stations as string[]);
+
+/** The close view of a spot's workplace, or null while it is not painted. */
+export function stationUrl(icon: string | undefined): string | null {
+  if (!icon || !PAINTED_STATIONS.has(icon)) return null;
+  return new URL(`./art/stations/s${(SPOT_ICONS as readonly string[]).indexOf(icon) + 1}.webp`, import.meta.url).href;
+}
+
+// Where works stand on each close view, in percent, the most telling place first (picked by eye).
+const SLOTS = stationSlotsJson as unknown as Record<string, Array<[number, number]>>;
+const SLOTS_ANY: Array<[number, number]> = [
+  [50, 50], [24, 40], [76, 40], [36, 74], [64, 74], [14, 72], [86, 72], [50, 18],
+];
+
+/** The places for medals on a workplace's close view. */
+export function stationSlots(icon: string): Array<[number, number]> {
+  return SLOTS[icon] ?? SLOTS_ANY;
 }
 
 // Painted marks: atlases of 4×3 cells (scripts/art.ts marks) — spot icons, and '@' + scene for the map.

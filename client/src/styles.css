@@ -3740,7 +3740,13 @@ mark {
   .life-mist,
   .scene-art,
   .map-card-art,
-  .doll-paint {
+  .doll-paint,
+  .stage-art,
+  .stage-paint,
+  .act-medal,
+  .stage-fan-shade,
+  .stage-fan-body,
+  .work-card {
     animation: none;
   }
   .life-smoke,
@@ -5347,6 +5353,490 @@ span.spot-pic.painted {
   padding: 14px 16px 18px;
   animation: shade 0.2s ease-out both;
 }
+/* ---------- an opened spot on its stage: the workplace painted, its works standing on it ---------- */
+/* a spot without works (the way out, the yard's extras): the painting only heads it */
+.stage-art {
+  position: relative;
+  height: clamp(130px, 26vh, 220px);
+  margin: -14px -16px 0;
+  background-position: center;
+  background-size: cover;
+  animation: tile-in 0.5s ease-out backwards;
+}
+.station-sheet.docked .stage-art {
+  margin: -16px -18px 0;
+}
+.stage-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(34, 28, 21, 0.2), transparent 30%, transparent 50%, var(--leaf));
+}
+.stage-body {
+  position: relative;
+  margin-top: -52px;
+}
+.stage-body .group-head h3,
+.stage-body .group-head .desc {
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+}
+
+/* the painting whole, at its own 3:2, so every medal stands on the thing it belongs to */
+.stage {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  margin: -14px -16px 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+.station-sheet.docked .stage {
+  margin: -16px -18px 0;
+}
+.stage-paint {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-position: center;
+  background-size: cover;
+  animation: tile-in 0.5s ease-out backwards;
+}
+.stage-paint::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(34, 28, 21, 0.18), transparent 22%, transparent 84%, var(--leaf));
+}
+
+/* a work: a disc with the mark of what it gives */
+.act-medal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 84px;
+  min-width: 0;
+  padding: 2px 0 4px;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font-family: var(--sans);
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  animation: medal-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 40ms + 120ms);
+}
+@keyframes medal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+/* on the painting the disc's centre is the place; the name of a stack hangs below it */
+.act-medal.placed {
+  position: absolute;
+  margin: -26px 0 0 -42px;
+}
+.act-pic {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  transition: transform 0.15s ease-out;
+}
+.act-disc {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: 1.5px solid rgba(196, 154, 69, 0.7);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, var(--leaf-2), var(--page) 75%);
+  box-shadow:
+    0 3px 10px rgba(8, 5, 2, 0.7),
+    0 0 0 3px rgba(20, 15, 10, 0.45),
+    inset 0 0 0 2px rgba(34, 28, 21, 0.9);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.2s;
+}
+.act-disc .item-icon,
+.act-disc span.item-icon.painted {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  vertical-align: 0;
+  opacity: 1;
+}
+.act-disc svg.item-icon,
+.act-disc svg {
+  width: 24px;
+  height: 24px;
+  color: var(--ink-2);
+}
+.act-disc span.spot-pic.painted {
+  width: 84%;
+  height: 84%;
+}
+/* a stack: discs behind the disc, how many it holds */
+.act-medal.stack .act-pic::before,
+.act-medal.stack .act-pic::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1.5px solid rgba(196, 154, 69, 0.45);
+  border-radius: 50%;
+  background: var(--page);
+  box-shadow: 0 2px 6px rgba(8, 5, 2, 0.6);
+}
+.act-medal.stack .act-pic::before {
+  transform: translate(5px, -4px);
+}
+.act-medal.stack .act-pic::after {
+  transform: translate(9px, -8px);
+  opacity: 0.7;
+}
+.act-medal.stack .act-pic {
+  isolation: isolate;
+}
+.act-count {
+  position: absolute;
+  right: -10px;
+  bottom: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid var(--ochre);
+  border-radius: 10px;
+  background: var(--page);
+  font: 700 0.72rem/18px var(--sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--ochre-ink);
+}
+/* the picked one glows */
+.act-medal.on .act-disc {
+  border-color: var(--ochre-ink);
+  box-shadow:
+    0 0 0 3px rgba(221, 184, 103, 0.35),
+    0 0 18px rgba(221, 184, 103, 0.55),
+    0 3px 10px rgba(8, 5, 2, 0.7);
+}
+.act-medal.on .act-pic {
+  transform: scale(1.1);
+}
+/* the work running: the medal fills from below as the time goes */
+.act-fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(196, 154, 69, 0.5), rgba(196, 154, 69, 0.12));
+  transform-origin: bottom center;
+}
+.act-fill.anim-fill {
+  animation-name: fill-rise;
+}
+@keyframes fill-rise {
+  from {
+    transform: scaleY(var(--p0, 0));
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.act-pic .ring {
+  left: 50%;
+  width: 150px;
+  height: 150px;
+  margin: -75px 0 0 -75px;
+}
+.act-secs {
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  padding: 0 5px;
+  border: 1px solid var(--ochre);
+  border-radius: 8px;
+  background: var(--page);
+  font: 700 0.7rem/1.4 var(--sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--ochre-ink);
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+.act-lock,
+.act-pair {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--page);
+}
+.act-lock {
+  right: -5px;
+  bottom: -3px;
+  border: 1px solid var(--rule-2);
+  color: var(--faded);
+}
+.act-pair {
+  left: -5px;
+  top: -3px;
+  border: 1px solid var(--ochre);
+  color: var(--ochre-ink);
+}
+.act-lock svg,
+.act-pair svg {
+  width: 11px;
+  height: 11px;
+}
+.act-quest {
+  position: absolute;
+  top: 0;
+  right: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--gall);
+  box-shadow: 0 0 0 2px var(--page);
+}
+.act-medal.running .act-disc,
+.act-medal.together .act-disc {
+  border-color: var(--ochre);
+}
+.act-medal.blocked .act-disc > * {
+  filter: grayscale(0.7) brightness(0.65);
+}
+.act-medal.blocked .act-disc {
+  border-color: rgba(230, 217, 188, 0.3);
+}
+.act-label {
+  max-width: 100%;
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.act-medal.placed .act-label {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(20, 15, 10, 0.72);
+  color: var(--ink);
+}
+.act-medal.blocked .act-label {
+  color: var(--ink-2);
+}
+/* while a work runs its seconds sit under the disc: the count steps aside, the name moves down */
+.act-medal.running .act-count {
+  display: none;
+}
+.act-medal.running .act-label {
+  margin-top: 8px;
+}
+@media (hover: hover) {
+  .act-medal:hover .act-pic {
+    transform: translateY(-2px);
+  }
+  .act-medal.on:hover .act-pic {
+    transform: scale(1.1) translateY(-2px);
+  }
+  .act-medal:hover .act-disc {
+    border-color: var(--ochre-ink);
+  }
+}
+.act-medal:active .act-pic {
+  transform: scale(0.94);
+}
+.act-medal:focus-visible {
+  outline: none;
+}
+.act-medal:focus-visible .act-disc {
+  outline: 2px solid var(--ochre-ink);
+  outline-offset: 3px;
+}
+@media (min-width: 960px) {
+  .act-medal.placed {
+    margin: -31px 0 0 -46px;
+    width: 92px;
+  }
+  .act-medal.placed .act-pic {
+    width: 58px;
+    height: 58px;
+  }
+  .act-medal.placed .act-disc .item-icon,
+  .act-medal.placed .act-disc span.item-icon.painted {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* a stack opened: its works spread over the dimmed painting */
+.stage-fan {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+}
+.stage-fan-shade {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(16, 12, 8, 0.72);
+  backdrop-filter: blur(2px);
+  cursor: pointer;
+  animation: tile-in 0.2s ease-out both;
+}
+.stage-fan-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  padding: 10px 12px 8px;
+  pointer-events: none;
+  animation: fan-in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes fan-in {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+.stage-fan-name {
+  flex: none;
+  margin-bottom: 6px;
+  font: 600 0.82rem/1.3 var(--sans);
+  letter-spacing: 0.04em;
+  color: var(--ochre-ink);
+}
+.stage-fan-list {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 8px 4px;
+  min-height: 0;
+  overflow-y: auto;
+  pointer-events: auto;
+}
+.stage-fan-list .act-medal {
+  width: 80px;
+  animation-delay: calc(var(--i, 0) * 30ms);
+}
+
+/* the picked work: what it takes and gives, and the button that does it */
+.work-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 12px;
+  padding: 12px 12px 12px 12px;
+  border: 1px solid var(--rule-2);
+  border-radius: 10px;
+  background: var(--leaf-2);
+  animation: card-in 0.22s ease-out both;
+}
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.work-card.together {
+  border-color: rgba(196, 154, 69, 0.5);
+}
+.work-card-pic {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(196, 154, 69, 0.5);
+  border-radius: 50%;
+  background: var(--page);
+}
+.work-card-pic .item-icon,
+.work-card-pic span.item-icon.painted {
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  vertical-align: 0;
+}
+.work-card-pic svg {
+  width: 20px;
+  height: 20px;
+  color: var(--ink-2);
+}
+.work-card-pic span.spot-pic.painted {
+  width: 80%;
+  height: 80%;
+}
+.work-card.blocked .work-card-pic > * {
+  filter: grayscale(0.7) brightness(0.7);
+}
+.work-card-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.work-card-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+  font: 600 1rem/1.3 var(--sans);
+  color: var(--ink);
+}
+.work-card .tile-meta {
+  font-size: 0.84rem;
+}
+.work-card .reason {
+  font-size: 0.84rem;
+}
+.work-card.blocked .reason {
+  color: var(--ink-2);
+}
+.work-do {
+  position: relative;
+  flex: none;
+  min-width: 112px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.work-do > span:last-child {
+  position: relative;
+}
+.work-do-fill {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--ochre-ink);
+}
+.btn.primary.work-do:has(.work-do-fill) {
+  background: rgba(196, 154, 69, 0.55);
+  opacity: 1;
+}
+@media (max-width: 380px) {
+  .work-card {
+    flex-wrap: wrap;
+  }
+  .work-card-text {
+    flex-basis: calc(100% - 52px);
+  }
+  .work-do {
+    flex: 1 1 100%;
+  }
+}
+
 .station-body .group:last-child,
 .station-body .stock:last-child {
   margin-bottom: 0;

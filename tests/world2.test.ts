@@ -111,6 +111,15 @@ describe('the hero', () => {
     expect(w.state.res['u_02']).toBe(3);
   });
 
+  it("a work shows the mark of what it yields, so its medal can show it", () => {
+    const { w, h } = home();
+    const entries = w.view(h).groups.flatMap((g) => g.entries).filter((e) => e.kind === 'act');
+    const withIcon = entries.filter((e) => e.icon);
+    expect(withIcon.length).toBeGreaterThan(0);
+    const icons = new Set<string>(w.g().ix.c.resources.flatMap((r) => (r.icon ? [r.icon] : [])));
+    for (const e of withIcon) expect(icons.has(e.icon!), e.id).toBe(true);
+  });
+
   it('a recipe nobody needs any more disappears; one that needs a tool says which', () => {
     const { w, h } = home();
     w.state.flags['built:x_16'] = 1;

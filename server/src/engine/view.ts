@@ -54,6 +54,21 @@ function costView(g: Game, cost: Record<string, number> | undefined, pid?: Playe
 }
 
 /** Describe what an action gives: exact amounts, ranges, or "+?" when it depends on luck. */
+/** The mark for an action's button: what it yields; for a sale — what is sold, not the coins. */
+function actionIcon(g: Game, a: ActionDef): string | undefined {
+  const ids = [
+    ...(actionSort(g, a) === 'sell' ? Object.keys(a.cost ?? {}) : []),
+    ...Object.keys(a.yield ?? {}),
+    ...(a.effects ?? []).flatMap((e) => ('add' in e ? Object.entries(e.add).filter(([, n]) => n > 0).map(([r]) => r) : [])),
+    ...(a.chance ?? []).flatMap((ch) => Object.keys(ch.add ?? {})),
+  ];
+  for (const r of ids) {
+    const def = g.ix.res.get(r);
+    if (def && !def.hidden && def.icon) return def.icon;
+  }
+  return undefined;
+}
+
 function actionGains(g: Game, a: ActionDef, pid: PlayerId): GainView[] {
   const out: GainView[] = [];
   const seen = new Set<string>();
@@ -172,6 +187,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         readyAt: cd > g.now ? cd : undefined,
         cooldown: g.actionTime(a, pid),
         sort: actionSort(g, a),
+        ...(actionIcon(g, a) ? { icon: actionIcon(g, a) } : {}),
         ...(a.spot ? { spot: a.spot } : {}),
         ...(a.quest ? { quest: true } : {}),
       });

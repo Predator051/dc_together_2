@@ -121,6 +121,8 @@ export interface EntryView {
   quest?: boolean;
   /** What it is for, so a long workplace can be laid out in sections: done together, upkeep, or what it makes. */
   sort?: EntrySort;
+  /** The mark of what it yields (a thing's icon), for its button. */
+  icon?: string;
 }
 
 export type EntrySort =

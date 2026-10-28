@@ -1,12 +1,12 @@
 // A place drawn as a plan: every workplace or corner is a spot to tap, its work opens on demand.
 
-import type { JSX } from 'preact';
+import { createContext, type ComponentChildren, type JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { PLAN_FIXED } from '../../shared/src/content.js';
 import type { GroupView, PlayerView } from '../../shared/src/protocol.js';
 import { IconPair } from './icons.js';
 import { duskOf } from './ambient.js';
-import { Ground, picture } from './pictures.js';
+import { Ground, picture, stationUrl } from './pictures.js';
 import { Sheet } from './sheet.js';
 import { T } from './strings.js';
 
@@ -84,6 +84,8 @@ export interface Spot {
   meter?: { load: number; cap: number };
   /** What opens when the spot is tapped. */
   body: () => JSX.Element;
+  /** Its works stand on its painted close view (the way out and the yard's extras only head it). */
+  works?: boolean;
 }
 
 /**
@@ -103,6 +105,7 @@ export function groupSpots(groups: GroupView[], body: (g: GroupView) => JSX.Elem
       keys: [g.id, ...g.entries.filter((e) => e.kind !== 'go').map((e) => `${g.id}:${e.id}`)],
       ...(g.progress ? { progress: { n: g.progress.n, max: g.progress.max } } : {}),
       body: () => body(g),
+      works: g.id !== 'paths',
     });
   for (const g of groups) {
     if (g.spots?.length) {
@@ -128,6 +131,25 @@ export function groupSpots(groups: GroupView[], body: (g: GroupView) => JSX.Elem
     add(g, at);
   }
   return [spots, rest];
+}
+
+/** Inside an opened spot whose works stand on its painting: the spot's icon (its works draw the stage). */
+export const StageOn = createContext<string | null>(null);
+
+/**
+ * An opened spot on its painted close view. Works stand on the painting itself (the body draws it,
+ * see StageOn); a spot without works only has the painting at its head.
+ */
+function Stage({ icon, works, children }: { icon: string; works: boolean; children: ComponentChildren }) {
+  const url = stationUrl(icon);
+  if (!url) return <>{children}</>;
+  if (works) return <StageOn.Provider value={icon}>{children}</StageOn.Provider>;
+  return (
+    <>
+      <div class="stage-art" key={url} style={{ backgroundImage: `url(${url})` }} aria-hidden="true" />
+      <div class="stage-body">{children}</div>
+    </>
+  );
 }
 
 export function extraSpot(
@@ -358,7 +380,9 @@ export function AreaPlan({
             </div>
           }
         >
-          {shown.body()}
+          <Stage icon={shown.icon} works={!!shown.works}>
+            {shown.body()}
+          </Stage>
         </Sheet>
       )}
     </div>

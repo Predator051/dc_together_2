@@ -7,6 +7,7 @@
 //   tsx scripts/art.ts ground <painted.png> <scene>
 //   tsx scripts/art.ts view <painted.png> <scene|hearth1|hearth2>
 //   tsx scripts/art.ts hero <painted.png> <maker-m|hunter-f|…>
+//   tsx scripts/art.ts stations <painted.png> <n>
 //
 // A map sheet is cut into tiles (client/src/art/<sheet>/r<row>c<col>.webp): the client asks only for
 // the tiles over explored land. The painting itself is kept, a little compressed, in art-src/ —
@@ -29,11 +30,15 @@
 // A hero is painted at full height on a magenta ground: the figure (client/src/art/heroes/p<i>.webp,
 // for the gear screen) and the face cut from the same painting (q<i>.webp), i — the key's number in
 // HEROES; the painted keys are listed in client/src/art/heroes.json.
+//
+// A sheet of stations is four close views of workplaces in a 2×2 grid (order: .design/art/stations.json,
+// sheet n); each quarter becomes client/src/art/stations/s<i>.webp, i — the spot icon's number in
+// SPOT_ICONS; the painted ones are listed in client/src/art/stations.json.
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { HEROES, SCENES, VIEWS } from '../shared/src/pictures.js';
+import { HEROES, SCENES, SPOT_ICONS, VIEWS } from '../shared/src/pictures.js';
 
 const ROOT = resolve(import.meta.dirname, '..');
 
@@ -328,13 +333,42 @@ function hero(src: string, key: string): void {
   console.log(`hero ${key}: figure ${bw}×${bh} → p${i}.webp, face → q${i}.webp`);
 }
 
+// ---------------------------------------------------------------------------- stations
+
+function stations(src: string, n: number): void {
+  const order = JSON.parse(readFileSync(join(ROOT, '.design/art/stations.json'), 'utf8')) as Array<Array<[string, string]>>;
+  const keys = (order[n - 1] ?? []).map(([k]) => k);
+  if (keys.length !== 4) throw new Error(`no sheet ${n} of four in .design/art/stations.json`);
+  const [w, h] = sizeOf(src);
+  const qw = Math.floor(w / 2);
+  const qh = Math.floor(h / 2);
+  // a little in from each quarter's edges, past the gutters between the paintings
+  const inset = Math.round(Math.min(qw, qh) * 0.035);
+  const outDir = join(ROOT, 'client/src/art/stations');
+  mkdirSync(outDir, { recursive: true });
+  const listPath = join(ROOT, 'client/src/art/stations.json');
+  const list = new Set<string>(existsSync(listPath) ? JSON.parse(readFileSync(listPath, 'utf8')) : []);
+  keys.forEach((k, q) => {
+    const i = (SPOT_ICONS as readonly string[]).indexOf(k) + 1;
+    if (!i) throw new Error(`no spot icon ${k}`);
+    const x = (q % 2) * qw + inset;
+    const y = Math.floor(q / 2) * qh + inset;
+    magick(src, '-crop', `${qw - 2 * inset}x${qh - 2 * inset}+${x}+${y}`, '+repage', '-resize', '720x480^', '-gravity', 'center', '-extent', '720x480', '-strip', '-quality', '76', '-define', 'webp:method=6', join(outDir, `s${i}.webp`));
+    list.add(k);
+  });
+  writeFileSync(listPath, JSON.stringify([...list].sort()) + '\n');
+  keep(src, `stations${n}`);
+  console.log(`stations ${n}: ${keys.join(' ')}`);
+}
+
 const [cmd, ...args] = process.argv.slice(2);
 if (cmd === 'map' && args[0] && args[1]) map(resolve(args[0]), args[1], Number(args[2] ?? 6), Number(args[3] ?? 4));
 else if ((cmd === 'things' || cmd === 'foes' || cmd === 'marks') && args[0] && args[1]) atlas(cmd, resolve(args[0]), Number(args[1]));
 else if (cmd === 'ground' && args[0] && args[1]) ground(resolve(args[0]), args[1]);
 else if (cmd === 'view' && args[0] && args[1]) view(resolve(args[0]), args[1]);
 else if (cmd === 'hero' && args[0] && args[1]) hero(resolve(args[0]), args[1]);
+else if (cmd === 'stations' && args[0] && args[1]) stations(resolve(args[0]), Number(args[1]));
 else {
-  console.error('usage: tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows] | things|foes|marks <painted.png> <n> | ground <painted.png> <scene> | view <painted.png> <key> | hero <painted.png> <role-gender>');
+  console.error('usage: tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows] | things|foes|marks <painted.png> <n> | ground <painted.png> <scene> | view <painted.png> <key> | hero <painted.png> <role-gender> | stations <painted.png> <n>');
   process.exit(1);
 }
