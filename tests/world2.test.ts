@@ -185,12 +185,17 @@ describe('the map', () => {
     expect(w.cmd(h, { c: 'go', to: 'a_07' }).ok).toBe(true);
     const v = w.view(h);
     expect(v.map.travel?.to).toBe('a_07');
+    // the map draws the walk leg by leg: the stretch walked now, the stops still ahead
+    expect(v.map.legs.me).toMatchObject({ from: 'a_02', to: 'a_01', since: t0, next: ['a_04', 'a_07'] });
+    expect(w.view(m).map.legs.mate).toMatchObject({ from: 'a_02', to: 'a_01' });
+    expect(w.view(m).map.legs.me).toBeNull();
     expect(v.busyUntil).toBe(t0 + node.go!.time);
     expect(w.view(m).partner.busy?.until).toBe(t0 + node.go!.time);
     // halfway: at home, but just passing by
     w.advance(legs[0]! + 1);
     expect(w.state.players[h].at).toBe('a_01');
     expect(w.state.players[h].travel?.to).toBe('a_04');
+    expect(w.view(h).map.legs.me).toMatchObject({ from: 'a_01', to: 'a_04', next: ['a_07'] });
     expect(w.state.players[h].bag).toEqual({ u_03: 1 });
     w.rest(h);
     expect(w.state.players[h].at).toBe('a_07');

@@ -14,6 +14,7 @@ import { Scene } from './scene.js';
 import { IconBell, IconBellOff, IconDown, IconFlame, IconHero, IconLock, IconLog, IconMap, IconMute, IconNotes, IconPair, IconPin, IconSnow, IconSound, IconWork } from './icons.js';
 import { T } from './strings.js';
 import { BagPanel, FightPanel, MapPanel, NearFight, PackList, ResidentsPanel } from './world.js';
+import { Cell } from './cells.js';
 import { Thing } from './items.js';
 import { NeedsBar, NeedsSheet } from './needs.js';
 import { WeatherChip } from './weather.js';
@@ -369,22 +370,17 @@ function Stock({ v, foldable = false }: { v: PlayerView; foldable?: boolean }) {
       {shown && res.length > 0 && (
         <>
           {!foldable && <h3>{T.stock}</h3>}
-          <dl class="ledger">
+          <ul class="cells" aria-label={T.stock}>
             {res.map((r) => (
-              <div
-                class={`ledger-row ${r.cap !== undefined && r.n >= r.cap ? 'full' : ''} ${r.n === 0 ? 'empty' : ''}`}
-              >
-                <dt>
-                  <Thing icon={r.icon} />
-                  {r.name}
-                </dt>
-                <dd>
-                  {r.n}
-                  {r.cap !== undefined && <small>/{r.cap}</small>}
-                </dd>
-              </div>
+              <Cell
+                icon={r.icon}
+                name={r.name}
+                n={r.n}
+                cap={r.cap}
+                cls={`${r.cap !== undefined && r.n >= r.cap ? 'full' : ''} ${r.n === 0 ? 'empty' : ''}`}
+              />
             ))}
-          </dl>
+          </ul>
         </>
       )}
       {shown && folk.length > 0 && (
@@ -399,20 +395,14 @@ function Stock({ v, foldable = false }: { v: PlayerView; foldable?: boolean }) {
         </p>
       )}
       {shown && tools.length > 0 && (
-        <p class="inline-list tools">
-          <span class="il-head">{T.items}:</span>{' '}
-          {/* the comma and space stay outside the unbreakable name: the line may wrap between things */}
-          {tools.map((r, i) => (
-            <>
-              {i > 0 && ', '}
-              <span class="il-thing">
-                <Thing icon={r.icon} />
-                {r.n > 1 ? `${r.name} ×${r.n}` : r.name}
-              </span>
-            </>
-          ))}
-          .
-        </p>
+        <>
+          <p class="il-head cells-head">{T.items}</p>
+          <ul class="cells" aria-label={T.items}>
+            {tools.map((r) => (
+              <Cell icon={r.icon} name={r.name} n={r.n > 1 ? r.n : undefined} />
+            ))}
+          </ul>
+        </>
       )}
     </section>
   );
@@ -646,6 +636,20 @@ export function Game({ s }: { s: NetState }) {
   const [needsOpen, setNeedsOpen] = useState(false);
   const needsShown = needsOpen && !!v.needs;
   useEffect(() => store('bezgomin.homeView', homeView), [homeView]);
+  // a new day: its number shows a moment over the page, as the chronicle turns a leaf
+  const [dayCard, setDayCard] = useState<number | null>(null);
+  const lastDay = useRef(v.day);
+  useEffect(() => {
+    const before = lastDay.current;
+    lastDay.current = v.day;
+    if (before <= 0 || v.day <= before) return;
+    setDayCard(v.day);
+    const t = window.setTimeout(() => setDayCard(null), 2600);
+    return () => clearTimeout(t);
+  }, [v.day]);
+  // a fight that has just ended stays a moment, so its last blow is seen; then it goes for good
+  const [goneFight, setGoneFight] = useState<number | null>(null);
+  const shownFight = v.fight ?? (v.fightEnd && v.fightEnd.id !== goneFight ? v.fightEnd : null);
 
   // The partner calls you: a knock.
   const calling = v.proposal && !v.proposal.mine ? v.proposal.label : null;
@@ -969,9 +973,15 @@ export function Game({ s }: { s: NetState }) {
       )}
 
       {v.scene && <Scene v={v} sc={v.scene} locked={locked} />}
-      {v.fight && <FightPanel f={v.fight} v={v} locked={locked} />}
-      {!v.scene && !v.fight && v.summary && <Summary s={v.summary} me={v.me.name} partner={v.partner.name} />}
-      {!v.scene && !v.fight && !v.summary && v.welcome && <Welcome w={v.welcome} partner={v.partner.name} />}
+      {shownFight && <FightPanel f={shownFight} v={v} locked={locked || !!shownFight.ended} onGone={() => setGoneFight(shownFight.id)} />}
+      {!v.scene && !shownFight && v.summary && <Summary s={v.summary} me={v.me.name} partner={v.partner.name} />}
+      {!v.scene && !shownFight && !v.summary && v.welcome && <Welcome w={v.welcome} partner={v.partner.name} />}
+      {dayCard !== null && (
+        <div class="day-card" key={dayCard} aria-hidden="true">
+          <span>{T.day}</span>
+          <b>{dayCard}</b>
+        </div>
+      )}
       {s.toast && <div class="toast">{s.toast.text}</div>}
       {s.deltas.length > 0 && (
         <div class="deltas" aria-live="polite">

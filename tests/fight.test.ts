@@ -47,6 +47,13 @@ describe('fights', () => {
     expect(w.view(m).fight?.party.find((p) => p.pid === h)?.picked).toBe(true);
     play(w, { [h]: hit, [m]: hit });
     expect(w.view(h).fight).toBeNull();
+    // the last blow stays in sight a moment, with nothing left to choose
+    const end = w.view(h).fightEnd!;
+    expect(end.ended).toBe('win');
+    expect(end.moves).toEqual([]);
+    expect(end.foes.every((x) => x.out)).toBe(true);
+    w.advance(5000);
+    expect(w.view(h).fightEnd).toBeNull();
     expect(w.state.players[h].xp).toBeGreaterThan(xp0);
     expect(w.state.bestiary['e_01']!.seen).toBeGreaterThan(0);
   });

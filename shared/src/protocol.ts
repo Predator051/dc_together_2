@@ -455,10 +455,21 @@ export interface MapNodeView {
   desc?: string;
 }
 
+/** The stretch of road a hero walks right now, and the stops still ahead after it. */
+export interface MapLegView {
+  from: string;
+  to: string;
+  since: number;
+  until: number;
+  next: string[];
+}
+
 export interface MapView {
   nodes: MapNodeView[];
   links: Array<[string, string]>;
   travel: { to: string; name: string; since: number; until: number } | null;
+  /** Where on the road each hero is (the partner only while in the game). */
+  legs: { me: MapLegView | null; mate: MapLegView | null };
 }
 
 export interface FoeView {
@@ -492,6 +503,8 @@ export interface FightView {
   myPick?: string;
   waiting: boolean;
   lines: string[];
+  /** Set on a fight that has just ended (shown a moment so the last blow is seen). */
+  ended?: 'win' | 'lose' | 'fled';
   /** The partner is fighting here and you could join. */
   canHelp?: boolean;
 }
@@ -660,6 +673,8 @@ export interface PlayerView {
   garden: GardenView | null;
   map: MapView;
   fight: FightView | null;
+  /** The fight that has just ended, after its last blow; only to be seen, never answered. */
+  fightEnd: FightView | null;
   /** A fight of the partner where you stand (you may join). */
   nearFight: { id: number; text: string } | null;
   residents: ResidentView[];

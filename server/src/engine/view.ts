@@ -20,6 +20,7 @@ import type {
   SummaryView,
   WelcomeView,
 } from '../../../shared/src/protocol.js';
+import type { FightState } from '../../../shared/src/state.js';
 import type { Game } from './index.js';
 import { questProgress } from './index.js';
 import { resolveParas } from './text.js';
@@ -724,10 +725,12 @@ function mapView(g: Game, pid: PlayerId): MapView {
     }
   }
   const tr = p.travel ? walkOf(p.travel) : null;
+  const leg = (t: NonNullable<typeof p.travel>) => ({ from: t.from, to: t.to, since: t.since, until: t.until, next: (t.route ?? []).map(([id]) => id) });
   return {
     nodes,
     links,
     travel: tr ? { to: tr.to, name: areaDef(g, tr.to)?.name ?? tr.to, since: tr.since, until: tr.until } : null,
+    legs: { me: p.travel ? leg(p.travel) : null, mate: o.joined && o.travel ? leg(o.travel) : null },
   };
 }
 
@@ -741,7 +744,19 @@ function intentText(g: Game, f: NonNullable<ReturnType<typeof fightOf>>, it: { m
 
 function fightView(g: Game, pid: PlayerId): FightView | null {
   const f = fightOf(g, pid);
-  if (!f) return null;
+  return f ? fightViewOf(g, pid, f) : null;
+}
+
+/** How long a finished fight stays in the view, after its last blow. */
+const AFTERGLOW = 3000;
+
+function fightEndView(g: Game, pid: PlayerId): FightView | null {
+  const a = g.s.afterFight?.[pid];
+  if (!a || fightOf(g, pid) || g.now - a.at > AFTERGLOW) return null;
+  return { ...fightViewOf(g, pid, a.fight, false), ended: a.how };
+}
+
+function fightViewOf(g: Game, pid: PlayerId, f: FightState, live = true): FightView {
   const role = g.p(pid).role;
   const foes = f.foes
     .filter((x) => !x.out || f.round - x.joined < 99)
@@ -792,7 +807,7 @@ function fightView(g: Game, pid: PlayerId): FightView | null {
       me: x === pid,
     };
   });
-  const moves = fightMoves(g, f, pid).map((m) => ({ ...m }));
+  const moves = live ? fightMoves(g, f, pid).map((m) => ({ ...m })) : [];
   const myPick = f.picks[pid];
   const others = f.party.filter((x) => x !== pid && g.p(x).online && !f.down.includes(x) && !f.fled.includes(x));
   return {
@@ -1066,6 +1081,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     garden: gardenView(g, pid),
     map: mapView(g, pid),
     fight: fightView(g, pid),
+    fightEnd: fightEndView(g, pid),
     nearFight: nearFight(g, pid),
     residents: residentsView(g, pid),
     bestiary: bestiaryView(g, pid),

@@ -2,6 +2,7 @@
 
 import type { ComponentChildren, JSX } from 'preact';
 import type { ItemIcon } from '../../shared/src/pictures.js';
+import painted from './art/things.json';
 
 function Ink({ children }: { children: ComponentChildren }) {
   return (
@@ -686,8 +687,31 @@ const DRAW: Record<ItemIcon, () => JSX.Element> = {
   ),
 };
 
+// Painted marks: atlases of 4×3 cells (scripts/art.ts things); a thing not painted yet keeps its strokes.
+const PAINTED = painted as unknown as Record<string, [number, number]>;
+
+function atlas(n: number): string {
+  return new URL(`./art/things/t${n}.webp`, import.meta.url).href;
+}
+
+/** The thing has a mark to show (painted or drawn). */
+export function hasMark(icon?: string): boolean {
+  return !!icon && (!!PAINTED[icon] || icon in DRAW);
+}
+
 /** A thing's small mark; nothing at all when the thing has none. */
 export function Thing({ icon }: { icon?: string }) {
+  const p = icon ? PAINTED[icon] : undefined;
+  if (p) {
+    const [n, i] = p;
+    return (
+      <span
+        class="item-icon painted"
+        style={{ backgroundImage: `url(${atlas(n)})`, backgroundPosition: `${((i % 4) / 3) * 100}% ${(Math.floor(i / 4) / 2) * 100}%` }}
+        aria-hidden="true"
+      />
+    );
+  }
   const draw = icon ? (DRAW as Record<string, () => JSX.Element>)[icon] : undefined;
   return draw ? draw() : null;
 }

@@ -3,8 +3,11 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { FightView, MapNodeView, PlayerView } from '../../shared/src/protocol.js';
 import { net } from './net.js';
 import { MapIcon } from './mapicons.js';
+import { LandMap, paintedFits } from './landmap.js';
+import { duskOf } from './ambient.js';
 import { Portrait } from './portraits.js';
 import { Thing } from './items.js';
+import { Cell } from './cells.js';
 import { sound } from './sound.js';
 import { T } from './strings.js';
 
@@ -64,6 +67,8 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
     boxEl.current?.parentElement?.querySelector('.map-card')?.scrollIntoView({ block: 'nearest' });
   }, [sel]);
   if (!m.nodes.length) return null;
+  // the painted land, when it holds every place shown; otherwise the drawn scheme
+  const painted = paintedFits(m);
   const xs = m.nodes.map((n) => n.x);
   const ys = m.nodes.map((n) => n.y);
   const minX = Math.min(...xs);
@@ -90,6 +95,9 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
           {T.mapOnWay} <b>{m.travel.name}</b>
         </p>
       )}
+      {painted ? (
+        <LandMap m={m} sel={sel} onPick={setSel} now={now} wayIds={way} dusk={duskOf(v.dayAt, now)} sky={v.ambient.sky ?? undefined} />
+      ) : (
       <div
         class={`map-box ${w > width ? 'scrolls' : ''}`}
         ref={(el) => {
@@ -166,6 +174,7 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
         })}
       </svg>
       </div>
+      )}
       <div class="map-legend">
         <span>
           <i class="dot me" /> {T.mapHere}
@@ -225,7 +234,9 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
 
 export function BagPanel({ v, locked }: { v: PlayerView; locked: boolean }) {
   const b = v.bag;
+  const [sel, setSel] = useState<string | null>(null);
   if (!b.items.length) return null;
+  const it = b.items.find((x) => x.id === sel) ?? null;
   return (
     <section class="stock bag">
       <h3>
@@ -235,74 +246,201 @@ export function BagPanel({ v, locked }: { v: PlayerView; locked: boolean }) {
         </span>
       </h3>
       <Bar n={b.load} max={b.cap} cls="load" />
-      <ul class="bag-items">
-        {b.items.map((it) => (
-          <li>
-            <span class="bag-name">
-              <span class="bag-title">
-                <Thing icon={it.icon} />
-                <span>
-                  {it.name} <b>{it.n}</b>
-                </span>
-              </span>
-              {it.note && <small>{it.note}</small>}
-            </span>
-            <span class="row">
-              {it.usable && (
-                <button class="btn small" disabled={locked} onClick={() => net.send({ c: 'use', id: it.id })}>
-                  {T.bagUse}
-                </button>
-              )}
-              {v.atHome ? (
-                <button class="btn small" disabled={locked} onClick={() => net.send({ c: 'pack', id: it.id, n: -it.n })}>
-                  {T.bagUnpack}
-                </button>
-              ) : (
-                <button class="btn small ghost" disabled={locked} onClick={() => net.send({ c: 'drop', id: it.id, n: 1 })}>
-                  {T.bagDrop}
-                </button>
-              )}
-            </span>
-          </li>
+      <ul class="cells" aria-label={T.bag}>
+        {b.items.map((x) => (
+          <Cell icon={x.icon} name={x.name} n={x.n} sel={sel === x.id} onPick={() => setSel(sel === x.id ? null : x.id)} />
         ))}
       </ul>
+      {it && (
+        <div class="cell-detail" key={it.id}>
+          <span class="bag-name">
+            <span class="bag-title">
+              <Thing icon={it.icon} />
+              <span>
+                {it.name} <b>{it.n}</b>
+              </span>
+            </span>
+            {it.note && <small>{it.note}</small>}
+          </span>
+          <span class="row">
+            {it.usable && (
+              <button class="btn small" disabled={locked} onClick={() => net.send({ c: 'use', id: it.id })}>
+                {T.bagUse}
+              </button>
+            )}
+            {v.atHome ? (
+              <button class="btn small" disabled={locked} onClick={() => net.send({ c: 'pack', id: it.id, n: -it.n })}>
+                {T.bagUnpack}
+              </button>
+            ) : (
+              <button class="btn small ghost" disabled={locked} onClick={() => net.send({ c: 'drop', id: it.id, n: 1 })}>
+                {T.bagDrop}
+              </button>
+            )}
+          </span>
+        </div>
+      )}
     </section>
   );
 }
 
 /** At home: things to take along (consumables and food) can go into the bag. */
 export function PackList({ v, locked }: { v: PlayerView; locked: boolean }) {
+  const [sel, setSel] = useState<string | null>(null);
   if (!v.atHome) return null;
   const list = v.res.filter((r) => (r.kind === 'use' || r.kind === 'food' || r.ware) && r.n > 0);
   if (!list.length) return null;
+  const r = list.find((x) => x.id === sel) ?? null;
   return (
     <section class="stock packs">
       <h3>{T.usesList}</h3>
-      <ul class="bag-items">
-        {list.map((r) => (
-          <li>
-            <span class="bag-name">
-              <span class="bag-title">
-                <Thing icon={r.icon} />
-                <span>
-                  {r.name} <b>{r.n}</b>
-                </span>
-              </span>
-              {r.note && <small>{r.note}</small>}
-            </span>
-            <button class="btn small" disabled={locked} onClick={() => net.send({ c: 'pack', id: r.id, n: r.ware ? Math.min(5, r.n) : r.kind === 'food' ? 2 : 1 })}>
-              + {T.bagPack}
-            </button>
-          </li>
+      <ul class="cells" aria-label={T.usesList}>
+        {list.map((x) => (
+          <Cell icon={x.icon} name={x.name} n={x.n} sel={sel === x.id} onPick={() => setSel(sel === x.id ? null : x.id)} />
         ))}
       </ul>
+      {r && (
+        <div class="cell-detail" key={r.id}>
+          <span class="bag-name">
+            <span class="bag-title">
+              <Thing icon={r.icon} />
+              <span>
+                {r.name} <b>{r.n}</b>
+              </span>
+            </span>
+            {r.note && <small>{r.note}</small>}
+          </span>
+          <button class="btn small" disabled={locked} onClick={() => net.send({ c: 'pack', id: r.id, n: r.ware ? Math.min(5, r.n) : r.kind === 'food' ? 2 : 1 })}>
+            + {T.bagPack}
+          </button>
+        </div>
+      )}
     </section>
   );
 }
 
 // ---------------------------------------------------------------------------- a fight
 
-export function FightPanel({ f, v, locked }: { f: FightView; v: PlayerView; locked: boolean }) {
+function still(): boolean {
+  return matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/** A change of a bar since the last look (a blow or a mend), with a key new for every change. */
+function useChange(n: number): { d: number; key: number } | null {
+  const prev = useRef(n);
+  const [change, setChange] = useState<{ d: number; key: number } | null>(null);
+  useEffect(() => {
+    if (n !== prev.current) setChange({ d: n - prev.current, key: Date.now() });
+    prev.current = n;
+  }, [n]);
+  useEffect(() => {
+    if (!change) return;
+    const t = window.setTimeout(() => setChange(null), 1000);
+    return () => clearTimeout(t);
+  }, [change]);
+  return change;
+}
+
+/** A jolt of an element: sideways for a blow; nothing for those who ask for less motion. */
+function jolt(el: Element | null, strength = 6): void {
+  if (!el || still()) return;
+  el.animate(
+    [
+      { transform: 'translateX(0)' },
+      { transform: `translateX(-${strength}px)` },
+      { transform: `translateX(${strength * 0.7}px)` },
+      { transform: `translateX(-${strength * 0.4}px)` },
+      { transform: 'translateX(0)' },
+    ],
+    { duration: 320, easing: 'ease-out' },
+  );
+}
+
+/** The number that rises over a hit one: −3 red for a blow, +2 green for a mend. */
+function Delta({ c }: { c: { d: number; key: number } | null }) {
+  if (!c) return null;
+  return (
+    <span key={c.key} class={`delta-pop ${c.d < 0 ? 'blow' : 'mend'}`} aria-hidden="true">
+      {c.d < 0 ? `−${-c.d}` : `+${c.d}`}
+    </span>
+  );
+}
+
+function FoeCard({ x, i }: { x: FightView['foes'][number]; i: number }) {
+  const hp = useChange(x.hp);
+  const pic = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (hp && hp.d < 0) jolt(pic.current);
+  }, [hp?.key]);
+  return (
+    <li class={`foe ${x.out ? 'out' : ''} ${hp && hp.d < 0 ? 'struck' : ''}`} style={{ '--i': String(i) }}>
+      <span class="foe-pic" ref={pic}>
+        <Portrait icon={x.icon} size={x.out ? 's' : 'xl'} out={!!x.out} />
+        <Delta c={hp} />
+      </span>
+      <div class="foe-body">
+        <div class="foe-top">
+          <b>{x.name}</b>
+          <span class="foe-lvl">{x.level}</span>
+          {x.out && <span class="foe-out">{T.fightOut[x.out] ?? ''}</span>}
+        </div>
+        {!x.out && (
+          <>
+            <Bar n={x.hp} max={x.hpMax} cls="hp" />
+            {x.morale !== undefined && (
+              <span class="fear-row">
+                <small>{T.combatFear}</small>
+                <Bar n={x.fear ?? 0} max={x.morale} cls="fear" />
+              </span>
+            )}
+            {x.intent && <p class="intent">→ {x.intent}</p>}
+            {x.next && (
+              <p class="intent next">
+                {T.fightNext}: {x.next}
+              </p>
+            )}
+            {x.holds && (
+              <p class="intent hold">
+                {T.fightHolds}: {x.holds}
+              </p>
+            )}
+            {x.calling !== undefined && <p class="intent hold">{T.fightCalling}</p>}
+            {x.weak && <p class="weak">{x.weak}</p>}
+            {x.traits.length > 0 && (
+              <p class="foe-traits">
+                {x.traits.map((t) => (
+                  <span class="pill">{t}</span>
+                ))}
+              </p>
+            )}
+          </>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function PartyRow({ p }: { p: FightView['party'][number] }) {
+  const hp = useChange(p.hp);
+  return (
+    <li class={`${p.me ? 'me' : ''} ${p.down ? 'down' : ''} ${hp && hp.d < 0 ? 'struck' : ''}`}>
+      <span class="fparty-name">
+        {p.name}
+        {p.picked && !p.me && <span class="tick"> ✓</span>}
+      </span>
+      <Bar n={p.hp} max={p.hpMax} cls="hp mine" />
+      <span class="fparty-hp">
+        {p.hp}/{p.hpMax}
+        <Delta c={hp} />
+      </span>
+      {p.down && <span class="pill">{T.fightDown}</span>}
+      {p.held && <span class="pill warn">{T.fightHeld}</span>}
+      {p.poison > 0 && <span class="pill warn">{T.fightPoison}</span>}
+    </li>
+  );
+}
+
+export function FightPanel({ f, v, locked, onGone }: { f: FightView; v: PlayerView; locked: boolean; onGone: () => void }) {
   const lastRound = useRef(f.round);
   useEffect(() => {
     if (f.round !== lastRound.current) {
@@ -310,10 +448,22 @@ export function FightPanel({ f, v, locked }: { f: FightView; v: PlayerView; lock
       sound.beat('chop', false);
     }
   }, [f.round]);
+  // a blow to you shakes the whole fight
+  const sheet = useRef<HTMLElement>(null);
+  const mine = useChange(f.party.find((p) => p.me)?.hp ?? 0);
+  useEffect(() => {
+    if (mine && mine.d < 0) jolt(sheet.current, 4);
+  }, [mine?.key]);
+  // an ended fight shows its last blow, then fades and goes
+  useEffect(() => {
+    if (!f.ended) return;
+    const t = window.setTimeout(onGone, still() ? 900 : 1700);
+    return () => clearTimeout(t);
+  }, [f.ended, f.id]);
   const groups: Array<FightView['moves'][number]['group']> = ['hit', 'self', 'help', 'item', 'out'];
   return (
-    <div class="sheet-wrap fight-wrap" role="dialog" aria-labelledby="fight-title">
-      <section class="sheet fight">
+    <div class={`sheet-wrap fight-wrap ${f.ended ? 'ended' : ''}`} role="dialog" aria-labelledby="fight-title">
+      <section class={`sheet fight ${mine && mine.d < 0 ? 'hurt' : ''}`} ref={sheet}>
         <header class="fight-head">
           <h2 id="fight-title">{T.fightTitle}</h2>
           <span class="fight-round">
@@ -323,65 +473,13 @@ export function FightPanel({ f, v, locked }: { f: FightView; v: PlayerView; lock
         <div class="fight-grid">
         <div class="fight-side">
         <ul class="foes">
-          {f.foes.map((x) => (
-            <li class={`foe ${x.out ? 'out' : ''}`}>
-              <Portrait icon={x.icon} size={x.out ? 's' : 'm'} out={!!x.out} />
-              <div class="foe-body">
-              <div class="foe-top">
-                <b>{x.name}</b>
-                <span class="foe-lvl">{x.level}</span>
-                {x.out && <span class="foe-out">{T.fightOut[x.out] ?? ''}</span>}
-              </div>
-              {!x.out && (
-                <>
-                  <Bar n={x.hp} max={x.hpMax} cls="hp" />
-                  {x.morale !== undefined && (
-                    <span class="fear-row">
-                      <small>{T.combatFear}</small>
-                      <Bar n={x.fear ?? 0} max={x.morale} cls="fear" />
-                    </span>
-                  )}
-                  {x.intent && <p class="intent">→ {x.intent}</p>}
-                  {x.next && (
-                    <p class="intent next">
-                      {T.fightNext}: {x.next}
-                    </p>
-                  )}
-                  {x.holds && (
-                    <p class="intent hold">
-                      {T.fightHolds}: {x.holds}
-                    </p>
-                  )}
-                  {x.calling !== undefined && <p class="intent hold">{T.fightCalling}</p>}
-                  {x.weak && <p class="weak">{x.weak}</p>}
-                  {x.traits.length > 0 && (
-                    <p class="foe-traits">
-                      {x.traits.map((t) => (
-                        <span class="pill">{t}</span>
-                      ))}
-                    </p>
-                  )}
-                </>
-              )}
-              </div>
-            </li>
+          {f.foes.map((x, i) => (
+            <FoeCard key={x.uid} x={x} i={i} />
           ))}
         </ul>
         <ul class="fparty">
           {f.party.map((p) => (
-            <li class={`${p.me ? 'me' : ''} ${p.down ? 'down' : ''}`}>
-              <span class="fparty-name">
-                {p.name}
-                {p.picked && !p.me && <span class="tick"> ✓</span>}
-              </span>
-              <Bar n={p.hp} max={p.hpMax} cls="hp mine" />
-              <span class="fparty-hp">
-                {p.hp}/{p.hpMax}
-              </span>
-              {p.down && <span class="pill">{T.fightDown}</span>}
-              {p.held && <span class="pill warn">{T.fightHeld}</span>}
-              {p.poison > 0 && <span class="pill warn">{T.fightPoison}</span>}
-            </li>
+            <PartyRow key={p.pid} p={p} />
           ))}
           {f.dog && (
             <li class="dog">
@@ -420,7 +518,7 @@ export function FightPanel({ f, v, locked }: { f: FightView; v: PlayerView; lock
             );
           })}
           {f.waiting && <p class="waiting">{T.fightWaiting}</p>}
-          {!f.moves.length && <p class="waiting">{T.fightDown}…</p>}
+          {f.ended ? <p class={`fight-end ${f.ended}`}>{T.fightEnd[f.ended]}</p> : !f.moves.length && <p class="waiting">{T.fightDown}…</p>}
         </div>
         </div>
         </div>
