@@ -18,6 +18,7 @@ export const actions: ActionDef[] = [
   // ------------------------------------------------------------------ the shore
   {
     id: 'x_01',
+    icon: 'spot:footprints',
     group: L.shore,
     spot: 'shore',
     label: 'Прийти до тями',
@@ -190,6 +191,7 @@ export const actions: ActionDef[] = [
   // ------------------------------------------------------------------ home: the hearth
   {
     id: 'x_10',
+    icon: 'wood',
     group: L.hearth,
     label: 'Підкинути плавника',
     visible: hut,
@@ -232,6 +234,7 @@ export const actions: ActionDef[] = [
   },
   {
     id: 'x_13',
+    icon: 'food',
     group: L.hearth,
     label: 'Поїсти біля вогню',
     visible: hut,
@@ -275,6 +278,7 @@ export const actions: ActionDef[] = [
   // ------------------------------------------------------------------ home: the yard
   {
     id: 'x_14',
+    icon: 'spot:well',
     group: L.yard,
     label: 'Розчистити колодязь',
     once: true,
@@ -305,6 +309,7 @@ export const actions: ActionDef[] = [
   },
   {
     id: 'x_16',
+    icon: 'spot:bench',
     group: L.yard,
     label: 'Полагодити верстак',
     once: true,
@@ -324,6 +329,7 @@ export const actions: ActionDef[] = [
   },
   {
     id: 'x_24',
+    icon: 'spot:hides',
     group: L.yard,
     label: 'Поставити чинбарню',
     once: true,
@@ -339,6 +345,7 @@ export const actions: ActionDef[] = [
   },
   {
     id: 'x_31',
+    icon: 'spot:store',
     group: L.yard,
     label: 'Збити полиці',
     once: true,
@@ -354,6 +361,7 @@ export const actions: ActionDef[] = [
   },
   {
     id: 'x_41',
+    icon: 'spear',
     group: L.yard,
     label: 'Вправлятися з остенем',
     visible: { owns: G.spear },
@@ -366,6 +374,7 @@ export const actions: ActionDef[] = [
   },
   {
     id: 'x_42',
+    icon: 'bow',
     group: L.yard,
     label: 'Стріляти по мішені',
     visible: { owns: G.sling },

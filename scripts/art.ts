@@ -11,8 +11,8 @@
 //   tsx scripts/art.ts folk <painted.png> <n> [crop]
 //
 // A map sheet is cut into tiles (client/src/art/<sheet>/r<row>c<col>.webp): the client asks only for
-// the tiles over explored land. The painting itself is kept, a little compressed, in art-src/ —
-// it cannot be painted again the same way.
+// the tiles over explored land; a small preview.webp stands in for each until it comes. The painting
+// itself is kept, a little compressed, in art-src/ — it cannot be painted again the same way.
 //
 // A sheet of things is painted as a 4×3 grid on a transparent (or flat) ground. Each thing is found by
 // its outline, centred in a square and put into an atlas of 128 px cells (client/src/art/things/t<n>.webp).
@@ -73,8 +73,10 @@ function map(src: string, sheet: string, cols: number, rows: number): void {
       magick(src, '-crop', `${tw}x${th}+${c * tw}+${r * th}`, '+repage', '-strip', '-quality', '80', '-define', 'webp:method=6', join(out, `r${r}c${c}.webp`));
     }
   }
+  // a small blurry copy stands in for a tile until the tile itself comes
+  magick(src, '-resize', '384x', '-strip', '-quality', '50', '-define', 'webp:method=6', join(out, 'preview.webp'));
   keep(src, sheet);
-  console.log(`${sheet}: ${w}×${h} → ${cols}×${rows} tiles of ${tw}×${th}`);
+  console.log(`${sheet}: ${w}×${h} → ${cols}×${rows} tiles of ${tw}×${th}, and a preview`);
 }
 
 // ---------------------------------------------------------------------------- things

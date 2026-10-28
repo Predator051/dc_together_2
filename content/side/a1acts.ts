@@ -10,6 +10,7 @@ export const sideActions1: ActionDef[] = [
   // ------------------------------------------------------------------ q_01 the boat
   {
     id: 'x_120',
+    icon: 'boat',
     quest: Q.boat,
     group: L.shore,
     spot: 'water',
@@ -121,6 +122,7 @@ export const sideActions1: ActionDef[] = [
   },
   {
     id: 'x_127',
+    icon: 'feather',
     quest: Q.boat,
     group: L.bunks,
     label: 'Набити пухові подушки',
@@ -239,6 +241,7 @@ export const sideActions1: ActionDef[] = [
   // ------------------------------------------------------------------ q_03 the pack
   {
     id: 'x_156',
+    icon: 'paw',
     quest: Q.pack,
     group: L.grove,
     spot: 'brush',
@@ -258,6 +261,7 @@ export const sideActions1: ActionDef[] = [
   },
   {
     id: 'x_157',
+    icon: 'meat',
     quest: Q.pack,
     group: L.grove,
     spot: 'brush',
@@ -316,6 +320,7 @@ export const sideActions1: ActionDef[] = [
   },
   {
     id: 'x_128',
+    icon: 'brine',
     quest: Q.mason,
     group: L.pan,
     label: 'Поставити відстійник біля чрену',
@@ -350,6 +355,7 @@ export const sideActions1: ActionDef[] = [
   // ------------------------------------------------------------------ q_05 the reed widow
   {
     id: 'x_130',
+    icon: 'spot:fish',
     quest: Q.vekla,
     group: L.reeds,
     spot: 'tracks',
@@ -368,6 +374,7 @@ export const sideActions1: ActionDef[] = [
   },
   {
     id: 'x_131',
+    icon: 'reed',
     quest: Q.vekla,
     group: L.yard,
     label: 'Наготувати снопи на Веклин дах',
@@ -384,6 +391,7 @@ export const sideActions1: ActionDef[] = [
   },
   {
     id: 'x_132',
+    icon: 'brew',
     quest: Q.vekla,
     group: L.reeds,
     spot: 'tracks',
@@ -400,6 +408,7 @@ export const sideActions1: ActionDef[] = [
   },
   {
     id: 'x_133',
+    icon: 'osier',
     quest: Q.vekla,
     group: L.yard,
     label: 'Сплести ятір по-Веклиному й поставити на мілині',
@@ -484,6 +493,7 @@ export const sideActions1: ActionDef[] = [
   },
   {
     id: 'x_137',
+    icon: 'rattle',
     quest: Q.bell,
     group: L.yard,
     label: 'Повісити дзвін над варницею',

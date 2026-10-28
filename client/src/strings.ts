@@ -177,6 +177,7 @@ export const T = {
   tabHero: 'Герой',
   mapHere: 'ти тут',
   mapGo: 'Іти',
+  mapMore: 'Докладніше',
   mapVia: 'Дорогою через',
   mapScout: 'Розвідати',
   mapUnknown: 'Ще не розвідано. Іти туди вперше — тільки вдвох.',

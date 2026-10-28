@@ -30,6 +30,7 @@ export const sideActions2: ActionDef[] = [
   // ------------------------------------------------------------------ q_11 Petryk
   {
     id: 'x_172',
+    icon: 'spot:pier',
     quest: Q.petryk,
     group: L2.pier,
     label: 'Розпитати на пристані про Петрика',
@@ -47,6 +48,7 @@ export const sideActions2: ActionDef[] = [
   // ------------------------------------------------------------------ q_12 the lyre player
   {
     id: 'x_173',
+    icon: 'lyre',
     quest: Q.lyre,
     group: L2.market,
     label: 'Послухати лірника',
@@ -190,6 +192,7 @@ export const sideActions2: ActionDef[] = [
   },
   {
     id: 'x_189',
+    icon: 'book',
     quest: Q.book,
     group: L.bunks,
     label: 'Вписати в книгу імена жителів',
@@ -206,6 +209,7 @@ export const sideActions2: ActionDef[] = [
   // ------------------------------------------------------------------ q_16 old Nychypir
   {
     id: 'x_190',
+    icon: 'salt',
     quest: Q.nychypir,
     group: QL2.mill,
     label: 'Принести Ничипорові чистої солі',
@@ -246,6 +250,7 @@ export const sideActions2: ActionDef[] = [
   },
   {
     id: 'x_192',
+    icon: 'lamp',
     quest: Q.bogman,
     group: L2.bog,
     spot: 'ore',
@@ -315,6 +320,7 @@ export const sideActions2: ActionDef[] = [
   // ------------------------------------------------------------------ q_19 the widow's son
   {
     id: 'x_198',
+    icon: 'salt',
     quest: Q.widow,
     group: L2.market,
     label: 'Віднести Семенові чистої солі',
@@ -336,6 +342,7 @@ export const sideActions2: ActionDef[] = [
   },
   {
     id: 'x_196',
+    icon: 'meat',
     quest: Q.widow,
     group: L.yard,
     label: 'Поставити бочки для засолу',
@@ -353,6 +360,7 @@ export const sideActions2: ActionDef[] = [
   // ------------------------------------------------------------------ q_20 a letter home
   {
     id: 'x_197',
+    icon: 'book',
     quest: Q.letter,
     group: L2.camp,
     spot: 'carts',

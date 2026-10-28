@@ -56,6 +56,7 @@ function costView(g: Game, cost: Record<string, number> | undefined, pid?: Playe
 /** Describe what an action gives: exact amounts, ranges, or "+?" when it depends on luck. */
 /** The mark for an action's button: what it yields; for a sale — what is sold, not the coins. */
 function actionIcon(g: Game, a: ActionDef): string | undefined {
+  if (a.icon) return a.icon;
   const ids = [
     ...(actionSort(g, a) === 'sell' ? Object.keys(a.cost ?? {}) : []),
     ...Object.keys(a.yield ?? {}),

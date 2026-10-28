@@ -36,6 +36,7 @@ export const needs2Resources: ResourceDef[] = [
 export const needs2Actions: ActionDef[] = [
   {
     id: 'x_117',
+    icon: 'felt',
     group: L.bunks,
     label: 'Пошити повстяні ковдри',
     visible: { all: [act2, { flag: 'built:x_64' }] },

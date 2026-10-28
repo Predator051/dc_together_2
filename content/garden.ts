@@ -130,6 +130,7 @@ export const gardenActions: ActionDef[] = [
   },
   {
     id: 'x_202',
+    icon: 'peat',
     group: GR.place,
     label: 'Насипати грядки з торфу',
     visible: { all: [dug, act2] },
@@ -144,6 +145,7 @@ export const gardenActions: ActionDef[] = [
   },
   {
     id: 'x_203',
+    icon: 'osier',
     group: GR.place,
     label: 'Обгородити город тином',
     visible: { flag: 'built:x_202' },
@@ -158,6 +160,7 @@ export const gardenActions: ActionDef[] = [
   },
   {
     id: 'x_204',
+    icon: 'water',
     group: GR.place,
     label: 'Полити город',
     visible: dug,

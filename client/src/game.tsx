@@ -14,10 +14,11 @@ import { Scene } from './scene.js';
 import { IconBell, IconBellOff, IconDown, IconFlame, IconHero, IconLock, IconLog, IconMap, IconMute, IconNotes, IconPair, IconPin, IconSnow, IconSound, IconWork } from './icons.js';
 import { T } from './strings.js';
 import { BagPanel, FightPanel, MapPanel, NearFight, PackList, ResidentsPanel } from './world.js';
+import { preloadLand } from './landmap.js';
 import { Cell } from './cells.js';
 import { heroFace } from './portraits.js';
 import { Thing } from './items.js';
-import { picture, stationSlots, stationUrl } from './pictures.js';
+import { markOf, picture, stationSlots, stationUrl } from './pictures.js';
 import { seatItems, stageItems } from './stage-place.js';
 import { StoreStage } from './store.js';
 import { FolkStage } from './folk.js';
@@ -264,7 +265,7 @@ const SORTS: Array<[EntrySort, string]> = [
 
 /** The mark of a work: what it gives, the place a way leads to, two for a joint one, else the place's. */
 function workMark(e: EntryView, place: string): JSX.Element {
-  if (e.icon) return e.icon.startsWith('@') ? picture(e.icon) : <Thing icon={e.icon} />;
+  if (e.icon) return markOf(e.icon) ?? <Thing icon={e.icon} />;
   return e.kind === 'scene' || e.kind === 'pool' ? <IconPair /> : picture(place);
 }
 
@@ -984,6 +985,14 @@ export function Game({ s }: { s: NetState }) {
     return () => window.clearTimeout(id);
   }, [s.toast?.id]);
 
+  // the painted land is fetched while the work is looked at, so the map opens painted, not dark
+  const seenLand = v.map.nodes.filter((n) => n.known).map((n) => n.id).join();
+  useEffect(() => {
+    if (!v.tabs.includes('map')) return;
+    const id = window.setTimeout(() => preloadLand(v.map), 1500);
+    return () => window.clearTimeout(id);
+  }, [seenLand]);
+
   const hasNotes = v.journal.clues.length + v.journal.questions.length + v.journal.people.length + v.bestiary.length > 0;
   const groups = useMemo(() => v.groups.filter((g) => g.entries.length > 0 || g.desc), [v.groups]);
   const hasMap = v.tabs.includes('map');
@@ -1180,7 +1189,7 @@ export function Game({ s }: { s: NetState }) {
             </div>
           )}
           {mid === 'work' && work}
-          {mid === 'map' && <MapPanel v={v} locked={locked} now={now} />}
+          {mid === 'map' && <MapPanel v={v} locked={locked} now={now} desktop={desktop} />}
           {mid === 'hero' && <HeroPanel v={v} locked={locked} desktop={desktop} />}
           {mid === 'work' && (
             <div class="only-mobile mini-log">
