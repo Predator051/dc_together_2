@@ -135,6 +135,7 @@ export const ui: Record<string, string> = {
   tool_quiet: 'тихий крок',
   tool_disguise: 'не впізнати',
   tool_dry: 'сухі ноги',
+  tool_scythe: 'коса',
   outfit_fight: 'Бій',
   outfit_work: 'Промисел',
 

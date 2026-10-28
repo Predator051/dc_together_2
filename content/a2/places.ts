@@ -26,6 +26,7 @@ export const areas2: AreaDef[] = [
       { to: A.well, time: 12 * SEC },
       { to: A.flat, time: 14 * SEC },
       { to: A2.town, time: 12 * SEC },
+      { to: 'a_15', time: 14 * SEC },
     ],
   },
   {
@@ -38,7 +39,10 @@ export const areas2: AreaDef[] = [
     scout: S2.gate,
     visible: act2,
     foes: [{ enemy: E2.snatcher, n: [1, 2], w: 1, if: { all: [{ flag: 'p2_bounty' }, { not: { tool: 'disguise' } }] } }],
-    links: [{ to: A.shore, time: 16 * SEC, if: { flag: 'built:x_186' } }],
+    links: [
+      { to: A.shore, time: 16 * SEC, if: { flag: 'built:x_186' } },
+      { to: 'a_16', time: 16 * SEC },
+    ],
     desc: [
       { if: { flag: 'p2_bounty' }, text: 'Місто цеху. На воротах — біла грамота з вашими прикметами.' },
       { text: 'Місто цеху над гирлом. Гори солі під навісами, управа зі знаком, торг, пристань.' },

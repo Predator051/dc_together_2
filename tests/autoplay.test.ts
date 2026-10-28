@@ -130,3 +130,35 @@ describe('act two has no dead ends when the stores are emptied', () => {
     }
   });
 });
+
+const ACT3 = (w: World) => !!w.state.flags['p2_act3_done'] && !w.state.scene;
+const STORY3 = ['s_100', 's_101', 's_102', 's_103', 's_104', 's_105', 's_106', 's_107', 's_108', 's_109', 's_110', 's_111', 's_112', 's_114'];
+
+describe('two bots play act three to its end', () => {
+  for (const seed of [1, 2]) {
+    it(`seed ${seed}`, { timeout: 900_000 }, () => {
+      const a1 = autoplay({}, {}, { seed, until: ACT1 });
+      const a2 = autoplay({}, {}, { from: a1.world, until: ACT2, maxSteps: 150000, stallLimit: 15000 });
+      expect(a2.done).toBe(true);
+      const start = a2.world.now;
+      const r = autoplay({}, {}, { from: a2.world, until: ACT3, maxSteps: 200000, stallLimit: 20000 });
+      if (!r.done) console.log(r.reason, show(r.world));
+      expect(r.done).toBe(true);
+      for (const s of STORY3) expect(r.world.state.flags[`done:${s}`], s).toBe(1);
+      const minutes = (r.world.now - start) / 60000;
+      expect(minutes).toBeGreaterThan(25);
+      expect(minutes).toBeLessThan(200);
+      expect(Object.keys(r.world.state.residents).length).toBe(10);
+      expect(r.world.state.meta.actDone).toBe(3);
+    });
+  }
+
+  it('a careless partner does not stop the act', { timeout: 900_000 }, () => {
+    const a1 = autoplay({}, {}, { seed: 17, until: ACT1 });
+    const a2 = autoplay({}, {}, { from: a1.world, until: ACT2, maxSteps: 150000, stallLimit: 15000 });
+    expect(a2.done).toBe(true);
+    const r = autoplay({}, { careless: true, seed: 5 }, { from: a2.world, until: ACT3, maxSteps: 300000, stallLimit: 60000 });
+    if (!r.done) console.log(r.reason, show(r.world));
+    expect(r.done).toBe(true);
+  });
+});

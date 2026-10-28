@@ -144,6 +144,8 @@ export interface DelveState {
   lightMax: number;
   /** Way each player wants to go: `go:<room>`. */
   picks: Partial<Record<PlayerId, string>>;
+  /** Deeds done on this trip that can be done once a trip (a well drawn, a gully mown). */
+  used?: string[];
   /** What happened last, per player. */
   lines: Record<PlayerId, string[]>;
 }

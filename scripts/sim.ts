@@ -4,6 +4,7 @@
 import { content } from '../content/index.js';
 import { E, G, U } from '../content/a1/ids.js';
 import { E2, G2 } from '../content/a2/ids.js';
+import { E3, G3, T3 } from '../content/a3/ids.js';
 import type { PlayerId, Slot } from '../shared/src/content.js';
 import { xpForLevel } from '../shared/src/rules.js';
 import { ContentIndex, Game, newWorld } from '../server/src/engine/index.js';
@@ -74,11 +75,33 @@ export const STAGES: Record<string, Kit> = {
     bag: { [U.bandage]: 3, [U.torch]: 2, [U.rattle]: 1, [U.brew]: 1 },
     dog: true,
   },
+  // act three: the end of act two (as the bots reach it), then the steppe forge
+  E8: {
+    level: 12,
+    hunter: { weapon: G2.sabre, body: G2.quilt, legs: G.boots, offhand: G2.ironshield, head: G.helm, hands: G2.bracers },
+    maker: { weapon: G2.cleaver, body: G2.quilt, legs: G.boots, offhand: G2.ironshield, head: G.helm, hands: G2.bracers },
+    bag: { [U.bandage]: 3, [U.torch]: 2, [U.rattle]: 1, [U.brew]: 1 },
+    dog: true,
+  },
+  E9: {
+    level: 13,
+    hunter: { weapon: G3.longbow, body: G2.quilt, legs: G.boots, offhand: G2.ironshield, head: G3.cap, hands: G2.bracers },
+    maker: { weapon: G3.mace, body: G3.lamellar, legs: G.boots, offhand: G2.ironshield, head: G3.cap, hands: G2.bracers },
+    bag: { [U.bandage]: 3, [U.torch]: 2, [U.rattle]: 1, [U.brew]: 1, [U.arrow]: 20 },
+    dog: true,
+  },
+  E10: {
+    level: 15,
+    hunter: { weapon: G3.longbow, body: G3.lamellar, legs: G.boots, offhand: G2.ironshield, head: G3.cap, hands: G2.bracers },
+    maker: { weapon: G3.mace, body: G3.lamellar, legs: G.boots, offhand: G2.ironshield, head: G3.cap, hands: G2.bracers },
+    bag: { [U.bandage]: 3, [U.torch]: 2, [U.rattle]: 1, [U.brew]: 1, [U.arrow]: 20, [T3.drum]: 1 },
+    dog: true,
+  },
 };
 
 const LEVEL_UPS: Record<'hunter' | 'maker', string[]> = {
-  hunter: ['agi', 'end', 'per', 'agi', 'end', 'agi', 'end', 'agi'],
-  maker: ['str', 'end', 'end', 'str', 'agi', 'end', 'str', 'end'],
+  hunter: ['agi', 'end', 'per', 'agi', 'end', 'agi', 'end', 'agi', 'end', 'agi', 'end', 'per', 'agi', 'end'],
+  maker: ['str', 'end', 'end', 'str', 'agi', 'end', 'str', 'end', 'str', 'end', 'agi', 'str', 'end', 'str'],
 };
 
 function makeWorld(kit: Kit, seed: number, who: 'both' | 'hunter' | 'maker'): Game {
@@ -166,6 +189,13 @@ const TABLE: Array<{ name: string; foes: Array<{ enemy: string; n?: number }>; s
   { name: 'Хапуни ×2', foes: [{ enemy: E2.snatcher, n: 2 }], stages: ['E5', 'E6'], who: ['both', 'maker'] },
   { name: 'Білий + 2 пси', foes: [{ enemy: E.white }, { enemy: E.hound, n: 2 }], stages: ['E5', 'E6'], who: ['both'] },
   { name: 'Гак + хапун', foes: [{ enemy: E2.hook }, { enemy: E2.snatcher, n: 1 }], stages: ['E5', 'E6', 'E7'], who: ['both'] },
+  { name: 'Тарпан', foes: [{ enemy: E3.tarpan }], stages: ['E8', 'E9'], who: ['both', 'hunter', 'maker'] },
+  { name: 'Тарпани ×2', foes: [{ enemy: E3.tarpan, n: 2 }], stages: ['E8', 'E9'], who: ['both'] },
+  { name: 'Степовики ×2', foes: [{ enemy: E3.robber, n: 2 }], stages: ['E8', 'E9'], who: ['both', 'hunter', 'maker'] },
+  { name: 'Степовики ×3', foes: [{ enemy: E3.robber, n: 3 }], stages: ['E8', 'E9'], who: ['both'] },
+  { name: 'Вербувальник', foes: [{ enemy: E3.recruiter }], stages: ['E8', 'E9'], who: ['both', 'hunter', 'maker'] },
+  { name: 'Верб. + тихий', foes: [{ enemy: E3.recruiter }, { enemy: E3.silent }], stages: ['E8', 'E9'], who: ['both'] },
+  { name: 'Гудим', foes: [{ enemy: E3.osavul }], stages: ['E8', 'E9', 'E10'], who: ['both'] },
 ];
 
 if (process.argv[1]?.endsWith('sim.ts')) {

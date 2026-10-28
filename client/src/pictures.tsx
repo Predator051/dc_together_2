@@ -323,6 +323,20 @@ const PICS: Record<SpotIcon, () => JSX.Element> = {
       <path d="M23 22c0-3 1.2-5 3.4-6M23 22c0-2.2-1-4-3.2-5" />
     </Pic>
   ),
+  mound: () => (
+    <Pic>
+      <path d="M2 26c5-1 7-9 14-9s9 8 14 9" />
+      <path d="M14 17v-7l2-3 2 3v7" />
+      <path class="steam" d="M14 12h4" />
+    </Pic>
+  ),
+  tent: () => (
+    <Pic>
+      <path d="M4 26L16 8l12 18z" />
+      <path d="M16 8v18M12 26l4-7 4 7" />
+      <path class="steam" d="M14 6l2 2 2-2" />
+    </Pic>
+  ),
   berry: () => (
     <Pic>
       <path d="M16 4c-1 4-4 7-8 9M16 4c2 4 5 6 8 7M16 4v9" />
@@ -734,6 +748,55 @@ function Willow() {
   );
 }
 
+function Steppe() {
+  return (
+    <>
+      <Floor tone="salt" />
+      {/* feather grass in waves, a barrow with a stone woman, a well sweep on the right */}
+      <path class="rut" d="M200 350c-6-70 10-140 0-210s6-100 0-140" />
+      <path class="rut" d="M214 350c-6-70 10-140 0-210s6-100 0-140" />
+      <path class="mud" d="M120 60c30-40 110-40 150 0z" />
+      <path class="log thin" d="M194 40v-16l6-6 6 6v16" />
+      <path class="stakes" d="M330 90l20-60M330 90v40M322 130h16" />
+      <path class="log thin" d="M350 30v14" />
+      <path class="wave" d="M20 150c20-8 40 8 60 0M90 230c20-8 40 8 60 0M260 170c20-8 40 8 60 0M290 260c20-8 40 8 60 0M30 300c20-8 40 8 60 0" />
+      <Tuft x={40} y={120} cls="reed dry" />
+      <Tuft x={90} y={190} s={0.8} cls="reed dry" />
+      <Tuft x={300} y={210} s={0.9} cls="reed dry" />
+      <Tuft x={350} y={300} cls="reed dry" />
+      <Tuft x={130} y={320} s={0.8} cls="reed dry" />
+      <Tuft x={260} y={110} s={0.7} cls="reed dry" />
+    </>
+  );
+}
+
+function Quarry() {
+  const huts: Array<[number, number, number]> = [
+    [50, 100, 1],
+    [100, 80, 0.9],
+    [300, 90, 1],
+    [340, 120, 0.8],
+    [80, 170, 0.8],
+  ];
+  return (
+    <>
+      <Floor tone="salt" />
+      {/* the white wall of the quarry along the top, huts of branches under it, smoke */}
+      <path class="mud" d="M0 0h400v40c-40 20-80 10-120 18s-80 20-160 10S20 60 0 50z" />
+      <path class="stone" d="M40 30l20-8M120 36l24-6M250 30l20-10M330 40l24-8" />
+      {huts.map(([x, y, k]) => (
+        <path class="log thin" transform={`translate(${x} ${y}) scale(${k})`} d="M-18 16L0-14l18 30zM0-14v30" />
+      ))}
+      <path class="smoke" d="M200 70c-6-8 6-12 0-20M210 62c-6-8 6-12 0-20" />
+      <circle class="ember" cx="200" cy="82" r="6" />
+      <path class="path" d="M200 350c-10-60 10-120 0-180s8-60 0-80" />
+      <Tuft x={30} y={300} s={0.9} cls="reed dry" />
+      <Tuft x={370} y={280} cls="reed dry" />
+      <Tuft x={330} y={330} s={0.7} cls="reed dry" />
+    </>
+  );
+}
+
 const GROUNDS: Record<SceneId, (p: { warm: boolean }) => JSX.Element> = {
   yard: Yard,
   shore: Shore,
@@ -748,6 +811,8 @@ const GROUNDS: Record<SceneId, (p: { warm: boolean }) => JSX.Element> = {
   bog: Bog,
   isle: Isle,
   willow: Willow,
+  steppe: Steppe,
+  quarry: Quarry,
 };
 
 /** The drawn ground of a plan. */

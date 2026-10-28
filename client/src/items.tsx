@@ -21,6 +21,84 @@ function Ink({ children }: { children: ComponentChildren }) {
 }
 
 const DRAW: Record<ItemIcon, () => JSX.Element> = {
+  // ----- act three: the road south -----
+  hay: () => (
+    <Ink>
+      <path d="M4 19c1-6 4-10 8-11 4 1 7 5 8 11z" />
+      <path class="thin" d="M8 19c.5-4 2-7 4-8M16 19c-.5-4-2-7-4-8M12 11v8" />
+      <path d="M3 19h18" />
+    </Ink>
+  ),
+  tar: () => (
+    <Ink>
+      <path d="M7 8h10l-1 11a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z" />
+      <path class="fill" d="M7.4 12.5h9.2l-.6 6.5a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2z" />
+      <path d="M9 8V5h6v3M15 5.5l3-2" />
+    </Ink>
+  ),
+  wagon: () => (
+    <Ink>
+      <path d="M3 13h14l2-5M5 13l1.5-5H19" />
+      <circle cx="7" cy="17" r="3" />
+      <circle cx="16" cy="17" r="3" />
+      <path class="thin" d="M19 8l3-1.5" />
+    </Ink>
+  ),
+  oxen: () => (
+    <Ink>
+      <path d="M6 8c-2-1-3-3-2.5-5M18 8c2-1 3-3 2.5-5" />
+      <path d="M6 8c0 6 2 11 6 12 4-1 6-6 6-12-3-2-9-2-12 0z" />
+      <path class="thin" d="M9.5 11.5h.01M14.5 11.5h.01M10 17c1.2.8 2.8.8 4 0" />
+    </Ink>
+  ),
+  keg: () => (
+    <Ink>
+      <path d="M7 4h10c1.5 3 1.5 13 0 16H7c-1.5-3-1.5-13 0-16z" />
+      <path class="thin" d="M6 8.5h12M6 15.5h12" />
+      <path d="M17.5 12h3" />
+    </Ink>
+  ),
+  wheel: () => (
+    <Ink>
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="12" cy="12" r="2" />
+      <path class="thin" d="M12 3.5V10M12 14v6.5M3.5 12H10M14 12h6.5M6 6l4.6 4.6M13.4 13.4L18 18M18 6l-4.6 4.6M10.6 13.4L6 18" />
+    </Ink>
+  ),
+  drum: () => (
+    <Ink>
+      <ellipse cx="12" cy="8" rx="8" ry="3" />
+      <path d="M4 8v8c0 1.7 3.6 3 8 3s8-1.3 8-3V8" />
+      <path class="thin" d="M4.5 10.5l3 7M9 11l2 8M15 11l-2 8M19.5 10.5l-3 7" />
+    </Ink>
+  ),
+  scythe: () => (
+    <Ink>
+      <path d="M6 21L15 3" />
+      <path d="M15 3c3 0 6 1.5 7 4-3-1-6-1-8.5 0" />
+      <path class="thin" d="M9.5 14l3 1.5" />
+    </Ink>
+  ),
+  lamellar: () => (
+    <Ink>
+      <path d="M8 3.5L5 6v14h14V6l-3-2.5c-1 1.5-2.4 2.5-4 2.5s-3-1-4-2.5z" />
+      <path class="thin" d="M5 10h14M5 14h14M5 18h14M9 6v14M12 6.5V20M15 6v14" />
+    </Ink>
+  ),
+  mace: () => (
+    <Ink>
+      <path d="M8 21l7-12" />
+      <path d="M11 6l9 3.5-1.5 2.5L9.5 8.5z" />
+      <path class="thin" d="M9.5 8.5L6 5.5" />
+    </Ink>
+  ),
+  longbow: () => (
+    <Ink>
+      <path d="M5 3c5 1 2 6 5 9s8 0 9 9" />
+      <path class="thin" d="M5 3l14 18" />
+      <path class="thin" d="M8.5 5.5c1.5 0 2.5.6 2.5 2M15.5 15.5c1.5 0 2.5.6 2.5 2" />
+    </Ink>
+  ),
   // ----- materials -----
   wood: () => (
     <Ink>

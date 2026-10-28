@@ -5,7 +5,7 @@ import { autoplay } from '../tests/harness.js';
 
 const flag = process.argv[2] ?? 'done:s_09';
 const dataDir = resolve(process.env.DATA_DIR ?? './data');
-const r = autoplay({}, {}, { seed: 5, until: (w) => !!w.state.flags[flag] && !w.state.scene });
+const r = autoplay({}, {}, { seed: 5, maxSteps: 500000, stallLimit: 30000, until: (w) => !!w.state.flags[flag] && !w.state.scene });
 if (!r.done) throw new Error('could not reach ' + flag);
 const st = new Storage(join(dataDir, 'world.db'));
 st.saveWorld(r.world.state.version, JSON.stringify(r.world.state));

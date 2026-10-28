@@ -2247,6 +2247,15 @@ mark {
 .light.low {
   color: var(--cinnabar-ink);
 }
+.light.road .spot-pic {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+.light.road .light-bar > span {
+  background: linear-gradient(90deg, #7d6a3e, #c9b27a);
+  box-shadow: none;
+}
 .light.low .light-bar > span {
   background: var(--cinnabar);
   animation: flicker 1.2s ease-in-out infinite alternate;

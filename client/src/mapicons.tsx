@@ -5,6 +5,20 @@ import type { SceneId } from '../../shared/src/pictures.js';
 
 /** Paths in a 24×24 box, centred on 12,12. */
 const DRAW: Record<SceneId, () => JSX.Element> = {
+  steppe: () => (
+    <>
+      <path d="M3 17c4-1 5-6 9-6s5 5 9 6" />
+      <path d="M11 11V6.5l1-1.5 1 1.5V11" />
+      <path class="thin" d="M3 20.5c2-1 4-1 6 0s4 1 6 0 4-1 6 0" />
+    </>
+  ),
+  quarry: () => (
+    <>
+      <path d="M3 8h18M3 8v3c3 1 6 0 9 1s6 0 9-1V8" />
+      <path d="M7 20l4-6 4 6zM13 20l3-4.5 3 4.5" />
+      <path class="thin" d="M11 14v6" />
+    </>
+  ),
   yard: () => (
     <>
       <path d="M4 12l8-7 8 7" />

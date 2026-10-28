@@ -46,7 +46,7 @@ export class Bot {
     if (v.summary) return { c: 'ack', what: 'summary' };
     if (v.welcome) return { c: 'ack', what: 'welcome' };
     if (v.fight) return this.fight(v);
-    if (v.scene) return v.scene.paused ? null : this.scene(v);
+    if (v.scene) return v.scene.paused ? null : this.scene(v, g);
     if (v.proposal && !v.proposal.mine) return { c: 'accept' };
     if (v.hero.perkChoice) return { c: 'perk', id: v.hero.perkChoice[0]!.id };
     if (v.hero.points > 0) {
@@ -198,11 +198,12 @@ export class Bot {
 
   // ------------------------------------------------------------------ scenes
 
-  private scene(v: PlayerView): Command | null {
+  private scene(v: PlayerView, g: Game): Command | null {
     const sc = v.scene!;
     if (sc.waiting) return null;
     if (sc.kind === 'text') return { c: 'next' };
     if (sc.kind === 'fight') return null;
+    if (sc.kind === 'delve' && sc.delve) return this.delve(v, g);
     if (sc.kind === 'stealth' && sc.stealth) return this.stealth(v);
     if (sc.kind === 'operation' && sc.operation) return this.operation(v);
     if (sc.kind === 'choice' && sc.options) {
@@ -221,6 +222,38 @@ export class Bot {
       return { c: 'choose', id: opts[n % opts.length]!.id };
     }
     return null;
+  }
+
+  /**
+   * A trip along a map with a bar of light or supplies: take what a place gives for the bar, then
+   * go the cheapest way to the place the story waits in (follow the partner if they chose first).
+   */
+  private delve(v: PlayerView, g: Game): Command | null {
+    const d = v.scene!.delve!;
+    if (d.exits.some((e) => e.mine)) return null;
+    const gain = d.acts.find((a) => a.enabled && a.light < 0);
+    if (gain) return { c: 'choose', id: gain.id };
+    const theirs = d.exits.find((e) => e.partner && e.enabled);
+    if (theirs) return { c: 'choose', id: theirs.id };
+    const ok = d.exits.filter((e) => e.enabled && e.light <= d.light);
+    if (!ok.length) return d.canLeave ? { c: 'choose', id: 'leave' } : null;
+    if (this.o.careless) return { c: 'choose', id: this.rng.pick(ok).id };
+    const st = g.s.scene?.delve;
+    const map = st && g.ix.maps.get(st.map);
+    if (!st || !map) return { c: 'choose', id: ok[0]!.id };
+    // the goal: a place whose story beat is unconditional (the end of the road)
+    const goals = new Set(Object.entries(map.rooms).filter(([, r]) => (r.enter ?? []).some((e) => !e.if)).map(([id]) => id));
+    // cheapest light from each room to a goal (risks counted by their odds)
+    const cost = new Map<string, number>([...goals].map((id) => [id, 0]));
+    for (let k = 0; k < 20; k++)
+      for (const [id, r] of Object.entries(map.rooms))
+        for (const e of r.exits) {
+          if (!g.delveExitVisible(e) || !cost.has(e.to)) continue;
+          const c = (e.light ?? 1) + (e.risk ? e.risk.p * (e.risk.light ?? 0) : 0) + cost.get(e.to)!;
+          if (c < (cost.get(id) ?? Infinity)) cost.set(id, c);
+        }
+    const best = [...ok].sort((a, b) => a.light + (cost.get(a.to) ?? 99) - (b.light + (cost.get(b.to) ?? 99)))[0]!;
+    return { c: 'choose', id: best.id };
   }
 
   private stealth(v: PlayerView): Command | null {
@@ -394,6 +427,18 @@ export class Bot {
     return null;
   }
 
+  /** Deeds (not trade) that raise this trust flag and can still raise it. */
+  private helps(g: Game, flag: string): ActionDef[] {
+    return this.c.actions.filter(
+      (a) =>
+        a.kind === 'home' &&
+        !a.oncePerPlayer &&
+        (a.effects ?? []).some((e) => 'inc' in e && e.inc === flag && (e.max ?? Infinity) > g.flag(flag)) &&
+        (!a.visible || g.test(a.visible, this.pid)) &&
+        areaKnown(g, g.ix.areaOf(a.group)),
+    );
+  }
+
   private storyNeedsCoins(g: Game): boolean {
     return this.c.scenes.some(
       (sc) => !!sc.cost?.[COIN] && !(sc.once !== false && g.flag(`done:${sc.id}`)) && (!sc.visible || g.test(sc.visible, this.pid)) && g.stockAll(COIN) < sc.cost[COIN]!,
@@ -451,6 +496,16 @@ export class Bot {
         continue;
       }
       if (v.me.area !== area) return this.goTowards(v, g, area);
+    }
+    // trust some people give for help, not for goods: go and help
+    if (trust) {
+      const help = this.helps(g, trust.flag);
+      for (const a of help) {
+        const e = here.find((x) => x.id === a.id);
+        if (e?.enabled) return { c: 'act', id: a.id };
+      }
+      const carried = help.find((a) => Object.entries(a.cost ?? {}).every(([r, n]) => (g.p(this.pid).bag[r] ?? 0) >= n));
+      if (carried && v.me.area !== g.ix.areaOf(carried.group)) return this.goTowards(v, g, g.ix.areaOf(carried.group));
     }
     if (coins <= 0 && !trust) return null;
     const sells = this.c.actions.filter((a) => {
@@ -537,6 +592,7 @@ export class Bot {
     if (wood && g.p(this.pid).needs && g.stoveState() !== 'warm' && (g.s.res[wood] ?? 0) < 6) out.set(wood, 6);
     // trust is bought with goods: keep something to sell
     const trust = this.trustNeed(g);
+    if (trust) for (const a of this.helps(g, trust.flag).slice(0, 1)) for (const [r, n] of Object.entries(a.cost ?? {})) if (g.stockAll(r) < n * 2) out.set(r, Math.max(out.get(r) ?? 0, n * 2 - g.stockAll(r)));
     if (trust) {
       const salt = this.c.resources.find((r) => r.name === 'Сіль')?.id;
       if (salt && g.stockAll(salt) < 8) out.set(salt, 8 - g.stockAll(salt));
@@ -571,7 +627,7 @@ export class Bot {
   private worthMaking(a: ActionDef, g: Game): boolean {
     if (g.atLimit(a)) return false;
     // dishes and the like must not eat what the story will ask for
-    if (Object.keys(a.yield ?? {}).some((y) => g.ix.res.get(y)?.kind === 'use')) {
+    if (Object.keys(a.yield ?? {}).some((y) => g.ix.res.get(y)?.kind === 'use' && !g.ix.res.get(y)?.use?.reusable)) {
       for (const [r, n] of Object.entries(a.cost ?? {})) if (g.stockAll(r) - n < this.reserve(g, r)) return false;
     }
     const y = Object.keys(a.yield ?? {});
@@ -650,11 +706,12 @@ export class Bot {
 
   /** A story scene is there but asks for a higher level. */
   private levelGated(g: Game): boolean {
+    const levels = (c: Cond): Cond[] => ('all' in c ? c.all.flatMap(levels) : 'level' in c ? [c] : []);
     for (const sc of this.c.scenes) {
-      if (sc.pool || !sc.enabled || !('level' in sc.enabled)) continue;
+      if (sc.pool || !sc.enabled) continue;
       if (g.flag(`done:${sc.id}`)) continue;
       if (sc.visible && !g.test(sc.visible, this.pid)) continue;
-      if (!g.test(sc.enabled, this.pid)) return true;
+      if (levels(sc.enabled).some((c) => !g.test(c, this.pid))) return true;
     }
     return false;
   }
@@ -743,6 +800,7 @@ export class Bot {
     const h = v.hero;
     if (!h.canChange) return null;
     const keepKnife = v.me.role === 'maker';
+    const wantTools = v.me.role === 'maker' ? this.toolsWanted(g) : new Set<string>();
     for (const s of h.slots) {
       if (!s.options.length) continue;
       const cur = s.item?.id;
@@ -753,6 +811,7 @@ export class Bot {
         let x = (gr.armor ?? 0) * 3 + (gr.hp ?? 0) + (gr.carry ?? 0) * 0.5 + (gr.resist?.length ?? 0) * 3 + (gr.dodge ?? 0) * 20;
         if (gr.dmg) x += (gr.dmg[0] + gr.dmg[1]) * 1.5;
         if (gr.tools?.includes('blade') && keepKnife) x += 30;
+        if (gr.tools?.some((t) => wantTools.has(t))) x += 60;
         if (gr.ammo && (g.s.res[gr.ammo] ?? 0) + (g.p(this.pid).bag[gr.ammo] ?? 0) < 3) x -= 20;
         return x;
       };
@@ -760,6 +819,20 @@ export class Bot {
       if (score(best.id) > score(cur) + 0.5) return { c: 'equip', slot: s.slot, id: best.id };
     }
     return null;
+  }
+
+  /** Tools the gathering of wanted things asks for and this hero lacks. */
+  private toolsWanted(g: Game): Set<string> {
+    const want = this.wanted(g);
+    const out = new Set<string>();
+    for (const a of this.c.actions) {
+      if (a.kind !== 'gather' || !a.tool || (a.visible && !g.test(a.visible, this.pid))) continue;
+      if (!areaKnown(g, g.ix.areaOf(a.group))) continue;
+      if (Object.keys(a.yield ?? {}).some((r) => want.has(r))) out.add(a.tool);
+    }
+    // a tool kept for its own reasons (a blade) stays wanted only if nothing else gives it
+    out.delete('blade');
+    return out;
   }
 
   private pack(v: PlayerView, g: Game): Command | null {
@@ -785,6 +858,9 @@ export class Bot {
         if (node.type !== 'operation') continue;
         for (const m of node.moves) for (const [id, n] of Object.entries(m.cost ?? {})) want[id] = Math.max(want[id] ?? 0, n * Math.ceil(node.turns / 2));
       }
+    // what helping people away from home costs goes in the bag
+    const trust = this.trustNeed(g);
+    if (trust) for (const a of this.helps(g, trust.flag).slice(0, 1)) for (const [id, n] of Object.entries(a.cost ?? {})) want[id] = Math.max(want[id] ?? 0, n * 2);
     // what an errand away from home is paid with goes in the bag
     for (const a of this.c.actions) {
       if (!this.questStep(a, g) || g.ix.areaOf(a.group) === g.ix.homeArea) continue;

@@ -209,6 +209,55 @@ const DRAW: Record<PortraitId, () => JSX.Element> = {
       <path class="thin" d="M33 30c3 1 6 0 8-2M34 25c3 0 6-1 8-3M35 34c3 1 6 1 8 0" />
     </Ink>
   ),
+  tarpan: () => (
+    <Ink>
+      <path d="M30 8l2-4 2 5" />
+      <path d="M30 8c-6 1-12 6-15 12l-6 9c-1 3 1 5 4 4l7-3c2 4 5 9 9 11h8c1-6 0-14-2-20-1-5-2-10-5-13z" />
+      <path class="thick" d="M31 9c-3 3-5 8-5 14M34 11c-2 3-3 8-3 12" />
+      <Eye x={21} y={19} />
+      <path class="thin" d="M11 30.5l2 .5M13 27l1.5 1" />
+    </Ink>
+  ),
+  robber: () => (
+    <Ink>
+      <path d="M24 7c-5 0-8 4-8 9v3l-7 22h30l-7-22v-3c0-5-3-9-8-9z" />
+      <path d="M15 14c3-3 15-3 18 0l3 1-3 1c-3-2-15-2-18 0l-3-1z" />
+      <path class="shade" d="M19.5 19c1.5 2.5 7.5 2.5 9 0" />
+      <path class="thin" d="M18 24c2 2 10 2 12 0" />
+      <path d="M38 12c-2 8-2 18 0 26" />
+    </Ink>
+  ),
+  recruiter: () => (
+    <Ink>
+      <path d="M24 6c-5 0-8 4-8 9v4l-7 22h30l-7-22v-4c0-5-3-9-8-9z" />
+      <path d="M16 10c3-3 13-3 16 0" />
+      <path class="shade" d="M19.5 18.5c1.5 3 7.5 3 9 0" />
+      <path class="thin" d="M15 28h18M15 32h18M24 24v17" />
+      <circle cx="11" cy="32" r="7" />
+      <path class="thin" d="M7 28l8 8M15 28l-8 8" />
+    </Ink>
+  ),
+  silent: () => (
+    <Ink>
+      <path d="M24 7c-5 0-8 4-8 9v4l-6 21h28l-6-21v-4c0-5-3-9-8-9z" />
+      <circle class="eye" cx="20.5" cy="16" r="1.1" />
+      <circle class="eye" cx="27.5" cy="16" r="1.1" />
+      <path class="thin" d="M21 21.5h6" />
+      <path d="M38 5v38" />
+      <path d="M36 9l2-5 2 5" />
+      <path class="mark" d="M14 33l3-1M14 36l3-1" />
+    </Ink>
+  ),
+  osavul: () => (
+    <Ink>
+      <path class="thick" d="M24 6c-6 0-9 4-9 10v4L8 42h32l-7-22v-4c0-6-3-10-9-10z" />
+      <path class="shade" d="M19 19.5c1.5 3.5 8.5 3.5 10 0" />
+      <path class="thin" d="M17 14c2-1 4-1.5 7-1.5s5 .5 7 1.5M14 30h20M14 34h20" />
+      <path class="thick" d="M40 10l-4 14" />
+      <circle cx="40.5" cy="8.5" r="3" />
+      <path class="mark" d="M20 27l3 2M25 27l3 2" />
+    </Ink>
+  ),
 };
 
 /** A foe's portrait in its round seal. Unknown names fall back to a mark of a beast. */

@@ -245,6 +245,9 @@ export interface DelveView {
   own: string[];
   light: number;
   lightMax: number;
+  /** The bar's name when it is not a light (a road's supplies); a road is drawn with a cart. */
+  meter?: string;
+  road?: boolean;
   rooms: DelveRoomView[];
   links: Array<[string, string]>;
   exits: Array<{

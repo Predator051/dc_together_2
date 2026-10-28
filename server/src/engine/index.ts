@@ -1167,16 +1167,17 @@ export class Game {
 
   delveActVisible(map: DelveMapDef, a: DelveActDef, pid: PlayerId): boolean {
     if (a.visible && !this.test(a.visible, pid)) return false;
+    if (a.once === 'trip') return !this.s.scene?.delve?.used?.includes(a.id);
     if (a.once !== false && this.flag(`dact:${map.id}:${a.id}`)) return false;
     return true;
   }
 
-  delveActBlock(a: DelveActDef, pid: PlayerId): string | null {
+  delveActBlock(a: DelveActDef, pid: PlayerId, n?: DelveNode): string | null {
     const d = this.s.scene?.delve;
     if (a.role && this.p(pid).role !== a.role) return this.ix.ui('err_wrong_role');
     if (a.enabled && !this.test(a.enabled, pid)) return a.disabledHint ? this.render(a.disabledHint, pid) : this.ix.ui('err_not_now');
     if (!this.hasCostAll(a.cost)) return this.ix.ui('err_cost');
-    if (d && (a.light ?? 0) > 0 && d.light < (a.light ?? 0)) return this.ix.ui('delve_no_light');
+    if (d && (a.light ?? 0) > 0 && d.light < (a.light ?? 0)) return n?.meter ? this.render(n.meter.short, pid) : this.ix.ui('delve_no_light');
     return null;
   }
 
@@ -1203,14 +1204,15 @@ export class Game {
     if (optId.startsWith('act:')) {
       const a = (room.acts ?? []).find((x) => `act:${x.id}` === optId);
       if (!a || !this.delveActVisible(map, a, pid)) return this.fail('err_not_now');
-      const block = this.delveActBlock(a, pid);
+      const block = this.delveActBlock(a, pid, n);
       if (block) return { ok: false, err: block };
       d.lines = { p1: [], p2: [] };
       this.payCostAll(a.cost);
       const light = a.light ?? 0;
       d.light -= light;
       if (d.light > d.lightMax) d.lightMax = d.light;
-      if (a.once !== false) this.s.flags[`dact:${map.id}:${a.id}`] = 1;
+      if (a.once === 'trip') (d.used ??= []).push(a.id);
+      else if (a.once !== false) this.s.flags[`dact:${map.id}:${a.id}`] = 1;
       this.delveSay(a.log, pid);
       this.apply(a.effects, pid);
       if (d.light <= 0) {
@@ -1221,8 +1223,9 @@ export class Game {
     }
 
     if (!optId.startsWith('go:')) return this.fail('err_not_now');
-    const exit = room.exits.find((e) => `go:${e.to}` === optId);
-    if (!exit || !this.delveExitVisible(exit)) return this.fail('err_not_now');
+    // two ways to one place may stand for different conditions: the one that shows now counts
+    const exit = room.exits.find((e) => `go:${e.to}` === optId && this.delveExitVisible(e));
+    if (!exit) return this.fail('err_not_now');
     if (exit.enabled && !this.test(exit.enabled, pid)) return this.fail('err_not_now');
     d.picks[pid] = optId;
     if (!this.joinedIds().every((x) => d.picks[x] === optId)) return OK;

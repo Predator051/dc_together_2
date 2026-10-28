@@ -34,25 +34,35 @@ import { residents2 } from './a2/residents.js';
 import { resources2 } from './a2/resources.js';
 import { scenesA2, suppersA2 } from './a2/scenes.js';
 import { scenesA2b } from './a2/scenes2.js';
+import { actions3, fx3 } from './a3/actions.js';
+import { enemies3 } from './a3/enemies.js';
+import { clues3, goals3, mysteries3, npcs3 } from './a3/journal.js';
+import { areas3, locations3 } from './a3/places.js';
+import { residents3 } from './a3/residents.js';
+import { resources3 } from './a3/resources.js';
+import { roadMap } from './a3/road.js';
+import { events3 } from './a3/events.js';
+import { scenesA3 } from './a3/scenes.js';
+import { scenesA3b } from './a3/scenes2.js';
 
 /** Barrels at home keep more food and salted meat. */
 const withBarrels = (list: ResourceDef[]): ResourceDef[] =>
   list.map((r) => (r.id === R.food || r.id === R2.meat ? { ...r, capBonus: [...(r.capBonus ?? []), barrels] } : r));
 
 export const content: Content = {
-  areas: [...areas, ...areas2, ...sideAreas1],
-  resources: withBarrels([...resources, ...resources2, ...needs1Resources, ...needs2Resources, ...sideResources1, ...sideResources2, ...gardenResources]),
-  actions: [...actions, ...actions2, ...actionsA2, ...needs1Actions, ...needs2Actions, ...sideActions1, ...sideActions2, ...gardenActions],
+  areas: [...areas, ...areas2, ...areas3, ...sideAreas1],
+  resources: withBarrels([...resources, ...resources2, ...resources3, ...needs1Resources, ...needs2Resources, ...sideResources1, ...sideResources2, ...gardenResources]),
+  actions: [...actions, ...actions2, ...actionsA2, ...actions3, ...needs1Actions, ...needs2Actions, ...sideActions1, ...sideActions2, ...gardenActions],
   pools,
-  locations: [...locations, ...locations2, ...sideLocations1, ...sideLocations2, ...gardenLocations],
-  scenes: [...scenes1, ...scenes2, ...scenesA2, ...scenesA2b, ...suppersA2, ...sideScenes1, ...sideScenes2],
+  locations: [...locations, ...locations2, ...locations3, ...sideLocations1, ...sideLocations2, ...gardenLocations],
+  scenes: [...scenes1, ...scenes2, ...scenesA2, ...scenesA2b, ...suppersA2, ...scenesA3, ...scenesA3b, ...sideScenes1, ...sideScenes2],
   encounters: [],
-  clues: [...clues, ...clues2, ...sideClues1, ...sideClues2],
-  mysteries: [...mysteries, ...mysteries2, ...sideMysteries],
-  goals: [...goals2, ...goals1, goalFallback],
-  npcs: [...npcs, ...npcs2, ...sideNpcs1, ...sideNpcs2],
-  enemies: [...enemies, ...enemies2, ...sideEnemies1, ...sideEnemies2],
-  residents: [...residents, ...residents2, ...sideResidents2],
+  clues: [...clues, ...clues2, ...clues3, ...sideClues1, ...sideClues2],
+  mysteries: [...mysteries, ...mysteries2, ...mysteries3, ...sideMysteries],
+  goals: [...goals3, ...goals2, ...goals1, goalFallback],
+  npcs: [...npcs, ...npcs2, ...npcs3, ...sideNpcs1, ...sideNpcs2],
+  enemies: [...enemies, ...enemies2, ...enemies3, ...sideEnemies1, ...sideEnemies2],
+  residents: [...residents, ...residents2, ...residents3, ...sideResidents2],
   perks,
   traits,
   hero,
@@ -64,15 +74,16 @@ export const content: Content = {
   stove: { perWood: 4 * 60 * 1000, maxWood: 8, coldPenalty: 1.3, low: 60 * 1000 },
   needs: { ...needs, comfort: [...needs.comfort, ...sideComfort1, ...sideComfort2] },
   weather,
-  events,
+  events: { ...events, kinds: [...events.kinds, ...events3] },
   garden,
-  ambient: { ...ambient, areas: { ...ambient.areas, a_10: 'hill', a_11: 'river', a_12: 'marsh', a_13: 'river', a_14: 'grove' }, actions: { ...ambient.actions, ...fx2, ...needs1Fx, ...needs2Fx, ...sideFx1, ...sideFx2, ...gardenFx } },
-  maps: [],
+  ambient: { ...ambient, areas: { ...ambient.areas, a_10: 'hill', a_11: 'river', a_12: 'marsh', a_13: 'river', a_14: 'grove', a_15: 'hill', a_16: 'salt' }, actions: { ...ambient.actions, ...fx2, ...fx3, ...needs1Fx, ...needs2Fx, ...sideFx1, ...sideFx2, ...gardenFx } },
+  maps: [roadMap],
   start: { resources: {}, hp: 22, area: A.shore },
   storyFlags: ['p2_', 'done:s_', 'legacy'],
   actEnd: {
     1: 'Кінець першої дії. Варниця ваша — працюйте, ходіть плавнями, готуйтеся. Далі буде.',
     2: 'Кінець другої дії. Варниця тепер — дім для багатьох. А шлях кличе далі. Далі буде.',
+    3: 'Кінець третьої дії. Степ розповів, куди йдуть міцні. Тепер дорога веде у два боки. Далі буде.',
   },
   roleTitles,
   ui,

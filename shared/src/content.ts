@@ -549,6 +549,11 @@ export interface DelveNode extends NodeBase {
   out: string | null;
   /** The light gives out. */
   dark: string | null;
+  /**
+   * What the bar stands for when it is not a light (a road's supplies): its name, and what is said
+   * when a deed asks for more than is left.
+   */
+  meter?: { label: string; short: string; road?: boolean };
 }
 
 /**
@@ -656,8 +661,8 @@ export interface DelveActDef {
   visible?: Cond;
   enabled?: Cond;
   disabledHint?: Text;
-  /** Once in the whole world (default true). */
-  once?: boolean;
+  /** Once in the whole world (default true); `trip`: once on each trip down (or along the road). */
+  once?: boolean | 'trip';
   /** Light it takes; negative gives light. */
   light?: number;
   cost?: Record<string, number>;

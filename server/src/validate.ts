@@ -419,6 +419,7 @@ export function validateContent(c: Content): Report {
     const w = `action ${a.id}`;
     if (!locs.has(a.group)) err(`${w}: unknown group ${a.group}`);
     if (!(a.cooldown > 0)) err(`${w}: cooldown must be positive`);
+    for (const t of [a.tool, a.boost]) if (t && !c.ui[`tool_${t}`]) err(`${w}: the tool ${t} has no name (ui tool_${t})`);
     checkCost(w, a.cost);
     checkRes(w, a.yield);
     if (a.rollsPer && !res.has(a.rollsPer)) err(`${w}: unknown rollsPer ${a.rollsPer}`);

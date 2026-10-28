@@ -3,6 +3,7 @@
 import type { DelveView, OperationView, PlayerView, SceneView, StealthView } from '../../shared/src/protocol.js';
 import { IconCheck, IconFlame } from './icons.js';
 import { net } from './net.js';
+import { picture } from './pictures.js';
 import { T } from './strings.js';
 
 const CELL = 56;
@@ -41,12 +42,12 @@ function DelveMap({ d }: { d: DelveView }) {
   );
 }
 
-function LightMeter({ light, max }: { light: number; max: number }) {
+function LightMeter({ light, max, label, road }: { light: number; max: number; label?: string; road?: boolean }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (light / max) * 100)) : 0;
   return (
-    <div class={`light ${light <= 2 ? 'low' : ''}`}>
-      <IconFlame />
-      <span class="light-label">{T.delveLight}</span>
+    <div class={`light ${light <= 2 ? 'low' : ''} ${road ? 'road' : ''}`}>
+      {road ? picture('cart') : <IconFlame />}
+      <span class="light-label">{label ?? T.delveLight}</span>
       <span class="light-bar">
         <span style={{ width: `${pct}%` }} />
       </span>
@@ -63,7 +64,7 @@ export function DelveBody({ d, title }: { d: DelveView; title: string }) {
           {d.map !== title && <div class="delve-map-name">{d.map}</div>}
           <h3 class="delve-room">{d.room}</h3>
         </div>
-        <LightMeter light={d.light} max={d.lightMax} />
+        <LightMeter light={d.light} max={d.lightMax} label={d.meter} road={d.road} />
       </div>
       <DelveMap d={d} />
       <div class="block current">

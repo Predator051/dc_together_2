@@ -491,7 +491,7 @@ function delveView(g: Game, pid: PlayerId, n: DelveNode): DelveView {
   const acts = (room.acts ?? [])
     .filter((a) => g.delveActVisible(map, a, pid))
     .map((a) => {
-      const block = g.delveActBlock(a, pid);
+      const block = g.delveActBlock(a, pid, n);
       return {
         id: `act:${a.id}`,
         label: g.render(a.label, pid),
@@ -508,6 +508,7 @@ function delveView(g: Game, pid: PlayerId, n: DelveNode): DelveView {
     own: role === 'hunter' ? paras(g, room.hunter, pid) : role === 'maker' ? paras(g, room.maker, pid) : [],
     light: Math.max(0, d.light),
     lightMax: d.lightMax,
+    ...(n.meter ? { meter: g.render(n.meter.label, pid), road: !!n.meter.road } : {}),
     rooms,
     links,
     exits,

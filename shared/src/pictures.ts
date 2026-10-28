@@ -2,7 +2,7 @@
 // the client must draw every one of them (its tables are typed by these lists).
 
 /** Grounds of the drawn plans of places. */
-export const SCENES = ['yard', 'shore', 'reeds', 'saltflat', 'brine', 'grove', 'dyke', 'causeway', 'road', 'town', 'bog', 'isle', 'willow'] as const;
+export const SCENES = ['yard', 'shore', 'reeds', 'saltflat', 'brine', 'grove', 'dyke', 'causeway', 'road', 'town', 'bog', 'isle', 'willow', 'steppe', 'quarry'] as const;
 export type SceneId = (typeof SCENES)[number];
 
 /** Small pictures of spots on a plan. */
@@ -51,11 +51,13 @@ export const SPOT_ICONS = [
   'peat',
   'berry',
   'garden',
+  'mound',
+  'tent',
 ] as const;
 export type SpotIcon = (typeof SPOT_ICONS)[number];
 
 /** Portraits of foes. */
-export const PORTRAITS = ['rat', 'viper', 'oldviper', 'dog', 'leech', 'boar', 'greyboar', 'catfish', 'hound', 'cloak', 'chief', 'wolf', 'snatcher', 'hook', 'matka', 'elder', 'shewolf'] as const;
+export const PORTRAITS = ['rat', 'viper', 'oldviper', 'dog', 'leech', 'boar', 'greyboar', 'catfish', 'hound', 'cloak', 'chief', 'wolf', 'snatcher', 'hook', 'matka', 'elder', 'shewolf', 'tarpan', 'robber', 'recruiter', 'silent', 'osavul'] as const;
 export type PortraitId = (typeof PORTRAITS)[number];
 
 /** Small marks of things: materials, things to take along, gear. */
@@ -71,5 +73,6 @@ export const ITEM_ICONS = [
   'feather', 'osier', 'viperskin', 'fat', 'oar', 'boat', 'block', 'mark', 'level', 'grapnel', 'buckle', 'bighook', 'lamp',
   'key', 'lyre', 'paw', 'bag', 'book', 'ladle', 'whistle', 'honey',
   'garlic', 'beet', 'seeds', 'flax', 'pumpkin', 'borscht',
+  'hay', 'tar', 'wagon', 'oxen', 'keg', 'wheel', 'drum', 'scythe', 'lamellar', 'mace', 'longbow',
 ] as const;
 export type ItemIcon = (typeof ITEM_ICONS)[number];
