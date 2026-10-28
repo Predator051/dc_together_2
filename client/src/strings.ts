@@ -226,7 +226,7 @@ export const T = {
   beastsSub: 'з ким довелося битися',
   peopleSub: 'кого ви зустріли',
   quests: 'Доручення',
-  questsOpen: 'відкритих',
+  questsOpen: ['відкрите', 'відкриті', 'відкритих'] as [string, string, string],
   questsDone: 'виконано',
   questNow: 'Зараз',
   questDone: 'виконано',

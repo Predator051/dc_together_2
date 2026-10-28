@@ -86,7 +86,7 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
         </p>
       )}
       <div
-        class="map-box"
+        class={`map-box ${w > width ? 'scrolls' : ''}`}
         ref={(el) => {
           box(el);
           boxEl.current = el;
@@ -126,6 +126,12 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
               class={`map-node ${n.known ? 'known' : 'unknown'} ${n.here ? 'here' : ''} ${n.home ? 'home' : ''} ${sel === n.id ? 'sel' : ''} ${can ? 'can' : ''}`}
               transform={`translate(${p.x},${p.y})`}
               onClick={() => setSel(n.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSel(n.id);
+                }
+              }}
               role="button"
               tabIndex={0}
               aria-label={n.name}
@@ -459,10 +465,12 @@ export function ResidentsPanel({ v, locked }: { v: PlayerView; locked: boolean }
           </ul>
           <p class="meta">
             {T.residentJob}: <b>{r.jobLabel ?? T.residentRest}</b>
+            {r.hungry && ' '}
             {r.hungry && <span class="pill warn">{T.residentHungry}</span>}
+            {r.hurt && ' '}
             {r.hurt && <span class="pill warn">{T.residentHurt}</span>}
           </p>
-          <div class="slot-options">
+          <div class="slot-options jobs">
             {r.jobs.map((j) => (
               <button
                 class={`chip-btn ${r.job === j.id ? 'on' : ''}`}

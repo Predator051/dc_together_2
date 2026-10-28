@@ -53,10 +53,10 @@ export function Scene({ v, sc, locked }: { v: PlayerView; sc: SceneView; locked:
 
   if (min || (sc.paused && min)) {
     return (
-      <div class="scene-mini" onClick={() => setMin(false)} role="button">
+      <button type="button" class="scene-mini" onClick={() => setMin(false)}>
         <span>{sc.paused ? T.scenePaused : sc.title}</span>
         <b>{T.expand}</b>
-      </div>
+      </button>
     );
   }
 

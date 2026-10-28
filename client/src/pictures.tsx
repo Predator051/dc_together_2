@@ -637,8 +637,13 @@ function Town() {
       <rect class="square" x="160" y="84" width="80" height="44" rx="4" />
       <rect class="hall-b" x="20" y="40" width="70" height="44" />
       <path class="hall-b" d="M16 40l39-18 39 18" />
+      {/* gabled roofs seen from above: a ridge along the house and the far slope in shade */}
       {houses.map(([x, y, w, h]) => (
-        <rect class="house" x={x} y={y} width={w} height={h} rx="2" />
+        <g class="house-g">
+          <rect class="house" x={x} y={y} width={w} height={h} rx="2" />
+          <rect class="house-shade" x={x + 1} y={y + h / 2} width={w - 2} height={h / 2 - 1} />
+          <path class="house-roof" d={`M${x} ${y + h / 2}H${x + w}`} />
+        </g>
       ))}
       <g class="saltpile">
         <path d="M120 120l14-18 14 18zM300 64l12-16 12 16zM330 70l10-13 10 13z" />

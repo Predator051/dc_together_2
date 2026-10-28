@@ -77,7 +77,7 @@ export interface LogText {
   all?: LogLine;
   kind?: LogKind;
 }
-export type LogKind = 'story' | 'act' | 'find' | 'warn' | 'system';
+export type LogKind = 'story' | 'act' | 'find' | 'warn' | 'system' | 'day' | 'goal';
 
 export type EffectTarget = 'actor' | 'both' | Role;
 

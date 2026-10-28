@@ -77,8 +77,9 @@ function NotesHelp({ onClose }: { onClose: () => void }) {
         {steps.map(([n, name, text]) => (
           <li class={`level l${n}`}>
             <Track level={n} />
-            <b>{name}</b>
-            <span>— {text}</span>
+            <span class="help-step">
+              <b>{name}</b> <span>— {text}</span>
+            </span>
           </li>
         ))}
       </ul>
@@ -92,12 +93,13 @@ function NotesHelp({ onClose }: { onClose: () => void }) {
   );
 }
 
-function plural(n: number): string {
+/** Ukrainian number agreement: 1 запис, 2 записи, 5 записів. */
+function plural(n: number, forms: [string, string, string] = [T.rec1, T.rec2, T.rec5]): string {
   const a = n % 10;
   const b = n % 100;
-  if (a === 1 && b !== 11) return T.rec1;
-  if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return T.rec2;
-  return T.rec5;
+  if (a === 1 && b !== 11) return forms[0];
+  if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return forms[1];
+  return forms[2];
 }
 
 function norm(s: string): string {
@@ -300,7 +302,7 @@ export function Notes({
                 <span class="topic-q">{T.quests}</span>
                 <span class="topic-sub">
                   <span>
-                    {quests.filter((q) => q.state === 'on').length} {T.questsOpen} ·{' '}
+                    {quests.filter((q) => q.state === 'on').length} {plural(quests.filter((q) => q.state === 'on').length, T.questsOpen)} ·{' '}
                     {quests.filter((q) => q.state === 'done').length} {T.questsDone}
                   </span>
                 </span>
@@ -462,7 +464,7 @@ export function Notes({
                       {b.beaten > 0 && (
                         <span class="beast-beaten">
                           {' '}
-                          · {T.beaten} {b.beaten}
+                          <span class="nowrap">· {T.beaten} {b.beaten}</span>
                         </span>
                       )}
                       <p>{hl(b.desc, needle)}</p>

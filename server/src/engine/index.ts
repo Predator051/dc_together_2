@@ -190,7 +190,7 @@ export class Game {
     if (!g) return;
     const text: Partial<Record<PlayerId, string>> = {};
     for (const pid of this.joinedIds()) text[pid] = `${this.ix.ui('goal_prefix')} ${this.render(g.text, pid)}`;
-    this.logRaw('system', text);
+    this.logRaw('goal', text);
   }
 
   /** Errands begin, end, or close as their conditions come to hold. */
@@ -571,7 +571,7 @@ export class Game {
       this.s.meta.dayAt = this.now;
       const text: Partial<Record<PlayerId, string>> = {};
       for (const pid of this.joinedIds()) text[pid] = `${this.ix.ui('new_day')} ${this.s.meta.day}.`;
-      this.logRaw('system', text);
+      this.logRaw('day', text);
       this.applyDaily();
       nightRest(this);
       turnWeather(this);
