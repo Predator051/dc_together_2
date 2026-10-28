@@ -14,6 +14,7 @@ import { Scene } from './scene.js';
 import { IconBell, IconBellOff, IconDown, IconFlame, IconHero, IconLock, IconLog, IconMap, IconMute, IconNotes, IconPair, IconPin, IconSnow, IconSound, IconWork } from './icons.js';
 import { T } from './strings.js';
 import { BagPanel, FightPanel, MapPanel, NearFight, PackList, ResidentsPanel } from './world.js';
+import { Cell } from './cells.js';
 import { Thing } from './items.js';
 import { NeedsBar, NeedsSheet } from './needs.js';
 import { WeatherChip } from './weather.js';
@@ -369,22 +370,17 @@ function Stock({ v, foldable = false }: { v: PlayerView; foldable?: boolean }) {
       {shown && res.length > 0 && (
         <>
           {!foldable && <h3>{T.stock}</h3>}
-          <dl class="ledger">
+          <ul class="cells" aria-label={T.stock}>
             {res.map((r) => (
-              <div
-                class={`ledger-row ${r.cap !== undefined && r.n >= r.cap ? 'full' : ''} ${r.n === 0 ? 'empty' : ''}`}
-              >
-                <dt>
-                  <Thing icon={r.icon} />
-                  {r.name}
-                </dt>
-                <dd>
-                  {r.n}
-                  {r.cap !== undefined && <small>/{r.cap}</small>}
-                </dd>
-              </div>
+              <Cell
+                icon={r.icon}
+                name={r.name}
+                n={r.n}
+                cap={r.cap}
+                cls={`${r.cap !== undefined && r.n >= r.cap ? 'full' : ''} ${r.n === 0 ? 'empty' : ''}`}
+              />
             ))}
-          </dl>
+          </ul>
         </>
       )}
       {shown && folk.length > 0 && (
@@ -399,20 +395,14 @@ function Stock({ v, foldable = false }: { v: PlayerView; foldable?: boolean }) {
         </p>
       )}
       {shown && tools.length > 0 && (
-        <p class="inline-list tools">
-          <span class="il-head">{T.items}:</span>{' '}
-          {/* the comma and space stay outside the unbreakable name: the line may wrap between things */}
-          {tools.map((r, i) => (
-            <>
-              {i > 0 && ', '}
-              <span class="il-thing">
-                <Thing icon={r.icon} />
-                {r.n > 1 ? `${r.name} ×${r.n}` : r.name}
-              </span>
-            </>
-          ))}
-          .
-        </p>
+        <>
+          <p class="il-head cells-head">{T.items}</p>
+          <ul class="cells" aria-label={T.items}>
+            {tools.map((r) => (
+              <Cell icon={r.icon} name={r.name} n={r.n > 1 ? r.n : undefined} />
+            ))}
+          </ul>
+        </>
       )}
     </section>
   );

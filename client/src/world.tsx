@@ -6,6 +6,7 @@ import { MapIcon } from './mapicons.js';
 import { LandMap, paintedFits } from './landmap.js';
 import { Portrait } from './portraits.js';
 import { Thing } from './items.js';
+import { Cell } from './cells.js';
 import { sound } from './sound.js';
 import { T } from './strings.js';
 
@@ -232,7 +233,9 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
 
 export function BagPanel({ v, locked }: { v: PlayerView; locked: boolean }) {
   const b = v.bag;
+  const [sel, setSel] = useState<string | null>(null);
   if (!b.items.length) return null;
+  const it = b.items.find((x) => x.id === sel) ?? null;
   return (
     <section class="stock bag">
       <h3>
@@ -242,67 +245,75 @@ export function BagPanel({ v, locked }: { v: PlayerView; locked: boolean }) {
         </span>
       </h3>
       <Bar n={b.load} max={b.cap} cls="load" />
-      <ul class="bag-items">
-        {b.items.map((it) => (
-          <li>
-            <span class="bag-name">
-              <span class="bag-title">
-                <Thing icon={it.icon} />
-                <span>
-                  {it.name} <b>{it.n}</b>
-                </span>
-              </span>
-              {it.note && <small>{it.note}</small>}
-            </span>
-            <span class="row">
-              {it.usable && (
-                <button class="btn small" disabled={locked} onClick={() => net.send({ c: 'use', id: it.id })}>
-                  {T.bagUse}
-                </button>
-              )}
-              {v.atHome ? (
-                <button class="btn small" disabled={locked} onClick={() => net.send({ c: 'pack', id: it.id, n: -it.n })}>
-                  {T.bagUnpack}
-                </button>
-              ) : (
-                <button class="btn small ghost" disabled={locked} onClick={() => net.send({ c: 'drop', id: it.id, n: 1 })}>
-                  {T.bagDrop}
-                </button>
-              )}
-            </span>
-          </li>
+      <ul class="cells" aria-label={T.bag}>
+        {b.items.map((x) => (
+          <Cell icon={x.icon} name={x.name} n={x.n} sel={sel === x.id} onPick={() => setSel(sel === x.id ? null : x.id)} />
         ))}
       </ul>
+      {it && (
+        <div class="cell-detail" key={it.id}>
+          <span class="bag-name">
+            <span class="bag-title">
+              <Thing icon={it.icon} />
+              <span>
+                {it.name} <b>{it.n}</b>
+              </span>
+            </span>
+            {it.note && <small>{it.note}</small>}
+          </span>
+          <span class="row">
+            {it.usable && (
+              <button class="btn small" disabled={locked} onClick={() => net.send({ c: 'use', id: it.id })}>
+                {T.bagUse}
+              </button>
+            )}
+            {v.atHome ? (
+              <button class="btn small" disabled={locked} onClick={() => net.send({ c: 'pack', id: it.id, n: -it.n })}>
+                {T.bagUnpack}
+              </button>
+            ) : (
+              <button class="btn small ghost" disabled={locked} onClick={() => net.send({ c: 'drop', id: it.id, n: 1 })}>
+                {T.bagDrop}
+              </button>
+            )}
+          </span>
+        </div>
+      )}
     </section>
   );
 }
 
 /** At home: things to take along (consumables and food) can go into the bag. */
 export function PackList({ v, locked }: { v: PlayerView; locked: boolean }) {
+  const [sel, setSel] = useState<string | null>(null);
   if (!v.atHome) return null;
   const list = v.res.filter((r) => (r.kind === 'use' || r.kind === 'food' || r.ware) && r.n > 0);
   if (!list.length) return null;
+  const r = list.find((x) => x.id === sel) ?? null;
   return (
     <section class="stock packs">
       <h3>{T.usesList}</h3>
-      <ul class="bag-items">
-        {list.map((r) => (
-          <li>
-            <span class="bag-name">
-              <span class="bag-title">
-                <Thing icon={r.icon} />
-                <span>
-                  {r.name} <b>{r.n}</b>
-                </span>
-              </span>
-              {r.note && <small>{r.note}</small>}
-            </span>
-            <button class="btn small" disabled={locked} onClick={() => net.send({ c: 'pack', id: r.id, n: r.ware ? Math.min(5, r.n) : r.kind === 'food' ? 2 : 1 })}>
-              + {T.bagPack}
-            </button>
-          </li>
+      <ul class="cells" aria-label={T.usesList}>
+        {list.map((x) => (
+          <Cell icon={x.icon} name={x.name} n={x.n} sel={sel === x.id} onPick={() => setSel(sel === x.id ? null : x.id)} />
         ))}
       </ul>
+      {r && (
+        <div class="cell-detail" key={r.id}>
+          <span class="bag-name">
+            <span class="bag-title">
+              <Thing icon={r.icon} />
+              <span>
+                {r.name} <b>{r.n}</b>
+              </span>
+            </span>
+            {r.note && <small>{r.note}</small>}
+          </span>
+          <button class="btn small" disabled={locked} onClick={() => net.send({ c: 'pack', id: r.id, n: r.ware ? Math.min(5, r.n) : r.kind === 'food' ? 2 : 1 })}>
+            + {T.bagPack}
+          </button>
+        </div>
+      )}
     </section>
   );
 }

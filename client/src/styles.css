@@ -3684,14 +3684,6 @@ mark {
   align-items: baseline;
   gap: 10px;
 }
-.bag-items {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.bag-items li:last-child {
-  border-bottom: none;
-}
 .stat-name {
   flex: 1;
   display: flex;
@@ -3740,26 +3732,11 @@ mark {
 .bag-load.full {
   color: var(--cinnabar-ink);
 }
-.bag-items li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px 8px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--rule);
-}
-/* In a narrow column the buttons drop under the name instead of squeezing it. */
 .bag-name {
   flex: 1 1 7.5rem;
   min-width: 0;
   display: flex;
   flex-direction: column;
-}
-.bag-items li > .row,
-.bag-items li > .btn {
-  flex: none;
-  margin-left: auto;
 }
 .bag-title b {
   white-space: nowrap;
@@ -3768,6 +3745,172 @@ mark {
   color: var(--faded);
   font-family: var(--sans);
   font-size: 0.8rem;
+}
+
+/* ---------- things as cells: the store, the bag, what to take along ---------- */
+.cells {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+  gap: 6px;
+  margin: 6px 0 10px;
+  padding: 0;
+  list-style: none;
+}
+.cells > li {
+  display: flex;
+  min-width: 0;
+}
+.cell {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 7px 4px 6px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: radial-gradient(90% 70% at 50% 35%, rgba(230, 217, 188, 0.06), transparent 70%), rgba(14, 10, 6, 0.28);
+  font-family: var(--sans);
+  color: var(--ink-2);
+  text-align: center;
+}
+button.cell {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.cell.sel {
+  border-color: var(--ochre);
+  box-shadow: 0 0 0 2px var(--ochre-wash);
+}
+@media (hover: hover) {
+  button.cell:hover {
+    border-color: var(--rule-2);
+  }
+  button.cell.sel:hover {
+    border-color: var(--ochre);
+  }
+}
+.cell-pic {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+}
+.cell .item-icon,
+.cell span.item-icon.painted {
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  vertical-align: 0;
+  opacity: 1;
+}
+/* a drawn mark (not painted yet) stays a little smaller inside its cell */
+.cell svg.item-icon {
+  width: 30px;
+  height: 30px;
+  color: var(--ink-2);
+}
+.cell-ph {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--rule-2);
+  border-radius: 50%;
+  font-weight: 600;
+  color: var(--faded);
+}
+.cell-n {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 18px;
+  padding: 1px 5px;
+  border-radius: 9px;
+  background: rgba(22, 17, 12, 0.82);
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-variant-numeric: lining-nums tabular-nums;
+  line-height: 1.3;
+  color: var(--ink);
+}
+.cell-n small {
+  font-weight: 400;
+  color: var(--pale);
+}
+.cell-name {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.cell.empty .cell-pic,
+.cell.empty .cell-name {
+  opacity: 0.45;
+}
+.cell.empty .cell-n {
+  color: var(--pale);
+}
+.cell.full .cell-n {
+  color: var(--ochre-ink);
+}
+.cells-head {
+  margin: 4px 0 0;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+}
+/* what can be done with the picked thing, under the cells */
+.cell-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+  margin: 0 0 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--rule-2);
+  border-radius: 8px;
+  background: var(--leaf-2);
+  animation: fade-up 0.2s ease-out backwards;
+}
+.cell-detail > .row,
+.cell-detail > .btn {
+  flex: none;
+  margin-left: auto;
+}
+
+/* painted marks: a cell of an atlas, a little larger than the drawn ones beside words */
+span.item-icon.painted {
+  display: inline-block;
+  width: 1.45em;
+  height: 1.45em;
+  vertical-align: -0.38em;
+  background-repeat: no-repeat;
+  background-size: 400% 300%;
+  opacity: 1;
+}
+/* in a round medal (a spot on a plan, a slot of the hero) the painting fills the round */
+.spot-medal span.item-icon.painted {
+  width: 38px;
+  height: 38px;
+  margin: 0;
+  vertical-align: 0;
+}
+.gear-now-pic span.item-icon.painted {
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  vertical-align: 0;
 }
 
 /* ---------- needs ---------- */
@@ -4097,12 +4240,6 @@ mark {
 }
 .ledger-row.empty .item-icon {
   opacity: 0.55;
-}
-.il-thing {
-  white-space: nowrap;
-}
-.il-thing .item-icon {
-  margin-right: 0.25em;
 }
 .bag-title {
   display: flex;
@@ -5762,7 +5899,7 @@ body.sheet-open {
 .mate-items {
   animation: fade-up 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
 }
-.stock:not(.folded) .ledger {
+.stock:not(.folded) .cells {
   animation: fade-down 0.22s ease-out backwards;
 }
 .bottom-nav button.on .nav-ico {
@@ -5892,7 +6029,8 @@ body.sheet-open {
   .map-card,
   .topic-body,
   .mate-items,
-  .stock .ledger,
+  .stock .cells,
+  .cell-detail,
   .bottom-nav button.on .nav-ico,
   .badge,
   .spot,

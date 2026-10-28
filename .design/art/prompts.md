@@ -79,3 +79,9 @@ animals. Style: <хвост стиля из bible.md>
 
 Новые земли (акт 3+): отдельный лист `map2` того же размера, края стыкуются с соседним листом по смыслу
 (река/дорога уходит за край). Клиент пока умеет один лист — второй потребует раскладки листов в мире.
+
+## Шаг 3. Значки предметов — 8 листов 4×3 (`things.json`: порядок и описания)
+
+Шаблон (собирается скриптом из `things.json`): «Generate an image, landscape 1536x1024, with a fully
+transparent background … strict grid of 4 columns and 3 rows … Row N, left to right: … Style: hand-painted
+gouache game icons …, a thin dark outline around each object …». Пустая клетка — «leave this cell empty».

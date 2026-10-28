@@ -5,8 +5,8 @@ import sheet from '../client/src/art/map1.json';
 // The painted map shows a place only if the painting has a spot for it; otherwise the whole map
 // falls back to the drawn scheme. A new place or road needs its spot and its line on a sheet.
 describe('the painted map', () => {
-  const at = sheet.at as Record<string, [number, number]>;
-  const ways = { ...sheet.roads, ...sheet.water } as Record<string, Array<[number, number]>>;
+  const at = sheet.at as unknown as Record<string, [number, number]>;
+  const ways = { ...sheet.roads, ...sheet.water } as unknown as Record<string, Array<[number, number]>>;
 
   it('has a spot for every place on the map, inside the painting', () => {
     for (const a of content.areas.filter((x) => x.pos)) {
