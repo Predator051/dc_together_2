@@ -724,10 +724,12 @@ function mapView(g: Game, pid: PlayerId): MapView {
     }
   }
   const tr = p.travel ? walkOf(p.travel) : null;
+  const leg = (t: NonNullable<typeof p.travel>) => ({ from: t.from, to: t.to, since: t.since, until: t.until, next: (t.route ?? []).map(([id]) => id) });
   return {
     nodes,
     links,
     travel: tr ? { to: tr.to, name: areaDef(g, tr.to)?.name ?? tr.to, since: tr.since, until: tr.until } : null,
+    legs: { me: p.travel ? leg(p.travel) : null, mate: o.joined && o.travel ? leg(o.travel) : null },
   };
 }
 

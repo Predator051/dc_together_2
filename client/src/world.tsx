@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { FightView, MapNodeView, PlayerView } from '../../shared/src/protocol.js';
 import { net } from './net.js';
 import { MapIcon } from './mapicons.js';
+import { LandMap, paintedFits } from './landmap.js';
 import { Portrait } from './portraits.js';
 import { Thing } from './items.js';
 import { sound } from './sound.js';
@@ -64,6 +65,8 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
     boxEl.current?.parentElement?.querySelector('.map-card')?.scrollIntoView({ block: 'nearest' });
   }, [sel]);
   if (!m.nodes.length) return null;
+  // the painted land, when it holds every place shown; otherwise the drawn scheme
+  const painted = paintedFits(m);
   const xs = m.nodes.map((n) => n.x);
   const ys = m.nodes.map((n) => n.y);
   const minX = Math.min(...xs);
@@ -90,6 +93,9 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
           {T.mapOnWay} <b>{m.travel.name}</b>
         </p>
       )}
+      {painted ? (
+        <LandMap m={m} sel={sel} onPick={setSel} now={now} wayIds={way} />
+      ) : (
       <div
         class={`map-box ${w > width ? 'scrolls' : ''}`}
         ref={(el) => {
@@ -166,6 +172,7 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
         })}
       </svg>
       </div>
+      )}
       <div class="map-legend">
         <span>
           <i class="dot me" /> {T.mapHere}

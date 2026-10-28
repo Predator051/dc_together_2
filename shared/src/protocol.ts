@@ -455,10 +455,21 @@ export interface MapNodeView {
   desc?: string;
 }
 
+/** The stretch of road a hero walks right now, and the stops still ahead after it. */
+export interface MapLegView {
+  from: string;
+  to: string;
+  since: number;
+  until: number;
+  next: string[];
+}
+
 export interface MapView {
   nodes: MapNodeView[];
   links: Array<[string, string]>;
   travel: { to: string; name: string; since: number; until: number } | null;
+  /** Where on the road each hero is (the partner only while in the game). */
+  legs: { me: MapLegView | null; mate: MapLegView | null };
 }
 
 export interface FoeView {
