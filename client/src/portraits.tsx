@@ -1,8 +1,9 @@
 // Portraits of foes: ink drawings in a round seal, the same hand as the plans.
 
 import type { ComponentChildren, JSX } from 'preact';
-import type { PortraitId } from '../../shared/src/pictures.js';
+import { HEROES, type PortraitId } from '../../shared/src/pictures.js';
 import painted from './art/foes.json';
+import heroes from './art/heroes.json';
 
 function Ink({ children }: { children: ComponentChildren }) {
   return (
@@ -236,4 +237,26 @@ export function Portrait({ icon, size = 'm', out = false }: { icon: string; size
   }
   const draw = (DRAW as Record<string, () => JSX.Element>)[icon] ?? DRAW.rat;
   return <span class={`portrait ${size} ${out ? 'out' : ''}`}>{draw()}</span>;
+}
+
+// ---------------------------------------------------------------------------- the heroes
+
+// Painted heroes (scripts/art.ts hero): a look per role and gender, as the players see their heroes.
+const PAINTED_HEROES = new Set(heroes as string[]);
+
+function heroIndex(role: string | null | undefined, gender: string): number {
+  const key = `${role}-${gender}`;
+  return role && PAINTED_HEROES.has(key) ? (HEROES as readonly string[]).indexOf(key) + 1 : 0;
+}
+
+/** A hero's painted face (head and shoulders), or null while that look is not painted. */
+export function heroFace(role: string | null | undefined, gender: string): string | null {
+  const i = heroIndex(role, gender);
+  return i ? new URL(`./art/heroes/q${i}.webp`, import.meta.url).href : null;
+}
+
+/** A hero painted at full height, for the gear, or null. */
+export function heroFigure(role: string | null | undefined, gender: string): string | null {
+  const i = heroIndex(role, gender);
+  return i ? new URL(`./art/heroes/p${i}.webp`, import.meta.url).href : null;
 }

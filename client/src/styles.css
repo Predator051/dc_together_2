@@ -1033,6 +1033,10 @@ button.bed:focus-visible {
   width: 28px;
   height: 28px;
 }
+.avatar.painted {
+  background-position: center;
+  background-size: cover;
+}
 .mate-body {
   display: flex;
   align-items: baseline;
@@ -3735,7 +3739,8 @@ mark {
   .life-water::before,
   .life-mist,
   .scene-art,
-  .map-card-art {
+  .map-card-art,
+  .doll-paint {
     animation: none;
   }
   .life-smoke,
@@ -4479,6 +4484,15 @@ span.item-icon.painted {
   gap: 4px 10px;
   font-family: var(--sans);
   font-size: 0.92rem;
+}
+.fparty-face {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--rule-2);
+  border-radius: 50%;
+  background-position: center;
+  background-size: cover;
 }
 .fparty-name {
   min-width: 5.5em;
@@ -5935,6 +5949,28 @@ body.sheet-open {
   line-height: 1;
   color: var(--cinnabar-ink);
 }
+/* the hero's face in the seal; the level moves to a small badge on its rim */
+.seal-face {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background-position: center;
+  background-size: cover;
+}
+.level-seal.with-face b {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  border: 1.5px solid var(--ochre);
+  border-radius: 12px;
+  background: var(--page);
+  font-size: 0.95rem;
+}
 .hero-who {
   display: flex;
   flex-direction: column;
@@ -6081,6 +6117,23 @@ body.sheet-open {
   inset: 0;
   width: 100%;
   height: 100%;
+}
+/* the hero painted at full height, standing among the slots; its leads still reach out to them */
+.doll-paint {
+  position: absolute;
+  left: 29%;
+  top: 2%;
+  width: 42%;
+  height: 96%;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  background-size: contain;
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.55));
+  pointer-events: none;
+  animation: tile-in 0.6s ease-out backwards;
+}
+.doll-figure.painted .body {
+  display: none;
 }
 .doll-figure .body {
   fill: none;

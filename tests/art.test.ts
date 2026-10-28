@@ -1,10 +1,11 @@
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { ITEM_ICONS, PORTRAITS, SCENES, SPOT_ICONS, VIEWS } from '../shared/src/pictures.js';
+import { HEROES, ITEM_ICONS, PORTRAITS, SCENES, SPOT_ICONS, VIEWS } from '../shared/src/pictures.js';
 import painted from '../client/src/art/things.json';
 import foes from '../client/src/art/foes.json';
 import marks from '../client/src/art/marks.json';
 import views from '../client/src/art/views.json';
+import heroes from '../client/src/art/heroes.json';
 import grounds from '../client/src/art/grounds.json';
 
 // Every mark of a thing is painted; a new mark needs its cell in an atlas (scripts/art.ts things).
@@ -71,6 +72,19 @@ describe('painted views', () => {
       const i = (VIEWS as readonly string[]).indexOf(k) + 1;
       expect(i, k).toBeGreaterThan(0);
       expect(existsSync(new URL(`../client/src/art/views/w${i}.webp`, import.meta.url)), k).toBe(true);
+    }
+  });
+});
+
+// The players' heroes as they see them: the maker a man, the hunter a woman (scripts/art.ts hero).
+describe('painted heroes', () => {
+  it("the players' looks are painted, each with a figure and a face", () => {
+    const list = heroes as string[];
+    expect(list).toEqual(expect.arrayContaining(['maker-m', 'hunter-f']));
+    for (const k of list) {
+      const i = (HEROES as readonly string[]).indexOf(k) + 1;
+      expect(i, k).toBeGreaterThan(0);
+      for (const f of [`p${i}`, `q${i}`]) expect(existsSync(new URL(`../client/src/art/heroes/${f}.webp`, import.meta.url)), `${k} ${f}`).toBe(true);
     }
   });
 });

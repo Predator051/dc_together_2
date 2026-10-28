@@ -15,6 +15,7 @@ import { IconBell, IconBellOff, IconDown, IconFlame, IconHero, IconLock, IconLog
 import { T } from './strings.js';
 import { BagPanel, FightPanel, MapPanel, NearFight, PackList, ResidentsPanel } from './world.js';
 import { Cell } from './cells.js';
+import { heroFace } from './portraits.js';
 import { Thing } from './items.js';
 import { NeedsBar, NeedsSheet } from './needs.js';
 import { WeatherChip } from './weather.js';
@@ -188,7 +189,7 @@ function Entry({ e, c }: { e: EntryView; c: Ctx }) {
 }
 
 /** What only the partner can do here: read-only, folded by default (the choice is remembered). */
-function MateList({ items, name }: { items: MateEntryView[]; name: string }) {
+function MateList({ items, name, face }: { items: MateEntryView[]; name: string; face: string | null }) {
   const [open, setOpen] = useState(() => load('bezgomin.mate') === 'open');
   const toggle = () => {
     store('bezgomin.mate', open ? 'closed' : 'open');
@@ -200,7 +201,11 @@ function MateList({ items, name }: { items: MateEntryView[]; name: string }) {
   return (
     <div class={`mate-list ${open ? 'open' : ''}`}>
       <button type="button" class="mate-list-head" aria-expanded={open} onClick={toggle}>
-        <span class="avatar small">{name.slice(0, 1).toUpperCase()}</span>
+        {face ? (
+          <span class="avatar small painted" style={{ backgroundImage: `url(${face})` }} />
+        ) : (
+          <span class="avatar small">{name.slice(0, 1).toUpperCase()}</span>
+        )}
         <span class="mate-list-title">
           {name} {T.mateCan}
           <span class="mate-list-count">
@@ -321,7 +326,7 @@ function Group({ g, c }: { g: GroupView; c: Ctx }) {
       </header>
       {c.v.garden && c.v.garden.group === g.id && <GardenBeds v={c.v} offset={c.offset} locked={c.locked} />}
       <Tiles g={g} c={c} />
-      {g.partner && g.partner.length > 0 && <MateList items={g.partner} name={c.v.partner.name} />}
+      {g.partner && g.partner.length > 0 && <MateList items={g.partner} name={c.v.partner.name} face={heroFace(c.v.partner.role, c.v.partner.gender)} />}
     </section>
   );
 }
@@ -562,6 +567,7 @@ function Summary({ s, me, partner }: { s: SummaryView; me: string; partner: stri
 
 function Partner({ v, now, offset }: { v: PlayerView; now: number; offset: number }) {
   const p = v.partner;
+  const face = heroFace(p.role, p.gender);
   if (!p.joined)
     return (
       <div class="mate off">
@@ -573,8 +579,8 @@ function Partner({ v, now, offset }: { v: PlayerView; now: number; offset: numbe
   const status = !p.online ? T.partnerOffline : working ? working.text : T.partnerIdle;
   return (
     <div class={`mate ${p.online ? 'on' : 'off'}`}>
-      <span class="avatar">
-        {p.name.slice(0, 1).toUpperCase()}
+      <span class={`avatar ${face ? 'painted' : ''}`} style={face ? { backgroundImage: `url(${face})` } : undefined}>
+        {!face && p.name.slice(0, 1).toUpperCase()}
         {working && <span key={working.from} class="ring" aria-hidden="true" />}
       </span>
       <span class="mate-body">

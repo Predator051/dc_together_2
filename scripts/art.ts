@@ -6,6 +6,7 @@
 //   tsx scripts/art.ts marks <painted.png> <n>
 //   tsx scripts/art.ts ground <painted.png> <scene>
 //   tsx scripts/art.ts view <painted.png> <scene|hearth1|hearth2>
+//   tsx scripts/art.ts hero <painted.png> <maker-m|hunter-f|…>
 //
 // A map sheet is cut into tiles (client/src/art/<sheet>/r<row>c<col>.webp): the client asks only for
 // the tiles over explored land. The painting itself is kept, a little compressed, in art-src/ —
@@ -24,11 +25,15 @@
 // A view is a place seen at eye level (the head of a scene there, the card of the place on the map):
 // a wide strip cut from the middle, client/src/art/views/w<i>.webp, i — the key's number in VIEWS;
 // the painted keys are listed in client/src/art/views.json.
+//
+// A hero is painted at full height on a magenta ground: the figure (client/src/art/heroes/p<i>.webp,
+// for the gear screen) and the face cut from the same painting (q<i>.webp), i — the key's number in
+// HEROES; the painted keys are listed in client/src/art/heroes.json.
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { SCENES, VIEWS } from '../shared/src/pictures.js';
+import { HEROES, SCENES, VIEWS } from '../shared/src/pictures.js';
 
 const ROOT = resolve(import.meta.dirname, '..');
 
@@ -283,12 +288,53 @@ function ground(src: string, scene: string): void {
   console.log(`ground ${scene}: ${w}×${h} → g${i}.webp`);
 }
 
+// ---------------------------------------------------------------------------- heroes
+
+function hero(src: string, key: string): void {
+  const i = (HEROES as readonly string[]).indexOf(key) + 1;
+  if (!i) throw new Error(`no hero look ${key}`);
+  const [w, h] = sizeOf(src);
+  const px = execFileSync('magick', [src, '-depth', '8', 'RGBA:-'], { maxBuffer: 64 << 20 });
+  clearGround(px, w, h);
+  const [box] = cellBoxes(px, w, h, 1, 1);
+  if (!box) throw new Error('no figure found');
+  const tmp = mkdtempSync(join(tmpdir(), 'hero-'));
+  const clean = join(tmp, 'clean.png');
+  execFileSync('magick', ['-size', `${w}x${h}`, '-depth', '8', 'RGBA:-', clean], { input: px });
+  const outDir = join(ROOT, 'client/src/art/heroes');
+  mkdirSync(outDir, { recursive: true });
+  const [x0, y0, x1, y1] = box;
+  const bw = x1 - x0 + 1;
+  const bh = y1 - y0 + 1;
+  // the figure stands in a 1:2 box, feet on its floor
+  const fh = Math.round(bh * 1.03);
+  const fw = Math.max(bw, Math.round(fh / 2));
+  magick(clean, '-crop', `${bw}x${bh}+${x0}+${y0}`, '+repage', '-background', 'none', '-gravity', 'south', '-extent', `${fw}x${fh}`, '-resize', '400x800', '-quality', '84', '-define', 'webp:alpha-quality=90', join(outDir, `p${i}.webp`));
+  // the face: head and shoulders, centred on where the head is
+  const headRows = Math.round(bh * 0.1);
+  let sx = 0;
+  let n = 0;
+  for (let y = y0; y < y0 + headRows; y++) for (let x = x0; x <= x1; x++) if (px[(y * w + x) * 4 + 3]! > 128) (sx += x), n++;
+  const cx = n ? Math.round(sx / n) : Math.round((x0 + x1) / 2);
+  const side = Math.round(bh * 0.27);
+  const fx = Math.max(0, Math.min(w - side, cx - Math.round(side / 2)));
+  const fy = Math.max(0, y0 - Math.round(bh * 0.015));
+  magick(clean, '-crop', `${side}x${side}+${fx}+${fy}`, '+repage', '-background', 'none', '-gravity', 'center', '-extent', `${side}x${side}`, '-resize', '256x256', '-quality', '86', '-define', 'webp:alpha-quality=90', join(outDir, `q${i}.webp`));
+  const listPath = join(ROOT, 'client/src/art/heroes.json');
+  const list = new Set<string>(existsSync(listPath) ? JSON.parse(readFileSync(listPath, 'utf8')) : []);
+  list.add(key);
+  writeFileSync(listPath, JSON.stringify([...list].sort()) + '\n');
+  keep(src, `hero${i}`);
+  console.log(`hero ${key}: figure ${bw}×${bh} → p${i}.webp, face → q${i}.webp`);
+}
+
 const [cmd, ...args] = process.argv.slice(2);
 if (cmd === 'map' && args[0] && args[1]) map(resolve(args[0]), args[1], Number(args[2] ?? 6), Number(args[3] ?? 4));
 else if ((cmd === 'things' || cmd === 'foes' || cmd === 'marks') && args[0] && args[1]) atlas(cmd, resolve(args[0]), Number(args[1]));
 else if (cmd === 'ground' && args[0] && args[1]) ground(resolve(args[0]), args[1]);
 else if (cmd === 'view' && args[0] && args[1]) view(resolve(args[0]), args[1]);
+else if (cmd === 'hero' && args[0] && args[1]) hero(resolve(args[0]), args[1]);
 else {
-  console.error('usage: tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows] | things|foes|marks <painted.png> <n> | ground <painted.png> <scene> | view <painted.png> <key>');
+  console.error('usage: tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows] | things|foes|marks <painted.png> <n> | ground <painted.png> <scene> | view <painted.png> <key> | hero <painted.png> <role-gender>');
   process.exit(1);
 }
