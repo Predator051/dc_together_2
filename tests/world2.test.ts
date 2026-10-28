@@ -120,6 +120,13 @@ describe('the hero', () => {
     for (const e of withIcon) expect(icons.has(e.icon!), e.id).toBe(true);
   });
 
+  it('a way out shows the mark of the place it leads to, as the map does', () => {
+    const { w, h } = home();
+    const ways = w.view(h).groups.flatMap((g) => g.entries).filter((e) => e.kind === 'go');
+    expect(ways.length).toBeGreaterThan(0);
+    for (const e of ways) expect(e.icon, e.id).toBe(`@${w.g().ix.c.areas.find((a) => `go:${a.id}` === e.id)!.scene}`);
+  });
+
   it('a recipe nobody needs any more disappears; one that needs a tool says which', () => {
     const { w, h } = home();
     w.state.flags['built:x_16'] = 1;
@@ -277,6 +284,8 @@ describe('the household', () => {
     w.state.res['r_05'] = 10;
     const jobs = w.view(h).residents[0]!.jobs;
     expect(jobs.map((j) => j.id)).not.toContain('x_34'); // she is afraid of water
+    // a work to set her to shows the mark of what it brings
+    expect(jobs.some((j) => j.icon)).toBe(true);
     // cutting reeds needs a blade lying in the store
     expect(jobs.find((j) => j.id === 'x_06')?.reason).toContain('ніж');
     expect(w.cmd(h, { c: 'job', who: 'h_01', id: 'x_06' }).ok).toBe(false);

@@ -3741,12 +3741,13 @@ mark {
   .scene-art,
   .map-card-art,
   .doll-paint,
-  .stage-art,
   .stage-paint,
   .act-medal,
   .stage-fan-shade,
   .stage-fan-body,
-  .work-card {
+  .work-card,
+  .shelf-card,
+  .folk-card {
     animation: none;
   }
   .life-smoke,
@@ -5353,34 +5354,7 @@ span.spot-pic.painted {
   padding: 14px 16px 18px;
   animation: shade 0.2s ease-out both;
 }
-/* ---------- an opened spot on its stage: the workplace painted, its works standing on it ---------- */
-/* a spot without works (the way out, the yard's extras): the painting only heads it */
-.stage-art {
-  position: relative;
-  height: clamp(130px, 26vh, 220px);
-  margin: -14px -16px 0;
-  background-position: center;
-  background-size: cover;
-  animation: tile-in 0.5s ease-out backwards;
-}
-.station-sheet.docked .stage-art {
-  margin: -16px -18px 0;
-}
-.stage-art::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(34, 28, 21, 0.2), transparent 30%, transparent 50%, var(--leaf));
-}
-.stage-body {
-  position: relative;
-  margin-top: -52px;
-}
-.stage-body .group-head h3,
-.stage-body .group-head .desc {
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
-}
-
+/* ---------- an opened spot on its stage: the workplace painted, its works (things, people) standing on it ---------- */
 /* the painting whole, at its own 3:2, so every medal stands on the thing it belongs to */
 .stage {
   position: relative;
@@ -5623,6 +5597,9 @@ span.spot-pic.painted {
   overflow-wrap: anywhere;
 }
 .act-medal.placed .act-label {
+  /* a name is never hidden under the next disc */
+  position: relative;
+  z-index: 1;
   padding: 1px 6px;
   border-radius: 6px;
   background: rgba(20, 15, 10, 0.72);
@@ -5824,6 +5801,201 @@ span.spot-pic.painted {
 .btn.primary.work-do:has(.work-do-fill) {
   background: rgba(196, 154, 69, 0.55);
   opacity: 1;
+}
+/* a resident on the painting: the face in the disc, the mark of their work at its foot */
+.folk-face {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font: 600 1.2rem/1 var(--serif);
+  color: var(--ink-2);
+}
+.folk-face.painted {
+  background-position: center 30%;
+  background-size: cover;
+}
+.act-medal.folk .act-disc {
+  background: var(--page);
+}
+.act-medal.folk.idle .act-disc {
+  border-color: rgba(230, 217, 188, 0.3);
+}
+.folk-job {
+  position: absolute;
+  right: -8px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--ochre);
+  border-radius: 50%;
+  background: var(--page);
+}
+.folk-job .item-icon,
+.folk-job span.item-icon.painted {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  vertical-align: 0;
+}
+.folk-warn {
+  position: absolute;
+  top: 0;
+  right: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--cinnabar-ink);
+  box-shadow: 0 0 0 2px var(--page);
+}
+
+/* the picked resident: who they are, what they bring, the works to set them to */
+.folk-card {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--rule-2);
+  border-radius: 10px;
+  background: var(--leaf-2);
+  animation: card-in 0.22s ease-out both;
+}
+.folk-card-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.folk-card-head small {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-2);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.folk-card-face {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 1.5px solid rgba(196, 154, 69, 0.6);
+  border-radius: 50%;
+  background-color: var(--page);
+  font: 600 1.3rem/1 var(--serif);
+  color: var(--ink-2);
+}
+.folk-card-face.painted {
+  background-position: center 30%;
+  background-size: cover;
+}
+.folk-card-name {
+  font: 600 1.05rem/1.3 var(--sans);
+  color: var(--ink);
+}
+.folk-card-now {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 10px 0 0;
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  color: var(--ink-2);
+}
+.folk-card-now b {
+  color: var(--ink);
+}
+.folk-card .traits {
+  font-size: 0.88rem;
+}
+.folk-jobs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+.folk-job-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 6px 10px 6px 6px;
+  border: 1px solid var(--rule-2);
+  border-radius: 8px;
+  background: var(--leaf);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.folk-job-pic {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--page);
+}
+.folk-job-pic .item-icon,
+.folk-job-pic span.item-icon.painted {
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  vertical-align: 0;
+}
+.folk-job-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.folk-job-text small {
+  color: var(--faded);
+  font-size: 0.8rem;
+}
+.folk-job-opt.on {
+  border-color: var(--ochre);
+  background: var(--ochre-wash);
+  opacity: 1;
+}
+.folk-job-opt:disabled:not(.on) {
+  opacity: 0.55;
+  cursor: default;
+}
+.folk-job-opt:disabled {
+  cursor: default;
+}
+@media (hover: hover) {
+  .folk-job-opt:hover:not(:disabled) {
+    border-color: var(--ochre);
+  }
+}
+.folk-job-opt:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 2px;
+}
+
+/* the store's picked shelf: its things as cells, what can be done with the picked one */
+.shelf-card {
+  margin: 12px 0 12px;
+  animation: card-in 0.22s ease-out both;
+}
+.shelf-name {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  font: 600 1rem/1.3 var(--sans);
+  color: var(--ink);
+}
+.shelf-card .cells {
+  margin-top: 8px;
+}
+.stage-note {
+  margin-top: 12px;
 }
 @media (max-width: 380px) {
   .work-card {

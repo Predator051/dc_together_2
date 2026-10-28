@@ -259,6 +259,8 @@ function pathEntries(g: Game, pid: PlayerId): EntryView[] {
         ...(block && block !== g.ix.ui('err_busy') ? { reason: block } : {}),
         cooldown: travelTime(g, pid, p.at, a.id),
         ...(a.danger ? { hint: `${g.ix.ui('danger')} ${a.danger}` } : {}),
+        // the painted mark of the place it leads to (the same as on the map)
+        ...(a.scene ? { icon: `@${a.scene}` } : {}),
       });
     } else if (a.scout) {
       const sc = g.ix.scenes.get(a.scout);
@@ -863,9 +865,11 @@ function residentsView(g: Game, pid: PlayerId): ResidentView[] {
         let mult = 1;
         for (const t of r.traits) mult *= t.mult?.[a.id] ?? 1;
         const per = Object.values(a.yield ?? {}).reduce((s: number, y) => s + (Array.isArray(y) ? (y[0] + y[1]) / 2 : y), 0);
+        const icon = actionIcon(g, a);
         return {
           id: j.id,
           label: g.render(a.label, pid),
+          ...(icon ? { icon } : {}),
           place: areaDef(g, j.area)?.name ?? j.area,
           // at the garden: water a hour, not a yield
           rate: a.id === g.ix.c.garden?.tend ? a.job!.rate : Math.round(a.job!.rate * per * mult),

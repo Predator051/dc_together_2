@@ -1,6 +1,8 @@
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { HEROES, ITEM_ICONS, PORTRAITS, SCENES, SPOT_ICONS, VIEWS } from '../shared/src/pictures.js';
+import { FOLK, HEROES, ITEM_ICONS, PORTRAITS, SCENES, SPOT_ICONS, VIEWS } from '../shared/src/pictures.js';
+import { content } from '../content/index.js';
+import folk from '../client/src/art/folk.json';
 import painted from '../client/src/art/things.json';
 import foes from '../client/src/art/foes.json';
 import marks from '../client/src/art/marks.json';
@@ -115,5 +117,14 @@ describe('painted stations', () => {
         }
       });
     }
+  });
+});
+
+// Every resident has a painted face (scripts/art.ts folk); a new resident needs one.
+describe('painted folk', () => {
+  it('every resident has a face, and every face its picture', () => {
+    expect(content.residents.map((r) => r.id).filter((id) => !(FOLK as readonly string[]).includes(id))).toEqual([]);
+    expect([...FOLK].filter((id) => !(folk as string[]).includes(id))).toEqual([]);
+    FOLK.forEach((id, i) => expect(existsSync(new URL(`../client/src/art/folk/f${i + 1}.webp`, import.meta.url)), id).toBe(true));
   });
 });

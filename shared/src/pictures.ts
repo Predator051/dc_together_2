@@ -8,6 +8,9 @@ export type SceneId = (typeof SCENES)[number];
 /** The heroes as the players see them: role and gender (a look for each pair the game may meet). */
 export const HEROES = ['maker-m', 'hunter-f', 'maker-f', 'hunter-m'] as const;
 
+/** Residents with a painted face, in the order of their pictures. */
+export const FOLK = ['h_01', 'h_02', 'h_03', 'h_04', 'h_05', 'h_06', 'h_07', 'h_08', 'h_09', 'h_10'] as const;
+
 /** Places seen at eye level (the head of a scene, the card of a place): every ground, and suppers by the fire. */
 export const VIEWS = [...SCENES, 'hearth1', 'hearth2'] as const;
 

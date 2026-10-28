@@ -104,3 +104,11 @@ strict grid of 3 columns and 3 rows … faces the viewer at three-quarters, mena
 1536×1024, обрезка до широкой полосы. «An eye-level painted establishing view of … The main subject sits in
 the middle horizontal band (top and bottom fifth will be cropped) … No people, no animals …» + хвост стиля.
 `hearth1/2` — для ужинов (сцены из пулов).
+
+## Лица жителей — листы 2×2, 1024², тёмный фон (`folk.json`: порядок и описания)
+
+«Create one square image 1024x1024: a 2x2 grid of four separate painted portraits, divided by thin solid
+black gutters … head and shoulders of one person, facing the viewer, face centered … plain dark warm
+painted background (smoky umber), soft firelight from one side … 17th century Cossack-era clothing …
+Top-left: … Top-right: … Bottom-left: … Bottom-right: …» + хвост стиля «Живопис» (лица читаются в
+маленьком круге на телефоне). Режется `scripts/art.ts folk <png> <n> 0.86`.

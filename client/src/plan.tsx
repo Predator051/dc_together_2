@@ -84,8 +84,6 @@ export interface Spot {
   meter?: { load: number; cap: number };
   /** What opens when the spot is tapped. */
   body: () => JSX.Element;
-  /** Its works stand on its painted close view (the way out and the yard's extras only head it). */
-  works?: boolean;
 }
 
 /**
@@ -105,7 +103,6 @@ export function groupSpots(groups: GroupView[], body: (g: GroupView) => JSX.Elem
       keys: [g.id, ...g.entries.filter((e) => e.kind !== 'go').map((e) => `${g.id}:${e.id}`)],
       ...(g.progress ? { progress: { n: g.progress.n, max: g.progress.max } } : {}),
       body: () => body(g),
-      works: g.id !== 'paths',
     });
   for (const g of groups) {
     if (g.spots?.length) {
@@ -133,23 +130,12 @@ export function groupSpots(groups: GroupView[], body: (g: GroupView) => JSX.Elem
   return [spots, rest];
 }
 
-/** Inside an opened spot whose works stand on its painting: the spot's icon (its works draw the stage). */
+/** Inside an opened spot with a painted close view: the spot's icon (what opens draws the view, its works on it). */
 export const StageOn = createContext<string | null>(null);
 
-/**
- * An opened spot on its painted close view. Works stand on the painting itself (the body draws it,
- * see StageOn); a spot without works only has the painting at its head.
- */
-function Stage({ icon, works, children }: { icon: string; works: boolean; children: ComponentChildren }) {
-  const url = stationUrl(icon);
-  if (!url) return <>{children}</>;
-  if (works) return <StageOn.Provider value={icon}>{children}</StageOn.Provider>;
-  return (
-    <>
-      <div class="stage-art" key={url} style={{ backgroundImage: `url(${url})` }} aria-hidden="true" />
-      <div class="stage-body">{children}</div>
-    </>
-  );
+/** An opened spot: one with a painted close view draws it with its works (or things, or people) on it. */
+function Stage({ icon, children }: { icon: string; children: ComponentChildren }) {
+  return stationUrl(icon) ? <StageOn.Provider value={icon}>{children}</StageOn.Provider> : <>{children}</>;
 }
 
 export function extraSpot(
@@ -380,7 +366,7 @@ export function AreaPlan({
             </div>
           }
         >
-          <Stage icon={shown.icon} works={!!shown.works}>
+          <Stage icon={shown.icon}>
             {shown.body()}
           </Stage>
         </Sheet>

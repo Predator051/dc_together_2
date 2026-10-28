@@ -19,6 +19,8 @@ import { heroFace } from './portraits.js';
 import { Thing } from './items.js';
 import { picture, stationSlots, stationUrl } from './pictures.js';
 import { seatItems, stageItems } from './stage-place.js';
+import { StoreStage } from './store.js';
+import { FolkStage } from './folk.js';
 import { NeedsBar, NeedsSheet } from './needs.js';
 import { WeatherChip } from './weather.js';
 import { EventCards } from './events.js';
@@ -260,6 +262,12 @@ const SORTS: Array<[EntrySort, string]> = [
   ['make', T.sortMake],
 ];
 
+/** The mark of a work: what it gives, the place a way leads to, two for a joint one, else the place's. */
+function workMark(e: EntryView, place: string): JSX.Element {
+  if (e.icon) return e.icon.startsWith('@') ? picture(e.icon) : <Thing icon={e.icon} />;
+  return e.kind === 'scene' || e.kind === 'pool' ? <IconPair /> : picture(place);
+}
+
 /** Stacks on a crowded painting come in the order of the list's sections. */
 const STACK_ORDER = SORTS.map(([id]) => id);
 const STACK_NAMES: Record<string, string> = { ...Object.fromEntries(SORTS), more: T.stageMore };
@@ -318,7 +326,7 @@ function Medal({
       <span class="act-pic">
         <span class="act-disc">
           {run && <Fill key={v.busyUntil} from={v.busyFrom} until={v.busyUntil} offset={c.offset} cls="act-fill" />}
-          {shown.icon ? <Thing icon={shown.icon} /> : pair ? <IconPair /> : picture(place)}
+          {workMark(shown, place)}
         </span>
         {ring > 0 && <span key={ring} class="ring" aria-hidden="true" />}
         {run && <span class="act-secs">{secsLeft(v.busyUntil, now)}</span>}
@@ -371,21 +379,25 @@ function WorkCard({ e, c, place }: { e: EntryView; c: Ctx; place: string }) {
   const busy = v.busyUntil + SAFETY_MS > now;
   const mine = v.busyAction === e.id && v.busyUntil > now;
   const recharge = e.readyAt && e.readyAt + SAFETY_MS > now ? e.readyAt : 0;
-  const disabled = c.locked || !e.enabled || (e.kind === 'act' && (busy || !!recharge));
+  const waits = e.kind === 'act' || e.kind === 'go';
+  const disabled = c.locked || !e.enabled || (waits && (busy || !!recharge));
   const pair = e.kind === 'scene' || e.kind === 'pool';
+  const walk = e.kind === 'go' && e.cooldown ? `${Math.round(e.cooldown / 1000)} ${T.sec}` : null;
   const word = mine
     ? secsLeft(v.busyUntil, now)
     : e.enabled && recharge
       ? secsLeft(recharge, now)
-      : e.enabled && e.kind === 'act' && busy
+      : e.enabled && waits && busy
         ? T.busyNow
-        : pair
-          ? T.workOffer
-          : T.workDo;
+        : e.kind === 'go'
+          ? T.mapGo
+          : pair
+            ? T.workOffer
+            : T.workDo;
   return (
     <div class={`work-card ${e.together ? 'together' : ''} ${mine ? 'running' : ''} ${!e.enabled ? 'blocked' : ''}`} key={e.id}>
       <span class="work-card-pic" aria-hidden="true">
-        {e.icon ? <Thing icon={e.icon} /> : pair ? <IconPair /> : picture(place)}
+        {workMark(e, place)}
       </span>
       <div class="work-card-text">
         <h4 class="work-card-name">
@@ -420,10 +432,16 @@ function WorkCard({ e, c, place }: { e: EntryView; c: Ctx; place: string }) {
               {e.reason}
             </span>
           )}
+          {walk && <span class="m walk">{walk}</span>}
           {e.enabled && e.hint && <span class="m hint">{e.hint}</span>}
         </span>
       </div>
-      <button type="button" class="btn primary work-do" disabled={disabled} onClick={() => net.send({ c: 'act', id: e.id })}>
+      <button
+        type="button"
+        class="btn primary work-do"
+        disabled={disabled}
+        onClick={() => (e.kind === 'go' ? net.send({ c: 'go', to: e.id.slice(3) }) : net.send({ c: 'act', id: e.id }))}
+      >
         {mine && <Fill key={v.busyUntil} from={v.busyFrom} until={v.busyUntil} offset={c.offset} cls="work-do-fill" />}
         <span>{word}</span>
       </button>
@@ -997,30 +1015,40 @@ export function Game({ s }: { s: NetState }) {
       const extra: Spot[] = [];
       if (v.atHome && v.residents.length > 0) {
         const warn = v.residents.some((r) => r.hungry || r.hurt);
-        extra.push(extraSpot('folk', T.residents, () => <ResidentsPanel v={v} locked={locked} />, warn));
+        extra.push(
+          extraSpot('folk', T.residents, () => (stationUrl('folk') ? <FolkStage v={v} locked={locked} /> : <ResidentsPanel v={v} locked={locked} />), warn),
+        );
       }
       // on a phone the store, the bag and what to take along are one more place in the yard;
       // away from home the bag is (and the store, to look at)
       if (!desktop && !v.atHome) {
         extra.push(
-          extraSpot('bag', T.bag, () => (
-            <>
-              <BagPanel v={v} locked={locked} />
-              {!v.bag.items.length && <p class="empty-note">{T.bagEmpty}</p>}
-              <Stock v={v} />
-            </>
-          ), false, { load: v.bag.load, cap: v.bag.cap }),
+          extraSpot('bag', T.bag, () =>
+            stationUrl('bag') ? (
+              <StoreStage v={v} locked={locked} icon="bag">
+                <Stock v={v} />
+              </StoreStage>
+            ) : (
+              <>
+                <BagPanel v={v} locked={locked} />
+                {!v.bag.items.length && <p class="empty-note">{T.bagEmpty}</p>}
+                <Stock v={v} />
+              </>
+            ), false, { load: v.bag.load, cap: v.bag.cap }),
         );
       }
       if (!desktop && v.atHome) {
         extra.push(
-          extraSpot('store', T.stock, () => (
-            <>
-              <BagPanel v={v} locked={locked} />
-              <PackList v={v} locked={locked} />
-              <Stock v={v} />
-            </>
-          ), false, v.bag.items.length ? { load: v.bag.load, cap: v.bag.cap } : undefined),
+          extraSpot('store', T.stock, () =>
+            stationUrl('store') ? (
+              <StoreStage v={v} locked={locked} icon="store" />
+            ) : (
+              <>
+                <BagPanel v={v} locked={locked} />
+                <PackList v={v} locked={locked} />
+                <Stock v={v} />
+              </>
+            ), false, v.bag.items.length ? { load: v.bag.load, cap: v.bag.cap } : undefined),
         );
       }
       // the way out stays last
