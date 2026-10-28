@@ -1,11 +1,15 @@
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { HEROES, ITEM_ICONS, PORTRAITS, SCENES, SPOT_ICONS, VIEWS } from '../shared/src/pictures.js';
+import { FOLK, HEROES, ITEM_ICONS, PORTRAITS, SCENES, SPOT_ICONS, VIEWS } from '../shared/src/pictures.js';
+import { content } from '../content/index.js';
+import folk from '../client/src/art/folk.json';
 import painted from '../client/src/art/things.json';
 import foes from '../client/src/art/foes.json';
 import marks from '../client/src/art/marks.json';
 import views from '../client/src/art/views.json';
 import heroes from '../client/src/art/heroes.json';
+import stations from '../client/src/art/stations.json';
+import stationSlots from '../client/src/art/station-slots.json';
 import grounds from '../client/src/art/grounds.json';
 
 // Every mark of a thing is painted; a new mark needs its cell in an atlas (scripts/art.ts things).
@@ -86,5 +90,41 @@ describe('painted heroes', () => {
       expect(i, k).toBeGreaterThan(0);
       for (const f of [`p${i}`, `q${i}`]) expect(existsSync(new URL(`../client/src/art/heroes/${f}.webp`, import.meta.url)), `${k} ${f}`).toBe(true);
     }
+  });
+});
+
+// Every spot opens on its workplace painted (scripts/art.ts stations).
+describe('painted stations', () => {
+  it('every spot icon has its close view', () => {
+    const list = stations as string[];
+    expect(SPOT_ICONS.filter((k) => !list.includes(k))).toEqual([]);
+    for (const k of list) {
+      const i = (SPOT_ICONS as readonly string[]).indexOf(k) + 1;
+      expect(existsSync(new URL(`../client/src/art/stations/s${i}.webp`, import.meta.url)), k).toBe(true);
+    }
+  });
+
+  // works stand on the painting: on a phone (a 375 by 250 stage, 48px medals) none may cover another
+  it('every close view has places for its works, inside it and apart', () => {
+    const slots = stationSlots as unknown as Record<string, Array<[number, number]>>;
+    for (const k of stations as string[]) {
+      const at = slots[k] ?? [];
+      expect(at.length, k).toBeGreaterThanOrEqual(8);
+      at.forEach(([x, y], i) => {
+        expect(x >= 9 && x <= 91 && y >= 12 && y <= 90, `${k} ${i}`).toBe(true);
+        for (const [x2, y2] of at.slice(0, i)) {
+          expect(Math.hypot((x - x2) * 3.75, (y - y2) * 2.5), `${k} ${i}`).toBeGreaterThanOrEqual(56);
+        }
+      });
+    }
+  });
+});
+
+// Every resident has a painted face (scripts/art.ts folk); a new resident needs one.
+describe('painted folk', () => {
+  it('every resident has a face, and every face its picture', () => {
+    expect(content.residents.map((r) => r.id).filter((id) => !(FOLK as readonly string[]).includes(id))).toEqual([]);
+    expect([...FOLK].filter((id) => !(folk as string[]).includes(id))).toEqual([]);
+    FOLK.forEach((id, i) => expect(existsSync(new URL(`../client/src/art/folk/f${i + 1}.webp`, import.meta.url)), id).toBe(true));
   });
 });

@@ -106,6 +106,11 @@ export const T = {
   soundOff: 'Вимкнути звук',
   mateCan: 'може тут',
   mateNow: 'зараз',
+  // a workplace's painting: works on it, the picked one in a card below
+  workDo: 'Зробити',
+  workOffer: 'Запропонувати',
+  stageMore: 'Ще',
+  stageFold: 'Згорнути',
 
   awayTitle: 'Поки тебе не було',
   awayDays: 'Минуло днів',

@@ -1,12 +1,12 @@
 // A place drawn as a plan: every workplace or corner is a spot to tap, its work opens on demand.
 
-import type { JSX } from 'preact';
+import { createContext, type ComponentChildren, type JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { PLAN_FIXED } from '../../shared/src/content.js';
 import type { GroupView, PlayerView } from '../../shared/src/protocol.js';
 import { IconPair } from './icons.js';
 import { duskOf } from './ambient.js';
-import { Ground, picture } from './pictures.js';
+import { Ground, picture, stationUrl } from './pictures.js';
 import { Sheet } from './sheet.js';
 import { T } from './strings.js';
 
@@ -128,6 +128,14 @@ export function groupSpots(groups: GroupView[], body: (g: GroupView) => JSX.Elem
     add(g, at);
   }
   return [spots, rest];
+}
+
+/** Inside an opened spot with a painted close view: the spot's icon (what opens draws the view, its works on it). */
+export const StageOn = createContext<string | null>(null);
+
+/** An opened spot: one with a painted close view draws it with its works (or things, or people) on it. */
+function Stage({ icon, children }: { icon: string; children: ComponentChildren }) {
+  return stationUrl(icon) ? <StageOn.Provider value={icon}>{children}</StageOn.Provider> : <>{children}</>;
 }
 
 export function extraSpot(
@@ -358,7 +366,9 @@ export function AreaPlan({
             </div>
           }
         >
-          {shown.body()}
+          <Stage icon={shown.icon}>
+            {shown.body()}
+          </Stage>
         </Sheet>
       )}
     </div>

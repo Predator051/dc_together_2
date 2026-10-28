@@ -54,6 +54,21 @@ function costView(g: Game, cost: Record<string, number> | undefined, pid?: Playe
 }
 
 /** Describe what an action gives: exact amounts, ranges, or "+?" when it depends on luck. */
+/** The mark for an action's button: what it yields; for a sale — what is sold, not the coins. */
+function actionIcon(g: Game, a: ActionDef): string | undefined {
+  const ids = [
+    ...(actionSort(g, a) === 'sell' ? Object.keys(a.cost ?? {}) : []),
+    ...Object.keys(a.yield ?? {}),
+    ...(a.effects ?? []).flatMap((e) => ('add' in e ? Object.entries(e.add).filter(([, n]) => n > 0).map(([r]) => r) : [])),
+    ...(a.chance ?? []).flatMap((ch) => Object.keys(ch.add ?? {})),
+  ];
+  for (const r of ids) {
+    const def = g.ix.res.get(r);
+    if (def && !def.hidden && def.icon) return def.icon;
+  }
+  return undefined;
+}
+
 function actionGains(g: Game, a: ActionDef, pid: PlayerId): GainView[] {
   const out: GainView[] = [];
   const seen = new Set<string>();
@@ -172,6 +187,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         readyAt: cd > g.now ? cd : undefined,
         cooldown: g.actionTime(a, pid),
         sort: actionSort(g, a),
+        ...(actionIcon(g, a) ? { icon: actionIcon(g, a) } : {}),
         ...(a.spot ? { spot: a.spot } : {}),
         ...(a.quest ? { quest: true } : {}),
       });
@@ -243,6 +259,8 @@ function pathEntries(g: Game, pid: PlayerId): EntryView[] {
         ...(block && block !== g.ix.ui('err_busy') ? { reason: block } : {}),
         cooldown: travelTime(g, pid, p.at, a.id),
         ...(a.danger ? { hint: `${g.ix.ui('danger')} ${a.danger}` } : {}),
+        // the painted mark of the place it leads to (the same as on the map)
+        ...(a.scene ? { icon: `@${a.scene}` } : {}),
       });
     } else if (a.scout) {
       const sc = g.ix.scenes.get(a.scout);
@@ -847,9 +865,11 @@ function residentsView(g: Game, pid: PlayerId): ResidentView[] {
         let mult = 1;
         for (const t of r.traits) mult *= t.mult?.[a.id] ?? 1;
         const per = Object.values(a.yield ?? {}).reduce((s: number, y) => s + (Array.isArray(y) ? (y[0] + y[1]) / 2 : y), 0);
+        const icon = actionIcon(g, a);
         return {
           id: j.id,
           label: g.render(a.label, pid),
+          ...(icon ? { icon } : {}),
           place: areaDef(g, j.area)?.name ?? j.area,
           // at the garden: water a hour, not a yield
           rate: a.id === g.ix.c.garden?.tend ? a.job!.rate : Math.round(a.job!.rate * per * mult),

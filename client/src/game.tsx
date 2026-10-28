@@ -1,12 +1,12 @@
-import type { JSX } from 'preact';
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import type { ComponentChildren, JSX } from 'preact';
+import { useContext, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { EntrySort, EntryView, GroupView, MateEntryView, PlayerView, SummaryView, WelcomeView } from '../../shared/src/protocol.js';
 import type { NetState } from './net.js';
 import { net } from './net.js';
 import { Ambient } from './ambient.js';
 import { Notes, useSeenClues } from './notes.js';
 import { HeroPanel } from './hero.js';
-import { AreaPlan, PlanBack, extraSpot, groupSpots } from './plan.js';
+import { AreaPlan, PlanBack, StageOn, extraSpot, groupSpots } from './plan.js';
 import type { Spot } from './plan.js';
 import { notifier } from './notify.js';
 import { sound } from './sound.js';
@@ -17,6 +17,10 @@ import { BagPanel, FightPanel, MapPanel, NearFight, PackList, ResidentsPanel } f
 import { Cell } from './cells.js';
 import { heroFace } from './portraits.js';
 import { Thing } from './items.js';
+import { picture, stationSlots, stationUrl } from './pictures.js';
+import { seatItems, stageItems } from './stage-place.js';
+import { StoreStage } from './store.js';
+import { FolkStage } from './folk.js';
 import { NeedsBar, NeedsSheet } from './needs.js';
 import { WeatherChip } from './weather.js';
 import { EventCards } from './events.js';
@@ -258,6 +262,277 @@ const SORTS: Array<[EntrySort, string]> = [
   ['make', T.sortMake],
 ];
 
+/** The mark of a work: what it gives, the place a way leads to, two for a joint one, else the place's. */
+function workMark(e: EntryView, place: string): JSX.Element {
+  if (e.icon) return e.icon.startsWith('@') ? picture(e.icon) : <Thing icon={e.icon} />;
+  return e.kind === 'scene' || e.kind === 'pool' ? <IconPair /> : picture(place);
+}
+
+/** Stacks on a crowded painting come in the order of the list's sections. */
+const STACK_ORDER = SORTS.map(([id]) => id);
+const STACK_NAMES: Record<string, string> = { ...Object.fromEntries(SORTS), more: T.stageMore };
+
+/**
+ * A work on a workplace's painting: the mark of what it yields (or of the place) in a disc. A stack
+ * is several works of one kind under one disc, its name below. A tap picks it; the card below does it.
+ */
+function Medal({
+  list,
+  shown,
+  sort,
+  c,
+  place,
+  on,
+  at,
+  i,
+  named = false,
+  onPick,
+}: {
+  list: EntryView[];
+  /** The work whose mark the disc shows. */
+  shown: EntryView;
+  /** A stack: the kind of works it holds. */
+  sort?: string;
+  c: Ctx;
+  place: string;
+  on: boolean;
+  /** Where it stands on the painting, in percent; none in an opened stack. */
+  at?: [number, number];
+  i: number;
+  named?: boolean;
+  onPick: () => void;
+}) {
+  const { v, now } = c;
+  const run = list.find((e) => v.busyAction === e.id && v.busyUntil > now);
+  const ring = useEcho(!!run);
+  const ready = list.filter((e) => e.enabled).length;
+  const pair = shown.kind === 'scene' || shown.kind === 'pool';
+  const together = list.some((e) => e.together);
+  const name = sort ? STACK_NAMES[sort] ?? sort : shown.label;
+  const says = sort ? `${name}: ${list.length}` : [shown.label, shown.enabled ? '' : shown.reason].filter(Boolean).join(' — ');
+  const where = at ? { left: `${at[0]}%`, top: `${at[1]}%` } : {};
+  return (
+    <button
+      type="button"
+      class={`act-medal ${at ? 'placed' : ''} ${sort ? 'stack' : ''} ${on ? 'on' : ''} ${together ? 'together' : ''} ${run ? 'running' : ''} ${ready ? '' : 'blocked'}`}
+      style={{ ...where, '--i': String(i) }}
+      aria-label={says}
+      aria-pressed={sort ? undefined : on}
+      aria-haspopup={sort ? 'dialog' : undefined}
+      title={says}
+      data-key={sort ? `#${sort}` : shown.id}
+      onClick={onPick}
+    >
+      <span class="act-pic">
+        <span class="act-disc">
+          {run && <Fill key={v.busyUntil} from={v.busyFrom} until={v.busyUntil} offset={c.offset} cls="act-fill" />}
+          {workMark(shown, place)}
+        </span>
+        {ring > 0 && <span key={ring} class="ring" aria-hidden="true" />}
+        {run && <span class="act-secs">{secsLeft(v.busyUntil, now)}</span>}
+        {sort && <span class="act-count">{list.length}</span>}
+        {!sort && !shown.enabled && (
+          <span class="act-lock" aria-hidden="true">
+            <IconLock />
+          </span>
+        )}
+        {together && !pair && (
+          <span class="act-pair" aria-hidden="true">
+            <IconPair />
+          </span>
+        )}
+        {list.some((e) => e.quest) && <span class="act-quest" aria-hidden="true" />}
+      </span>
+      {(named || sort) && <span class="act-label">{name}</span>}
+    </button>
+  );
+}
+
+/** A stack opened over the painting: its works spread out from where it stands. Escape folds it. */
+function Fan({ name, at, children, onClose }: { name: string; at: [number, number]; children: ComponentChildren; onClose: () => void }) {
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // Escape folds the stack first, the place stays open
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key !== 'Escape') return;
+      ev.stopPropagation();
+      onClose();
+    };
+    window.addEventListener('keydown', onKey, true);
+    box.current?.querySelector<HTMLButtonElement>('.act-medal')?.focus({ preventScroll: true });
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, []);
+  return (
+    <div class="stage-fan" role="dialog" aria-label={name} ref={box}>
+      <button type="button" class="stage-fan-shade" aria-label={T.stageFold} onClick={onClose} />
+      <div class="stage-fan-body" style={{ transformOrigin: `${at[0]}% ${at[1]}%` }}>
+        <div class="stage-fan-name">{name}</div>
+        <div class="stage-fan-list">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/** The picked work: what it takes and gives, why it cannot be done yet, and the button that does it. */
+function WorkCard({ e, c, place }: { e: EntryView; c: Ctx; place: string }) {
+  const { v, now } = c;
+  const busy = v.busyUntil + SAFETY_MS > now;
+  const mine = v.busyAction === e.id && v.busyUntil > now;
+  const recharge = e.readyAt && e.readyAt + SAFETY_MS > now ? e.readyAt : 0;
+  const waits = e.kind === 'act' || e.kind === 'go';
+  const disabled = c.locked || !e.enabled || (waits && (busy || !!recharge));
+  const pair = e.kind === 'scene' || e.kind === 'pool';
+  const walk = e.kind === 'go' && e.cooldown ? `${Math.round(e.cooldown / 1000)} ${T.sec}` : null;
+  const word = mine
+    ? secsLeft(v.busyUntil, now)
+    : e.enabled && recharge
+      ? secsLeft(recharge, now)
+      : e.enabled && waits && busy
+        ? T.busyNow
+        : e.kind === 'go'
+          ? T.mapGo
+          : pair
+            ? T.workOffer
+            : T.workDo;
+  return (
+    <div class={`work-card ${e.together ? 'together' : ''} ${mine ? 'running' : ''} ${!e.enabled ? 'blocked' : ''}`} key={e.id}>
+      <span class="work-card-pic" aria-hidden="true">
+        {workMark(e, place)}
+      </span>
+      <div class="work-card-text">
+        <h4 class="work-card-name">
+          {e.label}
+          {e.quest && <span class="pill errand">{T.questTag}</span>}
+          {e.together && (
+            <span class="pill pair">
+              <IconPair />
+              {T.together}
+            </span>
+          )}
+        </h4>
+        <span class="tile-meta">
+          {(e.gain ?? []).map((x) => (
+            <span class={`m gain ${x.unsure ? 'unsure' : ''}`}>{x.text}</span>
+          ))}
+          {(e.cost ?? []).map((x) =>
+            x.stock ? (
+              <span class="m stock-left">
+                {x.name}: {x.have}
+              </span>
+            ) : (
+              <span class={`m cost ${x.ok ? '' : 'short'}`}>
+                −{x.n} {x.name}
+                {!x.ok && ` (${T.have} ${x.have})`}
+              </span>
+            ),
+          )}
+          {!e.enabled && e.reason && (
+            <span class="m reason">
+              <IconLock />
+              {e.reason}
+            </span>
+          )}
+          {walk && <span class="m walk">{walk}</span>}
+          {e.enabled && e.hint && <span class="m hint">{e.hint}</span>}
+        </span>
+      </div>
+      <button
+        type="button"
+        class="btn primary work-do"
+        disabled={disabled}
+        onClick={() => (e.kind === 'go' ? net.send({ c: 'go', to: e.id.slice(3) }) : net.send({ c: 'act', id: e.id }))}
+      >
+        {mine && <Fill key={v.busyUntil} from={v.busyFrom} until={v.busyUntil} offset={c.offset} cls="work-do-fill" />}
+        <span>{word}</span>
+      </button>
+    </div>
+  );
+}
+
+/** Where each medal stood on this device: kept, so a medal does not move when another comes or goes. */
+function useSeats(id: string, keys: string[], room: number): Record<string, number> {
+  const seats = useMemo(() => {
+    let was: Record<string, number> = {};
+    try {
+      was = JSON.parse(load(`bezgomin.seats.${id}`) ?? '{}') as Record<string, number>;
+    } catch {
+      /* a broken note: start afresh */
+    }
+    return { was, now: seatItems(keys, room, was) };
+  }, [id, keys.join('|'), room]);
+  useEffect(() => {
+    const { was, now } = seats;
+    if (Object.keys(now).every((k) => was[k] === now[k])) return;
+    // the gone keep their places only while nobody has taken them
+    const used = new Set(Object.values(now));
+    const kept = Object.fromEntries(Object.entries(was).filter(([k, s]) => !(k in now) && !used.has(s)));
+    store(`bezgomin.seats.${id}`, JSON.stringify({ ...kept, ...now }));
+  }, [seats]);
+  return seats.now;
+}
+
+/**
+ * A workplace's painting with its works standing on it, and under it the card of the picked one.
+ * When there are more works than places, works of a kind share a stack that opens on a tap.
+ */
+function WorkStage({ g, c, icon }: { g: GroupView; c: Ctx; icon: string }) {
+  const slots = stationSlots(icon);
+  const items = stageItems(g.entries, slots.length, STACK_ORDER);
+  const seats = useSeats(g.id, items.map((it) => it.key), slots.length);
+  const [pick, setPick] = useState(() => load(`bezgomin.work.${g.id}`));
+  const [fan, setFan] = useState<string | null>(null);
+  const box = useRef<HTMLDivElement>(null);
+  // a folded stack gets the focus back, so the keyboard stays where it was
+  const fold = () => {
+    const key = fan;
+    setFan(null);
+    if (key) box.current?.querySelector<HTMLElement>(`[data-key="${CSS.escape(key)}"]`)?.focus({ preventScroll: true });
+  };
+  const byId = new Map(g.entries.map((e) => [e.id, e] as const));
+  const running = g.entries.find((e) => c.v.busyAction === e.id && c.v.busyUntil > c.now);
+  const chosen = (pick ? byId.get(pick) : undefined) ?? running ?? g.entries.find((e) => e.enabled) ?? g.entries[0];
+  const choose = (id: string) => {
+    setPick(id);
+    store(`bezgomin.work.${g.id}`, id);
+    fold();
+  };
+  const placed = items.map((it, n) => {
+    const list = it.ids.map((id) => byId.get(id)).filter((e): e is EntryView => !!e);
+    const at = slots[seats[it.key] ?? n] ?? slots[0]!;
+    return { it, list, at, n };
+  });
+  const open = placed.find((p) => p.it.key === fan);
+  return (
+    <>
+      <div class="stage" ref={box}>
+        <div class="stage-paint" style={{ backgroundImage: `url(${stationUrl(icon) ?? ''})` }} aria-hidden="true" />
+        {placed.map(({ it, list, at, n }) => (
+          <Medal
+            key={it.key}
+            list={list}
+            shown={list.find((e) => e === chosen) ?? list.find((e) => e.enabled) ?? list[0]!}
+            sort={it.sort}
+            c={c}
+            place={icon}
+            on={!!chosen && list.includes(chosen)}
+            at={at}
+            i={n}
+            onPick={() => (it.sort ? setFan(it.key) : choose(it.ids[0]!))}
+          />
+        ))}
+        {open && (
+          <Fan name={STACK_NAMES[open.it.sort ?? ''] ?? ''} at={open.at} onClose={fold}>
+            {open.list.map((e, n) => (
+              <Medal key={e.id} list={[e]} shown={e} c={c} place={icon} on={e === chosen} i={n} named onPick={() => choose(e.id)} />
+            ))}
+          </Fan>
+        )}
+      </div>
+      {chosen && <WorkCard e={chosen} c={c} place={icon} />}
+    </>
+  );
+}
+
 /**
  * A workplace's things to do. What can be done now comes first; a long list is split into
  * sections by what it is for, so a crowded hearth reads as food, supplies and upkeep, not a heap.
@@ -307,6 +582,17 @@ function Tiles({ g, c }: { g: GroupView; c: Ctx }) {
 }
 
 function Group({ g, c }: { g: GroupView; c: Ctx }) {
+  const stage = useContext(StageOn);
+  if (stage) {
+    return (
+      <section class={`group staged ${g.base ? 'base' : ''}`}>
+        <WorkStage g={g} c={c} icon={stage} />
+        {(g.desc || g.progress) && <PlaceHead g={g} />}
+        {c.v.garden && c.v.garden.group === g.id && <GardenBeds v={c.v} offset={c.offset} locked={c.locked} />}
+        {g.partner && g.partner.length > 0 && <MateList items={g.partner} name={c.v.partner.name} face={heroFace(c.v.partner.role, c.v.partner.gender)} />}
+      </section>
+    );
+  }
   return (
     <section class={`group ${g.base ? 'base' : ''}`}>
       <header class="group-head">
@@ -729,30 +1015,40 @@ export function Game({ s }: { s: NetState }) {
       const extra: Spot[] = [];
       if (v.atHome && v.residents.length > 0) {
         const warn = v.residents.some((r) => r.hungry || r.hurt);
-        extra.push(extraSpot('folk', T.residents, () => <ResidentsPanel v={v} locked={locked} />, warn));
+        extra.push(
+          extraSpot('folk', T.residents, () => (stationUrl('folk') ? <FolkStage v={v} locked={locked} /> : <ResidentsPanel v={v} locked={locked} />), warn),
+        );
       }
       // on a phone the store, the bag and what to take along are one more place in the yard;
       // away from home the bag is (and the store, to look at)
       if (!desktop && !v.atHome) {
         extra.push(
-          extraSpot('bag', T.bag, () => (
-            <>
-              <BagPanel v={v} locked={locked} />
-              {!v.bag.items.length && <p class="empty-note">{T.bagEmpty}</p>}
-              <Stock v={v} />
-            </>
-          ), false, { load: v.bag.load, cap: v.bag.cap }),
+          extraSpot('bag', T.bag, () =>
+            stationUrl('bag') ? (
+              <StoreStage v={v} locked={locked} icon="bag">
+                <Stock v={v} />
+              </StoreStage>
+            ) : (
+              <>
+                <BagPanel v={v} locked={locked} />
+                {!v.bag.items.length && <p class="empty-note">{T.bagEmpty}</p>}
+                <Stock v={v} />
+              </>
+            ), false, { load: v.bag.load, cap: v.bag.cap }),
         );
       }
       if (!desktop && v.atHome) {
         extra.push(
-          extraSpot('store', T.stock, () => (
-            <>
-              <BagPanel v={v} locked={locked} />
-              <PackList v={v} locked={locked} />
-              <Stock v={v} />
-            </>
-          ), false, v.bag.items.length ? { load: v.bag.load, cap: v.bag.cap } : undefined),
+          extraSpot('store', T.stock, () =>
+            stationUrl('store') ? (
+              <StoreStage v={v} locked={locked} icon="store" />
+            ) : (
+              <>
+                <BagPanel v={v} locked={locked} />
+                <PackList v={v} locked={locked} />
+                <Stock v={v} />
+              </>
+            ), false, v.bag.items.length ? { load: v.bag.load, cap: v.bag.cap } : undefined),
         );
       }
       // the way out stays last

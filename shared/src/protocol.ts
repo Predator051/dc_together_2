@@ -121,6 +121,8 @@ export interface EntryView {
   quest?: boolean;
   /** What it is for, so a long workplace can be laid out in sections: done together, upkeep, or what it makes. */
   sort?: EntrySort;
+  /** The mark of what it yields (a thing's icon), for its button; a way out: `@` + the scene it leads to. */
+  icon?: string;
 }
 
 export type EntrySort =
@@ -518,7 +520,8 @@ export interface ResidentView {
   traits: Array<{ name: string; text: string }>;
   job: string | null;
   jobLabel?: string;
-  jobs: Array<{ id: string; label: string; place: string; rate: number; reason?: string }>;
+  /** What each can be set to; `icon` is the mark of what it brings. */
+  jobs: Array<{ id: string; label: string; icon?: string; place: string; rate: number; reason?: string }>;
   hurt: boolean;
   hungry: boolean;
 }
