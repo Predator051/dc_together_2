@@ -3458,6 +3458,13 @@ mark {
     linear-gradient(180deg, transparent, #000 6%, #000 94%, transparent);
   mask-composite: intersect;
 }
+/* a small blurry copy of the painting under each tile, there before the tile itself comes */
+.land-tile-ph {
+  position: absolute;
+  display: block;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
 .land-tile {
   position: absolute;
   display: block;
@@ -3653,6 +3660,120 @@ mark {
 .land-pin.sel .pin-name {
   color: var(--ochre-ink);
 }
+/* what can be done with a picked place: round buttons fanned out above its mark, the same size at any zoom */
+.pin-ring {
+  position: absolute;
+  z-index: 3;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+  transform: scale(var(--inv, 1));
+}
+.ring-btn {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 86px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: var(--sans);
+  cursor: pointer;
+  transform: translate(calc(var(--x) - 50%), calc(var(--y) - 24px));
+  animation: ring-out 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 35ms);
+  -webkit-tap-highlight-color: transparent;
+}
+@keyframes ring-out {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -24px) scale(0.4);
+  }
+}
+.ring-disc {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1.5px solid var(--ink-2);
+  border-radius: 50%;
+  background: rgba(34, 28, 21, 0.94);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.6);
+  transition:
+    transform 0.15s ease-out,
+    border-color 0.15s;
+}
+.ring-disc svg {
+  width: 24px;
+  height: 24px;
+  color: var(--ink);
+}
+.ring-btn.primary .ring-disc {
+  border-color: var(--ochre);
+  background: var(--ochre);
+}
+.ring-btn.primary .ring-disc svg {
+  color: #1f180f;
+}
+.ring-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1px 7px 2px;
+  border-radius: 6px;
+  background: rgba(22, 17, 12, 0.82);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.ring-label small {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.ring-btn:disabled {
+  cursor: default;
+}
+.ring-btn:disabled .ring-disc {
+  border-color: var(--rule-2);
+  background: rgba(34, 28, 21, 0.94);
+}
+.ring-btn:disabled .ring-disc svg,
+.ring-btn:disabled .ring-label {
+  opacity: 0.5;
+}
+.ring-btn:not(:disabled):active .ring-disc {
+  transform: scale(0.92);
+}
+.ring-btn:focus-visible {
+  outline: none;
+}
+.ring-btn:focus-visible .ring-disc {
+  outline: 2px solid var(--ochre-ink);
+  outline-offset: 3px;
+}
+@media (hover: hover) {
+  .ring-btn:not(:disabled):hover .ring-disc {
+    border-color: var(--ochre-ink);
+  }
+}
+/* the place's card in a panel over the map, on a phone: the name heads the panel, not the card */
+.station-body .map-card > h3 {
+  display: none;
+}
+.map-sheet-name {
+  flex: 1;
+  margin: 0;
+  padding-left: 4px;
+  font: 600 1.05rem/1.3 var(--serif);
+  color: var(--ink);
+}
 /* a hero beside the mark of the place, or on the road itself while walking */
 .land-hero {
   --side: 0;
@@ -3755,6 +3876,9 @@ mark {
     display: none;
   }
   .land-tile,
+  .ring-btn,
+  .station-body.came-right,
+  .station-body.came-left,
   .land-way.ahead .over,
   .land-hero.me::after,
   .land-svg .reveal,
@@ -6017,6 +6141,36 @@ span.spot-pic.painted {
 body.sheet-open {
   overflow: hidden;
 }
+/* on a phone a place's panel keeps its head (the chips, the ×) at the bottom, under the thumb;
+   a sideways swipe over the body goes to the next place or the one before */
+.station-sheet.low:not(.docked) .station-bar {
+  order: 1;
+  padding: 7px 6px 8px 10px;
+  border-top: 1px solid var(--rule);
+  border-bottom: none;
+}
+.station-sheet.low:not(.docked) .station-body {
+  border-radius: 14px 14px 0 0;
+  touch-action: pan-y;
+}
+.station-body.came-right {
+  animation: came-right 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.station-body.came-left {
+  animation: came-left 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes came-right {
+  from {
+    opacity: 0;
+    transform: translateX(36px);
+  }
+}
+@keyframes came-left {
+  from {
+    opacity: 0;
+    transform: translateX(-36px);
+  }
+}
 .chip.running {
   color: var(--ochre-ink);
 }
@@ -6780,13 +6934,9 @@ body.sheet-open {
   width: 100%;
   height: 100%;
 }
-/* the hero painted at full height, standing among the slots; its leads still reach out to them */
+/* the hero painted at full height, standing among the slots (its box: PAINT_BOX in hero.tsx); the leads meet it */
 .doll-paint {
   position: absolute;
-  left: 29%;
-  top: 2%;
-  width: 42%;
-  height: 96%;
   background-position: center bottom;
   background-repeat: no-repeat;
   background-size: contain;
@@ -6812,15 +6962,24 @@ body.sheet-open {
   stroke: rgba(230, 217, 188, 0.14);
   stroke-dasharray: 3 3;
 }
-.doll-figure .lead {
+.doll-figure .lead path {
   fill: none;
   stroke: rgba(230, 217, 188, 0.14);
   stroke-width: 1;
   stroke-dasharray: 2 3;
   vector-effect: non-scaling-stroke;
 }
-.doll-figure .lead.on {
+.doll-figure .lead.on path {
   stroke: rgba(196, 154, 69, 0.45);
+}
+.doll-figure .lead circle {
+  fill: rgba(230, 217, 188, 0.35);
+  stroke: rgba(20, 15, 10, 0.6);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.doll-figure .lead.on circle {
+  fill: var(--ochre-ink);
 }
 .slot-spot {
   position: absolute;

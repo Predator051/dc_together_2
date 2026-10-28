@@ -83,6 +83,7 @@ export const needs1Actions: ActionDef[] = [
   // ------------------------------------------------------------------ the pot
   {
     id: 'x_107',
+    icon: 'ladle',
     group: L.hearth,
     label: 'Зліпити казанок',
     visible: hut,
@@ -132,6 +133,7 @@ export const needs1Actions: ActionDef[] = [
   // ------------------------------------------------------------------ the drying rack
   {
     id: 'x_109',
+    icon: 'driedfish',
     group: L.yard,
     label: 'Поставити сушню',
     visible: { flag: 'made:x_35' },
@@ -164,6 +166,7 @@ export const needs1Actions: ActionDef[] = [
   // ------------------------------------------------------------------ comfort
   {
     id: 'x_111',
+    icon: 'spot:log',
     group: L.hearth,
     label: 'Збити лаву біля вогню',
     visible: { flag: 'built:x_16' },
@@ -178,6 +181,7 @@ export const needs1Actions: ActionDef[] = [
   },
   {
     id: 'x_112',
+    icon: 'reed',
     group: L.hearth,
     label: 'Наплести очеретяних мат',
     visible: { flag: 'built:x_16' },
@@ -193,6 +197,7 @@ export const needs1Actions: ActionDef[] = [
   },
   {
     id: 'x_113',
+    icon: 'hide',
     group: L.bunks,
     label: 'Застелити лежанки шкурами',
     visible: { flag: 'built:x_64' },

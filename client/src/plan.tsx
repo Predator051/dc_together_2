@@ -343,6 +343,12 @@ export function AreaPlan({
           backIcon={picture('home')}
           bodyKey={shown.id}
           onClose={() => setSheet(false)}
+          low
+          onSwipe={(dir) => {
+            const i = spots.findIndex((x) => x.id === shown.id);
+            const next = spots[(i + dir + spots.length) % spots.length];
+            if (next) setPick(next.id);
+          }}
           bar={
             <div class="station-chips" role="tablist" ref={chips}>
               {spots.map((s) => (

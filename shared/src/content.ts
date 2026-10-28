@@ -242,6 +242,11 @@ export interface ActionDef {
   group: string;
   /** Named spot of that location on its plan. */
   spot?: string;
+  /**
+   * The mark on its button when what it gives is not a thing (a skill, a building, an errand): a thing's
+   * icon (ITEM_ICONS) or `spot:` + a spot icon. Works that give a marked thing show that thing's.
+   */
+  icon?: string;
   role?: Role;
   /** Can be done only once in the whole world. */
   once?: boolean;

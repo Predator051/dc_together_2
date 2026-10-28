@@ -222,7 +222,7 @@ function HeroCard({ v, onGrowth }: { v: PlayerView; onGrowth: () => void }) {
 
 // ---------------------------------------------------------------------------- gear on a figure
 
-/** Where each slot sits around the figure (per cent of the box) and where its line meets the body. */
+/** Where each slot sits around the figure (per cent of the box) and where its line meets the drawn body. */
 const SLOT_AT: Record<string, { x: number; y: number; to: [number, number] }> = {
   head: { x: 13, y: 12, to: [50, 14] },
   body: { x: 13, y: 37, to: [48, 36] },
@@ -233,16 +233,47 @@ const SLOT_AT: Record<string, { x: number; y: number; to: [number, number] }> = 
   belt: { x: 87, y: 74, to: [56, 54] },
 };
 
-function Figure({ slots, figure }: { slots: SlotView[]; figure: string | null }) {
+/**
+ * The painted hero's box in the doll (per cent; the doll is 200 by 220). The 1:2 painting fills the
+ * box's width and stands on its floor, so the figure itself takes `PAINTED` of the doll.
+ */
+const PAINT_BOX = { left: 29, top: 2, width: 42, height: 96 };
+const PAINTED = (() => {
+  const h = (PAINT_BOX.width * 2 * 200) / 220;
+  return { left: PAINT_BOX.left, top: PAINT_BOX.top + PAINT_BOX.height - h, width: PAINT_BOX.width, height: h };
+})();
+
+/** Where each slot's line meets a painted hero: per cent of that painting (measured on it, by eye). */
+const PAINTED_AT: Record<string, Record<string, [number, number]>> = {
+  'maker-m': { head: [49, 7], body: [48, 28], offhand: [14, 54], legs: [30, 89], hands: [85, 50], weapon: [87, 56], belt: [62, 41] },
+  'hunter-f': { head: [51, 7], body: [50, 27], offhand: [21, 52], legs: [31, 89], hands: [81, 49], weapon: [82, 54], belt: [58, 37] },
+};
+
+/** Where a slot's line ends: on the painted hero when there is one, else on the drawn body. */
+function leadTo(slot: string, look: string | null): [number, number] | null {
+  const at = look ? PAINTED_AT[look]?.[slot] : undefined;
+  if (at) return [PAINTED.left + (at[0] / 100) * PAINTED.width, PAINTED.top + (at[1] / 100) * PAINTED.height];
+  return SLOT_AT[slot]?.to ?? null;
+}
+
+function Figure({ slots, figure, look }: { slots: SlotView[]; figure: string | null; look: string | null }) {
+  const box = { left: `${PAINT_BOX.left}%`, top: `${PAINT_BOX.top}%`, width: `${PAINT_BOX.width}%`, height: `${PAINT_BOX.height}%` };
   return (
     <>
-      {figure && <span class="doll-paint" style={{ backgroundImage: `url(${figure})` }} aria-hidden="true" />}
+      {figure && <span class="doll-paint" style={{ ...box, backgroundImage: `url(${figure})` }} aria-hidden="true" />}
       <svg class={`doll-figure ${figure ? 'painted' : ''}`} viewBox="0 0 200 220" preserveAspectRatio="none" aria-hidden="true">
         {slots.map((s) => {
           const at = SLOT_AT[s.slot];
-          if (!at) return null;
+          const to = leadTo(s.slot, figure ? look : null);
+          if (!at || !to) return null;
           const x1 = at.x * 2 + (at.x < 50 ? 16 : -16);
-          return <path class={`lead ${s.item ? 'on' : ''}`} d={`M${x1} ${at.y * 2.2}L${at.to[0] * 2} ${at.to[1] * 2.2}`} />;
+          // a dot where the line meets the body, so it reads even over the clothes
+          return (
+            <g class={`lead ${s.item ? 'on' : ''}`}>
+              <path d={`M${x1} ${at.y * 2.2}L${to[0] * 2} ${to[1] * 2.2}`} />
+              {figure && <circle cx={to[0] * 2} cy={to[1] * 2.2} r={1.8} />}
+            </g>
+          );
         })}
         <g class="body">
           <ellipse cx="100" cy="27" rx="13" ry="15" />
@@ -362,7 +393,7 @@ function Gear({ v, locked, desktop }: { v: PlayerView; locked: boolean; desktop:
     <>
       {!(desktop && open) && (
         <div class="doll" role="group" aria-label={T.gear}>
-          <Figure slots={h.slots} figure={heroFigure(v.me.role, v.me.gender)} />
+          <Figure slots={h.slots} figure={heroFigure(v.me.role, v.me.gender)} look={v.me.role ? `${v.me.role}-${v.me.gender}` : null} />
           {h.slots.map((s, i) => {
             const at = SLOT_AT[s.slot];
             if (!at) return null;

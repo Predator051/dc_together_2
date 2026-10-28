@@ -3,13 +3,15 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { FightView, MapNodeView, PlayerView } from '../../shared/src/protocol.js';
 import { net } from './net.js';
 import { MapIcon } from './mapicons.js';
-import { LandMap, paintedFits } from './landmap.js';
+import { LandMap, paintedFits, type RingItem } from './landmap.js';
 import { duskOf } from './ambient.js';
 import { viewUrl } from './pictures.js';
 import { Portrait, heroFace } from './portraits.js';
 import { Thing } from './items.js';
 import { Cell } from './cells.js';
 import { sound } from './sound.js';
+import { Sheet } from './sheet.js';
+import { IconEye, IconPair, IconSignGo } from './icons.js';
 import { T } from './strings.js';
 
 function secs(ms: number): string {
@@ -41,12 +43,14 @@ function useWidth(): [(el: HTMLDivElement | null) => void, number] {
   return [ref, w];
 }
 
-export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; now: number }) {
+export function MapPanel({ v, locked, now, desktop }: { v: PlayerView; locked: boolean; now: number; desktop: boolean }) {
   // a running action ends on its own: the walk unlocks by the clock, without waiting for the server
   const busy = v.busyUntil + 150 > now;
   const m = v.map;
   const here = m.nodes.find((n) => n.here);
   const [sel, setSel] = useState<string | null>(null);
+  // on a phone the painted map keeps the place's card in a panel that slides up when asked for
+  const [info, setInfo] = useState(false);
   const [box, width] = useWidth();
   const boxEl = useRef<HTMLDivElement | null>(null);
   const picked = m.nodes.find((n) => n.id === sel) ?? null;
@@ -66,6 +70,9 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
   useEffect(() => {
     if (!sel) return;
     boxEl.current?.parentElement?.querySelector('.map-card')?.scrollIntoView({ block: 'nearest' });
+  }, [sel]);
+  useEffect(() => {
+    if (!sel) setInfo(false);
   }, [sel]);
   if (!m.nodes.length) return null;
   // the painted land, when it holds every place shown; otherwise the drawn scheme
@@ -88,7 +95,95 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
   const byId = new Map(m.nodes.map((n) => [n.id, n]));
   // the way to a far place goes through the near ones: show it
   const way = picked?.go && here ? [here.id, ...(picked.go.via ?? []), picked.id] : [];
+  // the card in a panel over the map (a phone with the painting), or under the map as it was
+  const sheeted = painted && !desktop;
+  // what can be done with the picked place, on a ring around its mark: go, look out the way, read more
+  const ring: RingItem[] = picked
+    ? [
+        ...(picked.go
+          ? [
+              {
+                key: 'go',
+                label: T.mapGo,
+                sub: secs(picked.go.time),
+                icon: <IconSignGo />,
+                primary: true,
+                disabled: locked || busy || !picked.go.enabled,
+                onDo: () => {
+                  net.send({ c: 'go', to: picked.id });
+                  setSel(null);
+                },
+              },
+            ]
+          : []),
+        ...(picked.scout
+          ? [
+              {
+                key: 'scout',
+                label: T.mapScout,
+                icon: <IconPair />,
+                primary: true,
+                disabled: locked || !picked.scout.enabled,
+                onDo: () => {
+                  net.send({ c: 'act', id: picked.scout!.id });
+                  setSel(null);
+                },
+              },
+            ]
+          : []),
+        {
+          key: 'more',
+          label: T.mapMore,
+          icon: <IconEye />,
+          onDo: () => (sheeted ? setInfo(true) : boxEl.current?.parentElement?.querySelector('.map-card')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })),
+        },
+      ]
+    : [];
   const onWay = (a: string, b: string) => way.some((id, i) => i > 0 && ((way[i - 1] === a && id === b) || (way[i - 1] === b && id === a)));
+  const card = (picked: MapNodeView) => (
+          <section class="map-card" key={picked.id}>
+            {picked.known && viewUrl(picked.icon) && (
+              <div class="map-card-art" style={{ backgroundImage: `url(${viewUrl(picked.icon)})` }} aria-hidden="true" />
+            )}
+            <h3>{picked.name}</h3>
+            {picked.desc && <p class="desc">{picked.desc}</p>}
+            {!picked.known && <p class="desc">{T.mapUnknown}</p>}
+            {picked.known && picked.danger > 0 && (
+              <p class="meta">
+                {T.mapDanger}: <b>{picked.danger}</b>
+              </p>
+            )}
+            {picked.known && picked.foes.length > 0 && (
+              <ul class="map-foes" aria-label={T.mapFoes}>
+                {picked.foes.map((f) => (
+                  <li>
+                    <Portrait icon={f.icon} size="s" />
+                    <span>{f.name}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div class="row">
+              {picked.go && (
+                <button class="btn primary" disabled={locked || busy || !picked.go.enabled} onClick={() => net.send({ c: 'go', to: picked.id })}>
+                  {T.mapGo} · {secs(picked.go.time)}
+                </button>
+              )}
+              {picked.go?.via && (
+                <p class="meta map-via">
+                  {T.mapVia}: {picked.go.via.map((id) => byId.get(id)?.name ?? '?').join(' → ')}
+                </p>
+              )}
+              {picked.scout && (
+                <button class="btn primary" disabled={locked || !picked.scout.enabled} onClick={() => net.send({ c: 'act', id: picked.scout!.id })}>
+                  {picked.scout.label}
+                </button>
+              )}
+            </div>
+            {picked.go?.reason && <p class="reason">{picked.go.reason}</p>}
+            {picked.scout?.reason && <p class="reason">{picked.scout.reason}</p>}
+          </section>
+  );
   return (
     <div class="mapview">
       {m.travel && (
@@ -97,7 +192,7 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
         </p>
       )}
       {painted ? (
-        <LandMap m={m} sel={sel} onPick={setSel} now={now} wayIds={way} dusk={duskOf(v.dayAt, now)} sky={v.ambient.sky ?? undefined} />
+        <LandMap m={m} sel={sel} onPick={setSel} ring={ring} now={now} wayIds={way} dusk={duskOf(v.dayAt, now)} sky={v.ambient.sky ?? undefined} />
       ) : (
       <div
         class={`map-box ${w > width ? 'scrolls' : ''}`}
@@ -184,51 +279,12 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
           <i class="dot mate" /> {v.partner.name || '—'}
         </span>
       </div>
-      {picked ? (
-        <section class="map-card" key={picked.id}>
-          {picked.known && viewUrl(picked.icon) && (
-            <div class="map-card-art" style={{ backgroundImage: `url(${viewUrl(picked.icon)})` }} aria-hidden="true" />
-          )}
-          <h3>{picked.name}</h3>
-          {picked.desc && <p class="desc">{picked.desc}</p>}
-          {!picked.known && <p class="desc">{T.mapUnknown}</p>}
-          {picked.known && picked.danger > 0 && (
-            <p class="meta">
-              {T.mapDanger}: <b>{picked.danger}</b>
-            </p>
-          )}
-          {picked.known && picked.foes.length > 0 && (
-            <ul class="map-foes" aria-label={T.mapFoes}>
-              {picked.foes.map((f) => (
-                <li>
-                  <Portrait icon={f.icon} size="s" />
-                  <span>{f.name}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div class="row">
-            {picked.go && (
-              <button class="btn primary" disabled={locked || busy || !picked.go.enabled} onClick={() => net.send({ c: 'go', to: picked.id })}>
-                {T.mapGo} · {secs(picked.go.time)}
-              </button>
-            )}
-            {picked.go?.via && (
-              <p class="meta map-via">
-                {T.mapVia}: {picked.go.via.map((id) => byId.get(id)?.name ?? '?').join(' → ')}
-              </p>
-            )}
-            {picked.scout && (
-              <button class="btn primary" disabled={locked || !picked.scout.enabled} onClick={() => net.send({ c: 'act', id: picked.scout!.id })}>
-                {picked.scout.label}
-              </button>
-            )}
-          </div>
-          {picked.go?.reason && <p class="reason">{picked.go.reason}</p>}
-          {picked.scout?.reason && <p class="reason">{picked.scout.reason}</p>}
-        </section>
-      ) : (
-        <p class="desc map-hint">{here ? T.mapTap : ''}</p>
+      {picked && !sheeted && card(picked)}
+      {!picked && <p class="desc map-hint">{here ? T.mapTap : ''}</p>}
+      {picked && sheeted && info && (
+        <Sheet desktop={false} label={picked.name} bar={<h3 class="map-sheet-name">{picked.name}</h3>} back={T.planBack} bodyKey={picked.id} onClose={() => setInfo(false)}>
+          {card(picked)}
+        </Sheet>
       )}
     </div>
   );

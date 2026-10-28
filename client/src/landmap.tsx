@@ -1,6 +1,7 @@
 // The painted map: land you drag about and zoom, the roads between places, fog over what nobody has
 // seen yet, and the heroes walking the roads as it happens. Places without a spot on the painting
 // keep the old drawn scheme (see MapPanel).
+import type { JSX } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { MapLegView, MapNodeView, MapView } from '../../shared/src/protocol.js';
 import sheet1 from './art/map1.json';
@@ -27,6 +28,21 @@ const SHEET = sheet1 as unknown as Sheet;
 
 function tileUrl(r: number, c: number): string {
   return new URL(`./art/map1/r${r}c${c}.webp`, import.meta.url).href;
+}
+const PREVIEW = new URL('./art/map1/preview.webp', import.meta.url).href;
+
+/**
+ * Fetch the tiles of the land already seen while nobody looks at the map, so it opens painted at once.
+ * The browser keeps them (the files are named by their content).
+ */
+export function preloadLand(m: MapView): void {
+  if (!paintedFits(m)) return;
+  for (const [r, c] of tilesOf(seenOf(m))) {
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = tileUrl(r, c);
+  }
+  new Image().src = PREVIEW;
 }
 
 /** The painting holds every place the map shows now. */
@@ -255,10 +271,23 @@ function centerOn(box: HTMLElement, p: Pt, k: number): Cam {
   return clamp(box, { k, x: box.clientWidth / 2 - p[0] * k, y: box.clientHeight / 2 - p[1] * k });
 }
 
+/** What can be done with a picked place: a button on the ring around its mark. */
+export interface RingItem {
+  key: string;
+  label: string;
+  /** A second line under the label (how long the way is). */
+  sub?: string;
+  icon: JSX.Element;
+  primary?: boolean;
+  disabled?: boolean;
+  onDo: () => void;
+}
+
 export function LandMap({
   m,
   sel,
   onPick,
+  ring,
   now,
   wayIds,
   dusk,
@@ -267,6 +296,8 @@ export function LandMap({
   m: MapView;
   sel: string | null;
   onPick: (id: string | null) => void;
+  /** The buttons around the picked place. */
+  ring: RingItem[];
   now: number;
   /** How far into the evening (0..1) and the weather, laid over the land. */
   dusk: number;
@@ -315,6 +346,33 @@ export function LandMap({
     ro.observe(box);
     return () => ro.disconnect();
   }, []);
+
+  // a tap on the land itself (not on a place or its ring) lets the picked place go
+  const pickRef = useRef(onPick);
+  pickRef.current = onPick;
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box) return;
+    const off = (e: MouseEvent) => {
+      if (!(e.target as Element).closest('.land-pin, .pin-ring, .land-tools')) pickRef.current(null);
+    };
+    box.addEventListener('click', off);
+    return () => box.removeEventListener('click', off);
+  }, []);
+
+  // a picked place near the edge comes towards the middle, so its ring fits on the screen
+  useEffect(() => {
+    const box = boxRef.current;
+    const p = sel ? SHEET.at[sel] : undefined;
+    if (!box || !p) return;
+    const c = cam.current;
+    const x = c.x + p[0] * c.k;
+    const y = c.y + p[1] * c.k;
+    const r = box.getBoundingClientRect();
+    if (x > 90 && x < r.width - 90 && y > 130 && y < r.height - 50) return;
+    cam.current = clamp(box, centerOn(box, [p[0], p[1] - 30 / c.k], c.k));
+    apply(true);
+  }, [sel]);
 
   // dragging, pinching and the wheel
   useEffect(() => {
@@ -454,6 +512,21 @@ export function LandMap({
       <div class="land-world" ref={worldRef} style={{ width: `${SHEET.w}px`, height: `${SHEET.h}px` }}>
         <div class="land-ground">
           {tiles.map(([r, c]) => (
+            <span
+              key={`p${r}-${c}`}
+              class="land-tile-ph"
+              style={{
+                left: `${c * tw}px`,
+                top: `${r * th}px`,
+                width: `${tw}px`,
+                height: `${th}px`,
+                backgroundImage: `url(${PREVIEW})`,
+                backgroundSize: `${SHEET.w}px ${SHEET.h}px`,
+                backgroundPosition: `-${c * tw}px -${r * th}px`,
+              }}
+            />
+          ))}
+          {tiles.map(([r, c]) => (
             <img
               key={`${r}-${c}`}
               class="land-tile"
@@ -511,6 +584,7 @@ export function LandMap({
         {m.nodes.map((n) => (
           <Pin key={n.id} n={n} sel={sel === n.id} fresh={fresh.has(n.id)} onPick={onPick} />
         ))}
+        {sel && SHEET.at[sel] && ring.length > 0 && <PinRing key={sel} at={SHEET.at[sel]!} items={ring} />}
         {(here || mePoint) && (
           <span
             ref={meRef}
@@ -576,5 +650,39 @@ function Pin({ n, sel, fresh, onPick }: { n: MapNodeView; sel: boolean; fresh: b
       </span>
       {n.known && <span class="pin-name">{n.name}</span>}
     </button>
+  );
+}
+
+/** The buttons around a picked place, fanned out in an arc above its mark. */
+function PinRing({ at, items }: { at: Pt; items: RingItem[] }) {
+  const n = items.length;
+  const span = n <= 1 ? 0 : Math.min(130, 58 * (n - 1));
+  const R = 72;
+  return (
+    <div class="pin-ring" style={{ left: `${at[0]}px`, top: `${at[1]}px` }} role="menu">
+      {items.map((it, i) => {
+        const a = ((-90 - span / 2 + (n <= 1 ? 0 : (span / (n - 1)) * i)) * Math.PI) / 180;
+        return (
+          <button
+            type="button"
+            role="menuitem"
+            class={`ring-btn ${it.primary ? 'primary' : ''}`}
+            disabled={it.disabled}
+            style={{ '--x': `${Math.round(Math.cos(a) * R)}px`, '--y': `${Math.round(Math.sin(a) * R)}px`, '--i': String(i) }}
+            aria-label={it.sub ? `${it.label}, ${it.sub}` : it.label}
+            onClick={(e) => {
+              e.stopPropagation();
+              it.onDo();
+            }}
+          >
+            <span class="ring-disc">{it.icon}</span>
+            <span class="ring-label">
+              {it.label}
+              {it.sub && <small>{it.sub}</small>}
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }

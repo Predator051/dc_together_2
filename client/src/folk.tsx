@@ -6,7 +6,7 @@ import { FOLK } from '../../shared/src/pictures.js';
 import type { PlayerView, ResidentView } from '../../shared/src/protocol.js';
 import { net } from './net.js';
 import { Thing } from './items.js';
-import { stationSlots, stationUrl } from './pictures.js';
+import { markOf, stationSlots, stationUrl } from './pictures.js';
 import { T } from './strings.js';
 import painted from './art/folk.json';
 
@@ -64,7 +64,7 @@ function FolkMedal({ r, i, at, on, onPick }: { r: ResidentView; i: number; at: [
         </span>
         {job?.icon && (
           <span class="folk-job" aria-hidden="true">
-            <Thing icon={job.icon} />
+            {markOf(job.icon) ?? <Thing icon={job.icon} />}
           </span>
         )}
         {warn && <span class="folk-warn" aria-hidden="true" />}
@@ -113,7 +113,7 @@ function FolkCard({ r, locked }: { r: ResidentView; locked: boolean }) {
             onClick={() => net.send({ c: 'job', who: r.id, id: j.id })}
           >
             <span class="folk-job-pic" aria-hidden="true">
-              {j.icon && <Thing icon={j.icon} />}
+              {j.icon && (markOf(j.icon) ?? <Thing icon={j.icon} />)}
             </span>
             <span class="folk-job-text">
               {j.label}

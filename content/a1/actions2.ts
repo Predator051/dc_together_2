@@ -77,6 +77,7 @@ export const actions2: ActionDef[] = [
   // ------------------------------------------------------------------ home: kiln, forge, bunks, shelves
   {
     id: 'x_50',
+    icon: 'spot:kiln',
     group: L.yard,
     label: 'Викопати вуглярку',
     once: true,
@@ -106,6 +107,7 @@ export const actions2: ActionDef[] = [
   },
   {
     id: 'x_52',
+    icon: 'spot:anvil',
     group: L.yard,
     label: 'Скласти кузню',
     once: true,
@@ -171,6 +173,7 @@ export const actions2: ActionDef[] = [
   },
   {
     id: 'x_58',
+    icon: 'iron',
     group: L.bench,
     label: 'Укріпити верстак залізом',
     once: true,
@@ -230,6 +233,7 @@ export const actions2: ActionDef[] = [
   },
   {
     id: 'x_64',
+    icon: 'spot:bed',
     group: L.yard,
     label: 'Збити лежанки',
     once: true,
@@ -245,6 +249,7 @@ export const actions2: ActionDef[] = [
   },
   {
     id: 'x_32',
+    icon: 'key',
     group: L.yard,
     label: 'Добудувати комору',
     once: true,

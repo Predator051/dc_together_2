@@ -382,6 +382,13 @@ export function markStyle(key: string): Record<string, string> | null {
   };
 }
 
+/** A mark sent with a work: a spot's (`spot:` + icon), a place's (`@` + scene), else null (a thing's). */
+export function markOf(icon: string): JSX.Element | null {
+  if (icon.startsWith('spot:')) return picture(icon.slice(5));
+  if (icon.startsWith('@')) return picture(icon);
+  return null;
+}
+
 export function picture(icon: string): JSX.Element {
   const m = markStyle(icon);
   if (m) return <span class="spot-pic painted" style={m} aria-hidden="true" />;

@@ -128,3 +128,26 @@ describe('painted folk', () => {
     FOLK.forEach((id, i) => expect(existsSync(new URL(`../client/src/art/folk/f${i + 1}.webp`, import.meta.url)), id).toBe(true));
   });
 });
+
+// A work's button shows the mark of the thing it gives, or its own (`icon` in content) when it gives none.
+describe('marks of works', () => {
+  it('every work on a plan has a mark, and a mark that is painted', () => {
+    const res = new Map(content.resources.map((r) => [r.id, r]));
+    const marked = (id: string) => {
+      const r = res.get(id);
+      return !!r && !r.hidden && !!r.icon;
+    };
+    for (const a of content.actions.filter((x) => x.group)) {
+      const gives = [
+        ...Object.keys(a.yield ?? {}),
+        ...(a.effects ?? []).flatMap((e) => ('add' in e ? Object.entries(e.add).filter(([, n]) => n > 0).map(([r]) => r) : [])),
+        ...(a.chance ?? []).flatMap((ch) => Object.keys(ch.add ?? {})),
+      ];
+      expect(!!a.icon || gives.some(marked), a.id).toBe(true);
+      if (a.icon) {
+        const ok = a.icon.startsWith('spot:') ? (SPOT_ICONS as readonly string[]).includes(a.icon.slice(5)) : (ITEM_ICONS as readonly string[]).includes(a.icon);
+        expect(ok, a.id).toBe(true);
+      }
+    }
+  });
+});

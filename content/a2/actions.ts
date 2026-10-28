@@ -132,6 +132,7 @@ export const actions2: ActionDef[] = [
   },
   {
     id: 'x_76',
+    icon: 'spot:cart',
     group: L2.camp,
     spot: 'ford',
     label: 'Напоїти волів',
@@ -289,6 +290,7 @@ export const actions2: ActionDef[] = [
   // ------------------------------------------------------------------ the tavern and the pier
   {
     id: 'x_88',
+    icon: 'spot:mug',
     group: L2.tavern,
     label: 'Послухати розмови',
     visible: town,
@@ -400,6 +402,7 @@ export const actions2: ActionDef[] = [
   // ------------------------------------------------------------------ home: the forge, second tier
   {
     id: 'x_93',
+    icon: 'coal',
     group: L.forge,
     label: 'Поставити горно з міхом',
     once: true,
@@ -573,6 +576,7 @@ export const actions2: ActionDef[] = [
   // ------------------------------------------------------------------ home: the yard
   {
     id: 'x_103',
+    icon: 'spot:home',
     group: L.yard,
     label: 'Звести курінь',
     once: true,
@@ -592,6 +596,7 @@ export const actions2: ActionDef[] = [
   },
   {
     id: 'x_104',
+    icon: 'spot:stakes',
     group: L.yard,
     label: 'Поставити частокіл',
     once: true,
@@ -611,6 +616,7 @@ export const actions2: ActionDef[] = [
   },
   {
     id: 'x_105',
+    icon: 'sabre',
     group: L.yard,
     label: 'Вправлятися проти сіті',
     visible: { met: E2.snatcher },
