@@ -3,6 +3,7 @@
 //   tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows]
 //   tsx scripts/art.ts things <painted.png> <n>
 //   tsx scripts/art.ts foes <painted.png> <n>
+//   tsx scripts/art.ts marks <painted.png> <n>
 //   tsx scripts/art.ts ground <painted.png> <scene>
 //
 // A map sheet is cut into tiles (client/src/art/<sheet>/r<row>c<col>.webp): the client asks only for
@@ -66,9 +67,11 @@ interface AtlasKind {
   prefix: string;
 }
 
-const KINDS: Record<'things' | 'foes', AtlasKind> = {
+const KINDS: Record<'things' | 'foes' | 'marks', AtlasKind> = {
   things: { cols: 4, rows: 3, cell: 128, prefix: 't' },
   foes: { cols: 3, rows: 3, cell: 192, prefix: 'f' },
+  // marks of spots on plans and of places on the map ('@' + scene)
+  marks: { cols: 4, rows: 3, cell: 128, prefix: 'm' },
 };
 
 /** A painting without real transparency: the flat ground around the things is wiped from the edges in. */
@@ -258,9 +261,9 @@ function ground(src: string, scene: string): void {
 
 const [cmd, ...args] = process.argv.slice(2);
 if (cmd === 'map' && args[0] && args[1]) map(resolve(args[0]), args[1], Number(args[2] ?? 6), Number(args[3] ?? 4));
-else if ((cmd === 'things' || cmd === 'foes') && args[0] && args[1]) atlas(cmd, resolve(args[0]), Number(args[1]));
+else if ((cmd === 'things' || cmd === 'foes' || cmd === 'marks') && args[0] && args[1]) atlas(cmd, resolve(args[0]), Number(args[1]));
 else if (cmd === 'ground' && args[0] && args[1]) ground(resolve(args[0]), args[1]);
 else {
-  console.error('usage: tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows] | things|foes <painted.png> <n> | ground <painted.png> <scene>');
+  console.error('usage: tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows] | things|foes|marks <painted.png> <n> | ground <painted.png> <scene>');
   process.exit(1);
 }

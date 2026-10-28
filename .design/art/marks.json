@@ -1,0 +1,17 @@
+[
+  [["home", "a small log hut with a thatched roof"], ["gate", "a wooden signpost with two arrow boards"], ["store", "a wooden storage chest with iron bands"], ["bag", "a canvas travel sack tied with rope"],
+   ["folk", "two simple peasant figures in hats, side by side, seen from the front"], ["hearth", "a campfire of crossed logs with bright flames"], ["well", "a wooden village well with a crank"], ["bench", "a carpenter's workbench with a saw"],
+   ["pan", "a wide shallow iron pan for boiling brine, steaming"], ["hides", "an animal hide stretched on a wooden frame"], ["kiln", "a small domed earthen charcoal kiln with smoke"], ["anvil", "a blacksmith's anvil with a hammer"]],
+  [["bed", "a plank sleeping bench with a fur blanket"], ["fish", "a silver river fish"], ["driftwood", "a pile of pale driftwood"], ["pebbles", "a small heap of round pebbles"],
+   ["footprints", "a trail of bare footprints in sand"], ["reed", "a tall clump of reeds with brown heads"], ["nest", "a bird nest with three speckled eggs"], ["tracks", "animal paw tracks in mud"],
+   ["clay", "a lump of grey clay with a wooden spade"], ["burrow", "a dark burrow hole in an earth bank"], ["salt", "a white chunk of cracked salt crust"], ["brine", "a wooden bucket of brine with white salt rim"]],
+  [["bark", "curled strips of tree bark"], ["resin", "a tree stump oozing amber resin"], ["moss", "a mossy stone"], ["sticks", "a bundle of dry sticks"],
+   ["log", "a fallen mossy log"], ["stoneblock", "a big old carved stone block"], ["iron", "a heap of rusty scrap iron"], ["sluice", "a wooden sluice gate in a stone wall with water"],
+   ["stakes", "a row of sharpened wooden stakes"], ["cart", "a wooden ox cart with big wheels"], ["ford", "stepping stones across shallow water"], ["grass", "a tuft of tall dry steppe grass"]],
+  [["scales", "a big wooden market balance scale with sacks"], ["hall", "a log hall with a steep roof and a porch"], ["mug", "a clay beer mug with foam"], ["pier", "a short wooden pier with a moored boat"],
+   ["ore", "a lump of reddish bog iron ore"], ["peat", "a stack of cut peat blocks"], ["berry", "a sprig of red cranberries"], ["garden", "three small vegetable beds with sprouts"],
+   ["@yard", "a lone homestead: thatched hut with smoke behind a wattle fence"], ["@shore", "a sandy river shore with small waves"], ["@reeds", "dense reeds around a little pool"], ["@saltflat", "white cracked salt flat with a salt mound"]],
+  [["@brine", "a square log frame over a dark brine pit with a well sweep"], ["@grove", "two birches standing in still water"], ["@dyke", "an old stone dam with a wooden gate and water above"], ["@causeway", "a log causeway across a dark bog"],
+   ["@road", "a dirt road with deep wheel ruts and a cart wheel"], ["@town", "a small town behind a wooden palisade"], ["@bog", "black bog pools and sedge tussocks"], ["@isle", "a small island with a willow in open water"],
+   ["@willow", "an old pollarded willow by the water"], ["", ""], ["", ""], ["", ""]]
+]

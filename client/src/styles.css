@@ -3698,6 +3698,14 @@ mark {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .life-water::before,
+  .life-mist {
+    animation: none;
+  }
+  .life-smoke,
+  .life-birds {
+    display: none;
+  }
   .land-tile,
   .land-way.ahead .over,
   .land-hero.me::after,
@@ -4764,6 +4772,132 @@ span.item-icon.painted {
     rgba(10, 12, 24, 0.18);
   transition: opacity 30s linear;
 }
+/* life on a painted ground: slow and faint; all of it stops for reduced motion */
+.life-water {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(closest-side, #000 55%, transparent);
+  mask-image: radial-gradient(closest-side, #000 55%, transparent);
+}
+.life-water::before {
+  content: '';
+  position: absolute;
+  inset: -30px -60px;
+  /* three layers, one width (so the drift loops) and three heights (so no grid shows) */
+  background-image:
+    radial-gradient(ellipse 15px 2.6px at 12px 6px, rgba(255, 244, 214, 0.85), transparent 72%),
+    radial-gradient(ellipse 10px 2px at 40px 20px, rgba(255, 244, 214, 0.65), transparent 72%),
+    radial-gradient(ellipse 7px 1.6px at 27px 11px, rgba(255, 244, 214, 0.5), transparent 72%);
+  background-size:
+    54px 26px,
+    54px 37px,
+    54px 19px;
+  mix-blend-mode: screen;
+  animation:
+    water-drift 16s linear infinite,
+    water-twinkle 3.4s ease-in-out infinite;
+}
+@keyframes water-drift {
+  to {
+    transform: translateX(54px);
+  }
+}
+@keyframes water-twinkle {
+  50% {
+    opacity: 0.35;
+  }
+}
+.life-smoke {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.life-smoke i {
+  position: absolute;
+  left: -14px;
+  top: -14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(225, 220, 210, 0.36), transparent 68%);
+  opacity: 0;
+  animation: smoke-rise 5.4s ease-out infinite;
+}
+.life-smoke i:nth-child(2) {
+  animation-delay: 1.8s;
+}
+.life-smoke i:nth-child(3) {
+  animation-delay: 3.6s;
+}
+@keyframes smoke-rise {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.5);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(12px, -64px) scale(2.3);
+  }
+}
+.life-mist {
+  position: absolute;
+  left: -30%;
+  width: 160%;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 50% at 30% 50%, rgba(220, 222, 214, 0.17), transparent 70%),
+    radial-gradient(35% 45% at 72% 55%, rgba(220, 222, 214, 0.13), transparent 70%);
+  animation: mist-drift 42s ease-in-out infinite alternate;
+}
+@keyframes mist-drift {
+  to {
+    transform: translateX(18%);
+  }
+}
+.life-birds {
+  position: absolute;
+  left: 0;
+  width: 34px;
+  height: 14px;
+  fill: none;
+  stroke: rgba(28, 22, 16, 0.8);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  pointer-events: none;
+  opacity: 0;
+  animation: birds-fly 28s linear 4s infinite;
+}
+.life-birds path {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: birds-flap 0.45s ease-in-out infinite alternate;
+}
+@keyframes birds-fly {
+  0% {
+    opacity: 1;
+    transform: translate(-50px, 0);
+  }
+  36% {
+    opacity: 1;
+    transform: translate(640px, -24px);
+  }
+  36.1%,
+  100% {
+    opacity: 0;
+    transform: translate(640px, -24px);
+  }
+}
+@keyframes birds-flap {
+  to {
+    transform: scaleY(0.55);
+  }
+}
+
 /* the fire in the hut at home, when it burns */
 .plan-paint-glow {
   inset: auto;
@@ -4775,6 +4909,32 @@ span.item-icon.painted {
   background: radial-gradient(circle, rgba(236, 150, 70, 0.38), transparent 68%);
   mix-blend-mode: screen;
   animation: hut-glow 5s ease-in-out infinite;
+}
+
+/* painted marks: a cell of an atlas, filling most of a round medal */
+span.spot-pic.painted {
+  display: block;
+  background-repeat: no-repeat;
+  background-size: 400% 300%;
+}
+.spot-medal span.spot-pic.painted {
+  width: 86%;
+  height: 86%;
+}
+.chip span.spot-pic.painted {
+  width: 24px;
+  height: 24px;
+}
+.pin-paint {
+  display: block;
+  width: 31px;
+  height: 31px;
+  background-repeat: no-repeat;
+  background-size: 400% 300%;
+}
+.land-pin.home .pin-paint {
+  width: 36px;
+  height: 36px;
 }
 
 /* a workplace: a round seal with its picture, its name under it */
