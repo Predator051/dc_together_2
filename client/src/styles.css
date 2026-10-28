@@ -1997,9 +1997,12 @@ mark {
 }
 .block {
   margin-bottom: 20px;
+}
+.block > * {
   transition: opacity 0.3s;
 }
-.block.past {
+/* read blocks step back, but who chose what stays legible */
+.block.past > :not(.picks) {
   opacity: 0.55;
 }
 .block p {
@@ -2041,10 +2044,12 @@ mark {
   color: var(--cinnabar-ink);
 }
 .picks {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--rule-2);
   font-family: var(--sans);
   font-size: 0.9rem;
   color: var(--gall);
-  margin-top: 6px;
 }
 .combat {
   margin: 12px 0;
@@ -3855,7 +3860,12 @@ mark {
 .fight-moves {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+}
+/* strikes, guard, help, things, way out: each kind of move is its own group */
+.move-group + .move-group {
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
 }
 .move-group {
   display: grid;
@@ -3867,6 +3877,20 @@ mark {
 }
 .opt.strike {
   border-color: rgba(194, 78, 54, 0.5);
+}
+.g-item .opt {
+  min-height: 46px;
+  padding: 8px 12px;
+  font-size: 0.94rem;
+  font-weight: 500;
+}
+/* running away is always there, never the first thing the eye lands on */
+.g-out .opt {
+  min-height: 46px;
+  background: transparent;
+  border-style: dashed;
+  color: var(--ink-2);
+  font-weight: 500;
 }
 .fight-moves .waiting {
   margin: 0;
@@ -3945,6 +3969,36 @@ mark {
   padding-bottom: 6px;
 }
 
+/* a fight on a phone: tighter foes and moves side by side, so the moves are in reach without a long scroll */
+@media (max-width: 759px) {
+  .foe {
+    padding: 8px 10px;
+    gap: 10px;
+  }
+  .foe .portrait.m {
+    width: 36px;
+    height: 36px;
+  }
+  .foe .intent {
+    margin-top: 2px;
+    font-size: 0.88rem;
+  }
+  .foe-traits {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 8px;
+  }
+  .foe-traits .pill {
+    font-size: 0.76rem;
+  }
+  .move-group {
+    grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+  }
+  .move-group .opt {
+    min-height: 48px;
+  }
+}
+
 /* a fight on a wide screen: who is where on the left, what to do on the right */
 @media (min-width: 760px) {
   .sheet.fight {
@@ -3958,6 +4012,9 @@ mark {
   }
   .fight-main .move-group {
     grid-template-columns: 1fr;
+  }
+  .fight-main .move-group.g-item {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
