@@ -2,6 +2,7 @@
 
 import type { ComponentChildren, JSX } from 'preact';
 import type { PortraitId } from '../../shared/src/pictures.js';
+import painted from './art/foes.json';
 
 function Ink({ children }: { children: ComponentChildren }) {
   return (
@@ -211,8 +212,28 @@ const DRAW: Record<PortraitId, () => JSX.Element> = {
   ),
 };
 
+// Painted portraits: atlases of 3×3 cells (scripts/art.ts foes); a foe not painted yet keeps its ink.
+const PAINTED = painted as unknown as Record<string, [number, number]>;
+
+function atlas(n: number): string {
+  return new URL(`./art/foes/f${n}.webp`, import.meta.url).href;
+}
+
 /** A foe's portrait in its round seal. Unknown names fall back to a mark of a beast. */
-export function Portrait({ icon, size = 'm', out = false }: { icon: string; size?: 's' | 'm' | 'l'; out?: boolean }) {
+export function Portrait({ icon, size = 'm', out = false }: { icon: string; size?: 's' | 'm' | 'l' | 'xl'; out?: boolean }) {
+  const p = PAINTED[icon];
+  if (p) {
+    const [n, i] = p;
+    return (
+      <span class={`portrait painted ${size} ${out ? 'out' : ''}`}>
+        <span
+          class="portrait-paint"
+          style={{ backgroundImage: `url(${atlas(n)})`, backgroundPosition: `${((i % 3) / 2) * 100}% ${(Math.floor(i / 3) / 2) * 100}%` }}
+          aria-hidden="true"
+        />
+      </span>
+    );
+  }
   const draw = (DRAW as Record<string, () => JSX.Element>)[icon] ?? DRAW.rat;
   return <span class={`portrait ${size} ${out ? 'out' : ''}`}>{draw()}</span>;
 }

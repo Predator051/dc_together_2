@@ -308,4 +308,6 @@ export interface WorldState {
   workAt: number;
   /** Scenes queued by effects, started when the current scene ends. */
   chain?: string[];
+  /** How each player's last fight ended, as it stood after the last blow (the view shows it a moment). */
+  afterFight?: Partial<Record<PlayerId, { at: number; how: 'win' | 'lose' | 'fled'; fight: FightState }>>;
 }

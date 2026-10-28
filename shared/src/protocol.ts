@@ -503,6 +503,8 @@ export interface FightView {
   myPick?: string;
   waiting: boolean;
   lines: string[];
+  /** Set on a fight that has just ended (shown a moment so the last blow is seen). */
+  ended?: 'win' | 'lose' | 'fled';
   /** The partner is fighting here and you could join. */
   canHelp?: boolean;
 }
@@ -671,6 +673,8 @@ export interface PlayerView {
   garden: GardenView | null;
   map: MapView;
   fight: FightView | null;
+  /** The fight that has just ended, after its last blow; only to be seen, never answered. */
+  fightEnd: FightView | null;
   /** A fight of the partner where you stand (you may join). */
   nearFight: { id: number; text: string } | null;
   residents: ResidentView[];

@@ -1,7 +1,8 @@
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { ITEM_ICONS, SCENES } from '../shared/src/pictures.js';
+import { ITEM_ICONS, PORTRAITS, SCENES } from '../shared/src/pictures.js';
 import painted from '../client/src/art/things.json';
+import foes from '../client/src/art/foes.json';
 import grounds from '../client/src/art/grounds.json';
 
 // Every mark of a thing is painted; a new mark needs its cell in an atlas (scripts/art.ts things).
@@ -30,6 +31,18 @@ describe('painted grounds', () => {
     for (const s of list) {
       const i = (SCENES as readonly string[]).indexOf(s) + 1;
       expect(existsSync(new URL(`../client/src/art/grounds/g${i}.webp`, import.meta.url)), s).toBe(true);
+    }
+  });
+});
+
+// Every foe has a painted portrait (scripts/art.ts foes).
+describe('painted foes', () => {
+  it('every portrait has a cell in an atlas that exists', () => {
+    const cells = foes as unknown as Record<string, [number, number]>;
+    expect(PORTRAITS.filter((k) => !cells[k])).toEqual([]);
+    for (const [k, [n, i]] of Object.entries(cells)) {
+      expect(existsSync(new URL(`../client/src/art/foes/f${n}.webp`, import.meta.url)), k).toBe(true);
+      expect(i).toBeLessThan(9);
     }
   });
 });

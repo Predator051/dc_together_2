@@ -4553,6 +4553,10 @@ span.item-icon.painted {
     width: 36px;
     height: 36px;
   }
+  .foe .portrait.xl {
+    width: 56px;
+    height: 56px;
+  }
   .foe .intent {
     margin-top: 2px;
     font-size: 0.88rem;
@@ -5237,6 +5241,177 @@ body.sheet-open {
 .portrait.out {
   filter: grayscale(1);
   opacity: 0.7;
+}
+/* a painted foe: a cell of an atlas inside the same round seal, on a warmer dark */
+.portrait.painted {
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 38%, #4a3626, #1c140e 74%);
+}
+.portrait-paint {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-size: 300% 300%;
+  transform: scale(1.06);
+}
+.portrait.xl {
+  width: 72px;
+  height: 72px;
+  border-width: 2px;
+}
+
+/* ---------- a fight that answers: foes step in, blows land, numbers rise ---------- */
+.foe {
+  animation: foe-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+@keyframes foe-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.foe-pic {
+  position: relative;
+  display: inline-grid;
+  flex: none;
+}
+.foe.struck .portrait {
+  border-color: var(--cinnabar-ink);
+}
+.foe.struck .portrait::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(216, 105, 76, 0.5), rgba(194, 78, 54, 0.15) 70%);
+  animation: struck-flash 0.5s ease-out forwards;
+}
+@keyframes struck-flash {
+  to {
+    opacity: 0;
+  }
+}
+/* a foe that is out is crossed with one stroke of cinnabar */
+.foe.out .portrait::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  left: -8%;
+  right: -8%;
+  top: 50%;
+  height: 2px;
+  background: var(--cinnabar-ink);
+  transform: rotate(-35deg);
+  transform-origin: center;
+  animation: out-slash 0.35s ease-out backwards;
+}
+@keyframes out-slash {
+  from {
+    transform: rotate(-35deg) scaleX(0);
+  }
+}
+.delta-pop {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: -8px;
+  font: 700 1rem/1 var(--sans);
+  white-space: nowrap;
+  text-shadow: 0 1px 3px #000;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: delta-rise 1s ease-out forwards;
+}
+.delta-pop.blow {
+  color: var(--cinnabar-ink);
+}
+.delta-pop.mend {
+  color: var(--verdigris);
+}
+@keyframes delta-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 6px) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -22px);
+  }
+}
+.fparty-hp {
+  position: relative;
+}
+.fparty li.struck .bar {
+  animation: bar-hit 0.5s ease-out;
+}
+@keyframes bar-hit {
+  0% {
+    box-shadow: 0 0 0 2px rgba(216, 105, 76, 0.7);
+  }
+}
+/* a blow to you: the edge of the fight reddens for a moment */
+.sheet.fight.hurt {
+  animation: hurt-edge 0.6s ease-out;
+}
+@keyframes hurt-edge {
+  0% {
+    box-shadow:
+      inset 0 0 70px rgba(194, 78, 54, 0.45),
+      var(--shadow);
+  }
+}
+/* the fight is over: its outcome in one word, a breath, and the fight fades away */
+.fight-end {
+  margin: 10px 0 4px;
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-align: center;
+  animation: fade-up 0.3s ease-out backwards;
+}
+.fight-end.win {
+  color: var(--ochre-ink);
+}
+.fight-end.lose {
+  color: var(--cinnabar-ink);
+}
+.fight-end.fled {
+  color: var(--gall);
+}
+.fight-wrap.ended {
+  animation: fight-out 0.45s ease-in 1.2s forwards;
+}
+@keyframes fight-out {
+  to {
+    opacity: 0;
+  }
+}
+@media (min-width: 960px) {
+  .portrait.xl {
+    width: 84px;
+    height: 84px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .foe,
+  .foe.struck .portrait::after,
+  .foe.out .portrait::before,
+  .fparty li.struck .bar,
+  .sheet.fight.hurt,
+  .fight-end,
+  .fight-wrap.ended {
+    animation: none;
+  }
+  .delta-pop {
+    animation: none;
+    transform: translate(-50%, -14px);
+  }
 }
 .foe-body {
   flex: 1;

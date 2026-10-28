@@ -1,0 +1,19 @@
+{
+ "boar": [1, 5],
+ "catfish": [1, 7],
+ "chief": [2, 1],
+ "cloak": [2, 0],
+ "dog": [1, 3],
+ "elder": [2, 6],
+ "greyboar": [1, 6],
+ "hook": [2, 4],
+ "hound": [1, 8],
+ "leech": [1, 4],
+ "matka": [2, 5],
+ "oldviper": [1, 2],
+ "rat": [1, 0],
+ "shewolf": [2, 7],
+ "snatcher": [2, 3],
+ "viper": [1, 1],
+ "wolf": [2, 2]
+}

@@ -92,3 +92,9 @@ gouache game icons …, a thin dark outline around each object …». Пуста
 1024×1024, затем обрезка до 8:7. Шаблон: «Generate an image, square 1024x1024. A hand-painted top-down location
 plan for a survival game … Location: <grounds.json> … Keep the very top and bottom edges plain …» + хвост стиля.
 Двор дома — без построек на местах будущих верстаков (иначе они «видны» до постройки).
+
+## Шаг 5. Портреты врагов — 2 листа 3×3, 1024², прозрачный фон (`foes.json`: порядок и описания)
+
+«Generate an image, square 1024x1024, with a fully transparent background … A sheet of enemy portraits …
+strict grid of 3 columns and 3 rows … faces the viewer at three-quarters, menacing … Row N …» + хвост стиля.
+Люди — по плечи; имён и сюжетных деталей в запросе нет.

@@ -636,6 +636,9 @@ export function Game({ s }: { s: NetState }) {
   const [needsOpen, setNeedsOpen] = useState(false);
   const needsShown = needsOpen && !!v.needs;
   useEffect(() => store('bezgomin.homeView', homeView), [homeView]);
+  // a fight that has just ended stays a moment, so its last blow is seen; then it goes for good
+  const [goneFight, setGoneFight] = useState<number | null>(null);
+  const shownFight = v.fight ?? (v.fightEnd && v.fightEnd.id !== goneFight ? v.fightEnd : null);
 
   // The partner calls you: a knock.
   const calling = v.proposal && !v.proposal.mine ? v.proposal.label : null;
@@ -959,9 +962,9 @@ export function Game({ s }: { s: NetState }) {
       )}
 
       {v.scene && <Scene v={v} sc={v.scene} locked={locked} />}
-      {v.fight && <FightPanel f={v.fight} v={v} locked={locked} />}
-      {!v.scene && !v.fight && v.summary && <Summary s={v.summary} me={v.me.name} partner={v.partner.name} />}
-      {!v.scene && !v.fight && !v.summary && v.welcome && <Welcome w={v.welcome} partner={v.partner.name} />}
+      {shownFight && <FightPanel f={shownFight} v={v} locked={locked || !!shownFight.ended} onGone={() => setGoneFight(shownFight.id)} />}
+      {!v.scene && !shownFight && v.summary && <Summary s={v.summary} me={v.me.name} partner={v.partner.name} />}
+      {!v.scene && !shownFight && !v.summary && v.welcome && <Welcome w={v.welcome} partner={v.partner.name} />}
       {s.toast && <div class="toast">{s.toast.text}</div>}
       {s.deltas.length > 0 && (
         <div class="deltas" aria-live="polite">

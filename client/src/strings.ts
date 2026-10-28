@@ -229,6 +229,7 @@ export const T = {
   fightDog: 'поруч',
   fightOut: { dead: 'упав', fled: 'втік', down: 'збитий' } as Record<string, string>,
   fightDown: 'не може встати',
+  fightEnd: { win: 'Відбилися', lose: 'Не вистояли', fled: 'Вирвалися' } as Record<'win' | 'lose' | 'fled', string>,
   fightHeld: 'схоплено',
   fightPoison: 'отрута',
   fightPicked: 'вирішив{p}',

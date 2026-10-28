@@ -2,6 +2,7 @@
 //
 //   tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows]
 //   tsx scripts/art.ts things <painted.png> <n>
+//   tsx scripts/art.ts foes <painted.png> <n>
 //   tsx scripts/art.ts ground <painted.png> <scene>
 //
 // A map sheet is cut into tiles (client/src/art/<sheet>/r<row>c<col>.webp): the client asks only for
@@ -12,6 +13,7 @@
 // its outline, centred in a square and put into an atlas of 128 px cells (client/src/art/things/t<n>.webp).
 // Which thing is in which cell comes from .design/art/things.json (sheet n, row by row) and is written
 // to client/src/art/things.json; file names say nothing about the things themselves.
+// Portraits of foes go the same way (3×3 sheets, 192 px cells, client/src/art/foes/f<n>.webp).
 //
 // A ground is the painted plan of a place: a square painting cut to the plan's 8:7 and saved as
 // client/src/art/grounds/g<i>.webp, i — the scene's number in SCENES; the painted scenes are listed
@@ -55,9 +57,19 @@ function map(src: string, sheet: string, cols: number, rows: number): void {
 
 // ---------------------------------------------------------------------------- things
 
-const CELL = 128;
-const COLS = 4;
-const ROWS = 3;
+/** How a kind of sheet is laid out and where its atlas goes. */
+interface AtlasKind {
+  cols: number;
+  rows: number;
+  cell: number;
+  /** Atlas file prefix in client/src/art/<kind>/. */
+  prefix: string;
+}
+
+const KINDS: Record<'things' | 'foes', AtlasKind> = {
+  things: { cols: 4, rows: 3, cell: 128, prefix: 't' },
+  foes: { cols: 3, rows: 3, cell: 192, prefix: 'f' },
+};
 
 /** A painting without real transparency: the flat ground around the things is wiped from the edges in. */
 function clearGround(px: Buffer, w: number, h: number): boolean {
@@ -67,12 +79,39 @@ function clearGround(px: Buffer, w: number, h: number): boolean {
   const border: number[] = [];
   for (let x = 0; x < w; x++) border.push(x, (h - 1) * w + x);
   for (let y = 0; y < h; y++) border.push(y * w, y * w + w - 1);
-  const med = (k: number) => {
-    const v = border.map((i) => px[i * 4 + k]!).sort((a, b) => a - b);
-    return v[v.length >> 1]!;
-  };
-  const bg = [med(0), med(1), med(2)];
-  const dist = (i: number) => Math.hypot(px[i * 4]! - bg[0]!, px[i * 4 + 1]! - bg[1]!, px[i * 4 + 2]! - bg[2]!);
+  // the ground may be one colour or a painted checkerboard of two: every colour common along the edge
+  const buckets = new Map<number, { n: number; r: number; g: number; b: number }>();
+  for (const i of border) {
+    const r = px[i * 4]!;
+    const g = px[i * 4 + 1]!;
+    const b = px[i * 4 + 2]!;
+    const k = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
+    const e = buckets.get(k) ?? { n: 0, r: 0, g: 0, b: 0 };
+    e.n++;
+    e.r += r;
+    e.g += g;
+    e.b += b;
+    buckets.set(k, e);
+  }
+  const grounds = [...buckets.values()].filter((e) => e.n >= border.length * 0.08).map((e) => [e.r / e.n, e.g / e.n, e.b / e.n] as const);
+  const dist = (i: number) =>
+    Math.min(...grounds.map(([r, g, b]) => Math.hypot(px[i * 4]! - r, px[i * 4 + 1]! - g, px[i * 4 + 2]! - b)));
+  // a magenta key (painted on purpose): it is wiped everywhere, even where the ground shows through a coil,
+  // and its tint is taken off the edges
+  const key = grounds.find(([r, g, b]) => r > 190 && b > 190 && g < 90);
+  if (key) {
+    for (let i = 0; i < w * h; i++) {
+      const d = Math.hypot(px[i * 4]! - key[0], px[i * 4 + 1]! - key[1], px[i * 4 + 2]! - key[2]);
+      if (d < 110) px[i * 4 + 3] = 0;
+      else if (d < 190) px[i * 4 + 3] = Math.min(px[i * 4 + 3]!, Math.round(((d - 110) / 80) * 255));
+      const spill = Math.min(px[i * 4]!, px[i * 4 + 2]!) - px[i * 4 + 1]!;
+      if (d < 280 && spill > 12) {
+        px[i * 4] = Math.max(0, px[i * 4]! - spill * 0.9);
+        px[i * 4 + 2] = Math.max(0, px[i * 4 + 2]! - spill * 0.9);
+      }
+    }
+    return true;
+  }
   const seen = new Uint8Array(w * h);
   const stack = border.filter((i) => dist(i) < 40);
   for (const i of stack) seen[i] = 1;
@@ -96,11 +135,11 @@ function clearGround(px: Buffer, w: number, h: number): boolean {
 }
 
 /** The box around everything painted in each cell (by where each blot's middle falls). */
-function cellBoxes(px: Buffer, w: number, h: number): Array<[number, number, number, number] | null> {
+function cellBoxes(px: Buffer, w: number, h: number, cols: number, rows: number): Array<[number, number, number, number] | null> {
   // a haze of nearly see-through pixels around the things would show as dirt on the dark page
   for (let i = 3; i < px.length; i += 4) if (px[i]! < 40) px[i] = 0;
   const label = new Int32Array(w * h).fill(-1);
-  const boxes: Array<[number, number, number, number] | null> = Array.from({ length: COLS * ROWS }, () => null);
+  const boxes: Array<[number, number, number, number] | null> = Array.from({ length: cols * rows }, () => null);
   const solid = (i: number) => px[i * 4 + 3]! > 32;
   let id = 0;
   for (let start = 0; start < w * h; start++) {
@@ -145,24 +184,25 @@ function cellBoxes(px: Buffer, w: number, h: number): Array<[number, number, num
       for (const i of blot) px[i * 4 + 3] = 0;
       continue;
     }
-    const c = Math.min(COLS - 1, Math.floor((sx / n / w) * COLS));
-    const r = Math.min(ROWS - 1, Math.floor((sy / n / h) * ROWS));
-    const k = r * COLS + c;
+    const c = Math.min(cols - 1, Math.floor((sx / n / w) * cols));
+    const r = Math.min(rows - 1, Math.floor((sy / n / h) * rows));
+    const k = r * cols + c;
     const b = boxes[k];
     boxes[k] = b ? [Math.min(b[0], x0), Math.min(b[1], y0), Math.max(b[2], x1), Math.max(b[3], y1)] : [x0, y0, x1, y1];
   }
   return boxes;
 }
 
-function things(src: string, n: number): void {
-  const order = JSON.parse(readFileSync(join(ROOT, '.design/art/things.json'), 'utf8')) as Array<Array<[string, string]>>;
+function atlas(kind: keyof typeof KINDS, src: string, n: number): void {
+  const { cols, rows, cell, prefix } = KINDS[kind];
+  const order = JSON.parse(readFileSync(join(ROOT, `.design/art/${kind}.json`), 'utf8')) as Array<Array<[string, string]>>;
   const keys = (order[n - 1] ?? []).map(([k]) => k);
-  if (!keys.length) throw new Error(`no sheet ${n} in .design/art/things.json`);
+  if (!keys.length) throw new Error(`no sheet ${n} in .design/art/${kind}.json`);
   const [w, h] = sizeOf(src);
   const px = execFileSync('magick', [src, '-depth', '8', 'RGBA:-'], { maxBuffer: 64 << 20 });
   const wiped = clearGround(px, w, h);
-  const boxes = cellBoxes(px, w, h);
-  const tmp = mkdtempSync(join(tmpdir(), 'things-'));
+  const boxes = cellBoxes(px, w, h, cols, rows);
+  const tmp = mkdtempSync(join(tmpdir(), `${kind}-`));
   const clean = join(tmp, 'clean.png');
   execFileSync('magick', ['-size', `${w}x${h}`, '-depth', '8', 'RGBA:-', clean], { input: px });
   const cells: string[] = [];
@@ -171,30 +211,30 @@ function things(src: string, n: number): void {
     const f = join(tmp, `${String(i).padStart(2, '0')}_${keys[i] || 'none'}.png`);
     if (!b || !keys[i]) {
       if (keys[i]) missing.push(keys[i]!);
-      magick('-size', `${CELL}x${CELL}`, 'xc:none', f);
+      magick('-size', `${cell}x${cell}`, 'xc:none', f);
     } else {
       const bw = b[2] - b[0] + 1;
       const bh = b[3] - b[1] + 1;
       const side = Math.round(Math.max(bw, bh) * 1.08);
-      magick(clean, '-crop', `${bw}x${bh}+${b[0]}+${b[1]}`, '+repage', '-background', 'none', '-gravity', 'center', '-extent', `${side}x${side}`, '-filter', 'Lanczos', '-resize', `${CELL}x${CELL}`, f);
+      magick(clean, '-crop', `${bw}x${bh}+${b[0]}+${b[1]}`, '+repage', '-background', 'none', '-gravity', 'center', '-extent', `${side}x${side}`, '-filter', 'Lanczos', '-resize', `${cell}x${cell}`, f);
     }
     cells.push(f);
   });
-  const outDir = join(ROOT, 'client/src/art/things');
+  const outDir = join(ROOT, 'client/src/art', kind);
   mkdirSync(outDir, { recursive: true });
-  magick('montage', ...cells, '-tile', `${COLS}x${ROWS}`, '-geometry', `${CELL}x${CELL}+0+0`, '-background', 'none', '-quality', '82', '-define', 'webp:alpha-quality=90', join(outDir, `t${n}.webp`));
+  magick('montage', ...cells, '-tile', `${cols}x${rows}`, '-geometry', `${cell}x${cell}+0+0`, '-background', 'none', '-quality', '82', '-define', 'webp:alpha-quality=90', join(outDir, `${prefix}${n}.webp`));
   // a check sheet for the eye: every cell with the name it was given
   const check = join(tmp, 'check.jpg');
-  magick('montage', '-label', '%t', ...cells, '-tile', `${COLS}x${ROWS}`, '-geometry', `${CELL}x${CELL}+6+6`, '-background', '#3a3026', '-fill', '#e6d9bc', check);
-  const manifestPath = join(ROOT, 'client/src/art/things.json');
+  magick('montage', '-label', '%t', ...cells, '-tile', `${cols}x${rows}`, '-geometry', `${cell}x${cell}+6+6`, '-background', '#3a3026', '-fill', '#e6d9bc', check);
+  const manifestPath = join(ROOT, `client/src/art/${kind}.json`);
   const manifest = (existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : {}) as Record<string, [number, number]>;
   keys.forEach((k, i) => {
     if (k && boxes[i]) manifest[k] = [n, i];
   });
   const sorted = Object.fromEntries(Object.entries(manifest).sort(([a], [b]) => a.localeCompare(b)));
   writeFileSync(manifestPath, JSON.stringify(sorted, null, 1).replace(/\[\n\s+(\d+),\n\s+(\d+)\n\s+\]/g, '[$1, $2]') + '\n');
-  keep(src, `things${n}`);
-  console.log(`things ${n}: ${wiped ? 'flat ground wiped' : 'transparent'}, ${keys.filter(Boolean).length - missing.length} placed${missing.length ? `, missing: ${missing.join(' ')}` : ''}`);
+  keep(src, `${kind}${n}`);
+  console.log(`${kind} ${n}: ${wiped ? 'flat ground wiped' : 'transparent'}, ${keys.filter(Boolean).length - missing.length} placed${missing.length ? `, missing: ${missing.join(' ')}` : ''}`);
   console.log(`check: ${check}`);
 }
 
@@ -218,9 +258,9 @@ function ground(src: string, scene: string): void {
 
 const [cmd, ...args] = process.argv.slice(2);
 if (cmd === 'map' && args[0] && args[1]) map(resolve(args[0]), args[1], Number(args[2] ?? 6), Number(args[3] ?? 4));
-else if (cmd === 'things' && args[0] && args[1]) things(resolve(args[0]), Number(args[1]));
+else if ((cmd === 'things' || cmd === 'foes') && args[0] && args[1]) atlas(cmd, resolve(args[0]), Number(args[1]));
 else if (cmd === 'ground' && args[0] && args[1]) ground(resolve(args[0]), args[1]);
 else {
-  console.error('usage: tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows] | things <painted.png> <n> | ground <painted.png> <scene>');
+  console.error('usage: tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows] | things|foes <painted.png> <n> | ground <painted.png> <scene>');
   process.exit(1);
 }

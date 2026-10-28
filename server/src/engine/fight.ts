@@ -149,6 +149,8 @@ export function startFight(
   opts: { scene?: boolean; party?: PlayerId[] } = {},
 ): FightState {
   const party = (opts.party ?? g.joinedIds().filter((pid) => canJoin(g, pid, area))).slice();
+  // a new fight puts the last one out of sight
+  for (const pid of party) delete g.s.afterFight?.[pid];
   const f: FightState = {
     id: g.s.nextFightId++,
     area,
@@ -779,6 +781,8 @@ export function defeat(g: Game, pid: PlayerId): void {
 function finishFight(g: Game, f: FightState, how: 'win' | 'lose' | 'fled'): void {
   g.s.fights = g.s.fights.filter((x) => x.id !== f.id);
   const party = f.party;
+  const after = (g.s.afterFight ??= {});
+  for (const pid of party) after[pid] = { at: g.now, how, fight: structuredClone(f) };
   for (const pid of party) {
     const p = g.p(pid);
     p.fight = null;
