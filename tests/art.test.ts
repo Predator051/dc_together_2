@@ -1,9 +1,10 @@
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { ITEM_ICONS, PORTRAITS, SCENES, SPOT_ICONS } from '../shared/src/pictures.js';
+import { ITEM_ICONS, PORTRAITS, SCENES, SPOT_ICONS, VIEWS } from '../shared/src/pictures.js';
 import painted from '../client/src/art/things.json';
 import foes from '../client/src/art/foes.json';
 import marks from '../client/src/art/marks.json';
+import views from '../client/src/art/views.json';
 import grounds from '../client/src/art/grounds.json';
 
 // Every mark of a thing is painted; a new mark needs its cell in an atlas (scripts/art.ts things).
@@ -57,6 +58,19 @@ describe('painted marks', () => {
     for (const [k, [n, i]] of Object.entries(cells)) {
       expect(existsSync(new URL(`../client/src/art/marks/m${n}.webp`, import.meta.url)), k).toBe(true);
       expect(i).toBeLessThan(12);
+    }
+  });
+});
+
+// Every place seen at eye level, and the suppers by the fire (scripts/art.ts view).
+describe('painted views', () => {
+  it('every view key has its picture', () => {
+    const list = views as string[];
+    expect(VIEWS.filter((k) => !list.includes(k))).toEqual([]);
+    for (const k of list) {
+      const i = (VIEWS as readonly string[]).indexOf(k) + 1;
+      expect(i, k).toBeGreaterThan(0);
+      expect(existsSync(new URL(`../client/src/art/views/w${i}.webp`, import.meta.url)), k).toBe(true);
     }
   });
 });

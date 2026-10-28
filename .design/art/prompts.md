@@ -98,3 +98,9 @@ plan for a survival game … Location: <grounds.json> … Keep the very top and 
 «Generate an image, square 1024x1024, with a fully transparent background … A sheet of enemy portraits …
 strict grid of 3 columns and 3 rows … faces the viewer at three-quarters, menacing … Row N …» + хвост стиля.
 Люди — по плечи; имён и сюжетных деталей в запросе нет.
+
+## Виды мест с уровня глаз (шапки сцен и карточка места на карте) — `views.json`
+
+1536×1024, обрезка до широкой полосы. «An eye-level painted establishing view of … The main subject sits in
+the middle horizontal band (top and bottom fifth will be cropped) … No people, no animals …» + хвост стиля.
+`hearth1/2` — для ужинов (сцены из пулов).

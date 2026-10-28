@@ -5,6 +5,7 @@ import { net } from './net.js';
 import { MapIcon } from './mapicons.js';
 import { LandMap, paintedFits } from './landmap.js';
 import { duskOf } from './ambient.js';
+import { viewUrl } from './pictures.js';
 import { Portrait } from './portraits.js';
 import { Thing } from './items.js';
 import { Cell } from './cells.js';
@@ -185,6 +186,9 @@ export function MapPanel({ v, locked, now }: { v: PlayerView; locked: boolean; n
       </div>
       {picked ? (
         <section class="map-card" key={picked.id}>
+          {picked.known && viewUrl(picked.icon) && (
+            <div class="map-card-art" style={{ backgroundImage: `url(${viewUrl(picked.icon)})` }} aria-hidden="true" />
+          )}
           <h3>{picked.name}</h3>
           {picked.desc && <p class="desc">{picked.desc}</p>}
           {!picked.known && <p class="desc">{T.mapUnknown}</p>}

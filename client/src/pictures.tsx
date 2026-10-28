@@ -1,8 +1,9 @@
 // Pictures of the plans: small seals for spots and the grounds they stand on, drawn in ink.
 
 import type { ComponentChildren, JSX } from 'preact';
-import { SCENES, type SceneId, type SpotIcon } from '../../shared/src/pictures.js';
+import { SCENES, VIEWS, type SceneId, type SpotIcon } from '../../shared/src/pictures.js';
 import grounds from './art/grounds.json';
+import views from './art/views.json';
 import marks from './art/marks.json';
 
 // ---------------------------------------------------------------------------- spot seals
@@ -335,6 +336,15 @@ const PICS: Record<SpotIcon, () => JSX.Element> = {
     </Pic>
   ),
 };
+
+// Eye-level views of places (scripts/art.ts view): the head of a scene, the card of a place on the map.
+const PAINTED_VIEWS = new Set(views as string[]);
+
+/** The picture of a place seen at eye level, or null while it is not painted. */
+export function viewUrl(key: string | undefined): string | null {
+  if (!key || !PAINTED_VIEWS.has(key)) return null;
+  return new URL(`./art/views/w${(VIEWS as readonly string[]).indexOf(key) + 1}.webp`, import.meta.url).href;
+}
 
 // Painted marks: atlases of 4×3 cells (scripts/art.ts marks) — spot icons, and '@' + scene for the map.
 const MARKS = marks as unknown as Record<string, [number, number]>;

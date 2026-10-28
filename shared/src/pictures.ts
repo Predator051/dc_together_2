@@ -5,6 +5,9 @@
 export const SCENES = ['yard', 'shore', 'reeds', 'saltflat', 'brine', 'grove', 'dyke', 'causeway', 'road', 'town', 'bog', 'isle', 'willow'] as const;
 export type SceneId = (typeof SCENES)[number];
 
+/** Places seen at eye level (the head of a scene, the card of a place): every ground, and suppers by the fire. */
+export const VIEWS = [...SCENES, 'hearth1', 'hearth2'] as const;
+
 /** Small pictures of spots on a plan. */
 export const SPOT_ICONS = [
   'home',
