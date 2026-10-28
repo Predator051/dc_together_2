@@ -1,7 +1,8 @@
 // Pictures of the plans: small seals for spots and the grounds they stand on, drawn in ink.
 
 import type { ComponentChildren, JSX } from 'preact';
-import type { SceneId, SpotIcon } from '../../shared/src/pictures.js';
+import { SCENES, type SceneId, type SpotIcon } from '../../shared/src/pictures.js';
+import grounds from './art/grounds.json';
 
 // ---------------------------------------------------------------------------- spot seals
 
@@ -756,7 +757,28 @@ const GROUNDS: Record<SceneId, (p: { warm: boolean }) => JSX.Element> = {
 };
 
 /** The drawn ground of a plan. */
-export function Ground({ scene, warm }: { scene: string; warm: boolean }) {
+// Painted grounds (scripts/art.ts ground): a place with one shows the painting, the rest keep the ink.
+const PAINTED = new Set(grounds as string[]);
+
+function groundUrl(scene: string): string {
+  return new URL(`./art/grounds/g${(SCENES as readonly string[]).indexOf(scene) + 1}.webp`, import.meta.url).href;
+}
+
+/**
+ * The ground a plan is drawn on. A painting takes the evening (`dusk`, 0..1) and the weather (`sky`)
+ * as tones laid over it; the ink plans have them from the page behind.
+ */
+export function Ground({ scene, warm, dusk = 0, sky }: { scene: string; warm: boolean; dusk?: number; sky?: string }) {
+  if (PAINTED.has(scene)) {
+    return (
+      <div class={`plan-paint g-${scene} ${sky ? `sky-${sky}` : ''}`} aria-hidden="true">
+        <img src={groundUrl(scene)} alt="" draggable={false} decoding="async" />
+        {warm && <span class="plan-paint-glow" />}
+        <span class="plan-paint-sky" />
+        <span class="plan-paint-dusk" style={{ opacity: String(dusk) }} />
+      </div>
+    );
+  }
   const Draw = (GROUNDS as Record<string, (p: { warm: boolean }) => JSX.Element>)[scene] ?? Yard;
   return (
     <svg class={`plan-ground g-${scene}`} viewBox="0 0 400 350" preserveAspectRatio="none" aria-hidden="true">

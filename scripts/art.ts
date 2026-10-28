@@ -2,6 +2,7 @@
 //
 //   tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows]
 //   tsx scripts/art.ts things <painted.png> <n>
+//   tsx scripts/art.ts ground <painted.png> <scene>
 //
 // A map sheet is cut into tiles (client/src/art/<sheet>/r<row>c<col>.webp): the client asks only for
 // the tiles over explored land. The painting itself is kept, a little compressed, in art-src/ —
@@ -11,10 +12,15 @@
 // its outline, centred in a square and put into an atlas of 128 px cells (client/src/art/things/t<n>.webp).
 // Which thing is in which cell comes from .design/art/things.json (sheet n, row by row) and is written
 // to client/src/art/things.json; file names say nothing about the things themselves.
+//
+// A ground is the painted plan of a place: a square painting cut to the plan's 8:7 and saved as
+// client/src/art/grounds/g<i>.webp, i — the scene's number in SCENES; the painted scenes are listed
+// in client/src/art/grounds.json.
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { SCENES } from '../shared/src/pictures.js';
 
 const ROOT = resolve(import.meta.dirname, '..');
 
@@ -192,10 +198,29 @@ function things(src: string, n: number): void {
   console.log(`check: ${check}`);
 }
 
+// ---------------------------------------------------------------------------- grounds
+
+function ground(src: string, scene: string): void {
+  const i = (SCENES as readonly string[]).indexOf(scene) + 1;
+  if (!i) throw new Error(`no scene ${scene}`);
+  const [w, h] = sizeOf(src);
+  const ch = Math.round((w * 7) / 8);
+  const outDir = join(ROOT, 'client/src/art/grounds');
+  mkdirSync(outDir, { recursive: true });
+  magick(src, '-gravity', 'center', '-crop', `${w}x${Math.min(h, ch)}+0+0`, '+repage', '-resize', '960x840', '-strip', '-quality', '78', '-define', 'webp:method=6', join(outDir, `g${i}.webp`));
+  const listPath = join(ROOT, 'client/src/art/grounds.json');
+  const list = new Set<string>(existsSync(listPath) ? JSON.parse(readFileSync(listPath, 'utf8')) : []);
+  list.add(scene);
+  writeFileSync(listPath, JSON.stringify([...list].sort()) + '\n');
+  keep(src, `ground${i}`);
+  console.log(`ground ${scene}: ${w}×${h} → g${i}.webp`);
+}
+
 const [cmd, ...args] = process.argv.slice(2);
 if (cmd === 'map' && args[0] && args[1]) map(resolve(args[0]), args[1], Number(args[2] ?? 6), Number(args[3] ?? 4));
 else if (cmd === 'things' && args[0] && args[1]) things(resolve(args[0]), Number(args[1]));
+else if (cmd === 'ground' && args[0] && args[1]) ground(resolve(args[0]), args[1]);
 else {
-  console.error('usage: tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows] | things <painted.png> <n>');
+  console.error('usage: tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows] | things <painted.png> <n> | ground <painted.png> <scene>');
   process.exit(1);
 }

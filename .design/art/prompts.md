@@ -85,3 +85,10 @@ animals. Style: <хвост стиля из bible.md>
 Шаблон (собирается скриптом из `things.json`): «Generate an image, landscape 1536x1024, with a fully
 transparent background … strict grid of 4 columns and 3 rows … Row N, left to right: … Style: hand-painted
 gouache game icons …, a thin dark outline around each object …». Пустая клетка — «leave this cell empty».
+
+## Шаг 4. Рисованные планы мест (вместо шапок) — `grounds.json`: описание на каждый SceneId
+
+Композиция повторяет SVG-план (`client/src/pictures.tsx`, `Ground`) и точки мест (`LocationDef.plan/spots`, %).
+1024×1024, затем обрезка до 8:7. Шаблон: «Generate an image, square 1024x1024. A hand-painted top-down location
+plan for a survival game … Location: <grounds.json> … Keep the very top and bottom edges plain …» + хвост стиля.
+Двор дома — без построек на местах будущих верстаков (иначе они «видны» до постройки).

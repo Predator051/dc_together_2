@@ -1,7 +1,8 @@
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { ITEM_ICONS } from '../shared/src/pictures.js';
+import { ITEM_ICONS, SCENES } from '../shared/src/pictures.js';
 import painted from '../client/src/art/things.json';
+import grounds from '../client/src/art/grounds.json';
 
 // Every mark of a thing is painted; a new mark needs its cell in an atlas (scripts/art.ts things).
 describe('painted things', () => {
@@ -16,6 +17,19 @@ describe('painted things', () => {
       expect(i).toBeLessThan(12);
       expect(taken.has(`${n}:${i}`), k).toBe(false);
       taken.add(`${n}:${i}`);
+    }
+  });
+});
+
+// Every plan of a place is painted; a new scene needs its painting (scripts/art.ts ground).
+describe('painted grounds', () => {
+  it('every scene has its painting, and nothing else is listed', () => {
+    const list = grounds as string[];
+    expect(SCENES.filter((s) => !list.includes(s))).toEqual([]);
+    expect(list.filter((s) => !(SCENES as readonly string[]).includes(s))).toEqual([]);
+    for (const s of list) {
+      const i = (SCENES as readonly string[]).indexOf(s) + 1;
+      expect(existsSync(new URL(`../client/src/art/grounds/g${i}.webp`, import.meta.url)), s).toBe(true);
     }
   });
 });

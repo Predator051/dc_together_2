@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { PLAN_FIXED } from '../../shared/src/content.js';
 import type { GroupView, PlayerView } from '../../shared/src/protocol.js';
 import { IconPair } from './icons.js';
+import { duskOf } from './ambient.js';
 import { Ground, picture } from './pictures.js';
 import { Sheet } from './sheet.js';
 import { T } from './strings.js';
@@ -303,7 +304,12 @@ export function AreaPlan({
             </button>
           </div>
           <div class="plan" role="group" aria-label={T.planTitle}>
-            <Ground scene={scene} warm={v.stove.state === 'warm' || v.stove.state === 'low'} />
+            <Ground
+              scene={scene}
+              warm={v.stove.state === 'warm' || v.stove.state === 'low'}
+              dusk={v.ambient.kind === 'cellar' || v.ambient.kind === 'candle' ? 0 : duskOf(v.dayAt, now)}
+              sky={v.ambient.sky ?? undefined}
+            />
             {spots.map((s, i) => (
               <SpotButton
                 key={s.id}

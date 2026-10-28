@@ -499,7 +499,7 @@ function reducedMotion(): boolean {
 }
 
 /** How far into the evening a long day has drawn: 0 by day, up to ~0.85 late on. */
-function duskOf(dayAt: number, now: number): number {
+export function duskOf(dayAt: number, now: number): number {
   const mins = (now - dayAt) / 60000;
   return Math.max(0, Math.min(0.85, (mins - 25) / 35));
 }
