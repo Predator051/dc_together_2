@@ -16,8 +16,8 @@
   /* inks */
   --ink: #e6d9bc;
   --ink-2: #cdbf9f;
-  --faded: #a08f70;
-  --pale: #85765c;
+  --faded: #a89777;
+  --pale: #99896a;
   /* pigments */
   --cinnabar: #c24e36;
   --cinnabar-ink: #d8694c;
@@ -65,6 +65,17 @@ button,
 input {
   font: inherit;
   color: inherit;
+}
+input {
+  caret-color: var(--ochre-ink);
+}
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--leaf-2) var(--page);
+}
+::selection {
+  background: rgba(196, 154, 69, 0.32);
+  color: var(--ink);
 }
 
 h1,
@@ -363,8 +374,10 @@ b {
     background 0.15s,
     border-color 0.15s;
 }
-.btn:hover:not(:disabled) {
-  border-color: var(--ochre);
+@media (hover: hover) {
+  .btn:hover:not(:disabled) {
+    border-color: var(--ochre);
+  }
 }
 .btn:active:not(:disabled) {
   background: var(--leaf);
@@ -379,8 +392,10 @@ b {
   color: #1f180f;
   font-weight: 700;
 }
-.btn.primary:hover:not(:disabled) {
-  background: var(--ochre-ink);
+@media (hover: hover) {
+  .btn.primary:hover:not(:disabled) {
+    background: var(--ochre-ink);
+  }
 }
 .btn.ghost {
   background: transparent;
@@ -735,10 +750,9 @@ button.bed:focus-visible {
 .panel.event {
   margin: 0 0 14px;
   padding: 14px 16px;
-  border: 1px solid var(--rule-2);
-  border-left: 3px solid var(--ochre);
+  border: 1px solid rgba(196, 154, 69, 0.45);
   border-radius: 8px;
-  background: var(--leaf);
+  background: linear-gradient(var(--ochre-wash), transparent 70%), var(--leaf);
   animation: event-in 0.35s ease backwards;
 }
 .panel.event.home {
@@ -815,9 +829,13 @@ button.bed:focus-visible {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.wx-chip:hover,
 .wx-chip.on {
   background: var(--gall-wash);
+}
+@media (hover: hover) {
+  .wx-chip:hover {
+    background: var(--gall-wash);
+  }
 }
 .wx-chip:focus-visible {
   outline: 2px solid var(--ochre);
@@ -1230,9 +1248,11 @@ button.bed:focus-visible {
     background 0.15s,
     border-color 0.15s;
 }
-.tile:hover:not(:disabled) {
-  border-color: rgba(196, 154, 69, 0.6);
-  background: var(--leaf-2);
+@media (hover: hover) {
+  .tile:hover:not(:disabled) {
+    border-color: rgba(196, 154, 69, 0.6);
+    background: var(--leaf-2);
+  }
 }
 .tile:active:not(:disabled) {
   background: var(--ochre-wash);
@@ -2109,8 +2129,10 @@ mark {
     background 0.15s,
     border-color 0.15s;
 }
-.opt:hover:not(:disabled) {
-  border-color: rgba(196, 154, 69, 0.6);
+@media (hover: hover) {
+  .opt:hover:not(:disabled) {
+    border-color: rgba(196, 154, 69, 0.6);
+  }
 }
 .opt:active:not(:disabled) {
   background: var(--ochre-wash);
@@ -2876,8 +2898,20 @@ mark {
   .col-left .stock {
     border-bottom: none;
   }
+  @media (pointer: fine) {
+    .col-left .btn.small {
+      min-height: 34px;
+      padding: 4px 12px;
+      font-size: 0.9rem;
+    }
+  }
   .col-left .ledger {
     grid-template-columns: 1fr;
+  }
+  /* the page scrolls under the header: the middle tabs stick right below it, with no band above */
+  .col-mid .side-switch {
+    top: 64px;
+    box-shadow: none;
   }
   .col-mid {
     padding: 0 32px;
@@ -3018,8 +3052,10 @@ mark {
   color: var(--faded);
   font-size: 0.8rem;
 }
-.chip-btn:hover:not(:disabled) {
-  border-color: var(--ochre);
+@media (hover: hover) {
+  .chip-btn:hover:not(:disabled) {
+    border-color: var(--ochre);
+  }
 }
 .chip-btn:disabled {
   opacity: 0.55;
@@ -3275,15 +3311,27 @@ mark {
 }
 .bag-items li {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 4px 8px;
   padding: 6px 0;
   border-bottom: 1px solid var(--rule);
 }
+/* In a narrow column the buttons drop under the name instead of squeezing it. */
 .bag-name {
+  flex: 1 1 7.5rem;
+  min-width: 0;
   display: flex;
   flex-direction: column;
+}
+.bag-items li > .row,
+.bag-items li > .btn {
+  flex: none;
+  margin-left: auto;
+}
+.bag-title b {
+  white-space: nowrap;
 }
 .bag-name small {
   color: var(--faded);
@@ -3320,9 +3368,13 @@ mark {
   font-weight: 600;
   transition: border-color 0.15s;
 }
-.needs-bar:hover .need,
 .needs-bar.on .need {
   border-color: rgba(196, 154, 69, 0.55);
+}
+@media (hover: hover) {
+  .needs-bar:hover .need {
+    border-color: rgba(196, 154, 69, 0.55);
+  }
 }
 .needs-bar .need-food,
 .needs-bar .need-rest {
@@ -4049,9 +4101,11 @@ mark {
 .spot.idle .spot-name {
   color: var(--faded);
 }
-.spot:hover .spot-medal {
-  transform: translateY(-2px);
-  border-color: var(--ochre);
+@media (hover: hover) {
+  .spot:hover .spot-medal {
+    transform: translateY(-2px);
+    border-color: var(--ochre);
+  }
 }
 .spot:focus-visible {
   outline: none;
@@ -4924,10 +4978,15 @@ body.sheet-open {
   border-color: rgba(196, 154, 69, 0.6);
   color: var(--ink);
 }
-.slot-spot.on .spot-medal,
-.slot-spot:hover .spot-medal {
+.slot-spot.on .spot-medal {
   border-color: var(--ochre);
   color: var(--ochre-ink);
+}
+@media (hover: hover) {
+  .slot-spot:hover .spot-medal {
+    border-color: var(--ochre);
+    color: var(--ochre-ink);
+  }
 }
 .slot-label {
   display: flex;
@@ -5114,9 +5173,9 @@ body.sheet-open {
   flex-direction: column;
   padding: 8px 12px;
   margin-bottom: 6px;
-  border-left: 3px solid var(--ochre);
+  border: 1px solid rgba(196, 154, 69, 0.22);
   background: rgba(196, 154, 69, 0.05);
-  border-radius: 0 6px 6px 0;
+  border-radius: 6px;
 }
 .perk-list span {
   color: var(--ink-2);

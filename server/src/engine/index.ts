@@ -64,6 +64,9 @@ import { cap, fill, resolveText, type Persona } from './text.js';
 
 export const LOG_LIMIT = 400;
 
+/** A title in «guillemets», unless it is already a quotation. */
+const quoted = (t: string) => (t.startsWith('«') ? t : `«${t}»`);
+
 /** Hand signs players can show each other (learned from the old beekeeper). */
 export const SIGNS = ['stop', 'go', 'quiet', 'danger', 'here'];
 
@@ -206,16 +209,16 @@ export class Game {
       if (!now) {
         if (!this.test(q.start)) continue;
         st[q.id] = 'on';
-        say(() => `${this.ix.ui('quest_new')} «${q.title}».`);
+        say(() => `${this.ix.ui('quest_new')} ${quoted(q.title)}.`);
       }
       if (q.fail && this.test(q.fail)) {
         st[q.id] = 'closed';
-        say((pid) => `${this.ix.ui('quest_closed')} «${q.title}».${q.failText ? ' ' + this.render(q.failText, pid) : ''}`);
+        say((pid) => `${this.ix.ui('quest_closed')} ${quoted(q.title)}.${q.failText ? ' ' + this.render(q.failText, pid) : ''}`);
         continue;
       }
       if (questProgress(this, q) >= q.steps.length) {
         st[q.id] = 'done';
-        say((pid) => `${this.ix.ui('quest_done')} «${q.title}». ${this.render(q.reward, pid)}`);
+        say((pid) => `${this.ix.ui('quest_done')} ${quoted(q.title)}. ${this.render(q.reward, pid)}`);
         for (const pid of this.joinedIds()) gainXp(this, pid, 15);
       }
     }
@@ -623,7 +626,7 @@ export class Game {
         p.perks.push(e.perk);
         refreshHero(this, pid);
         const def = this.ix.c.perks.find((x) => x.id === e.perk);
-        this.logRaw('find', { [pid]: `${this.ix.ui('perk_got')} «${def?.name ?? e.perk}».` }, pid);
+        this.logRaw('find', { [pid]: `${this.ix.ui('perk_got')} ${quoted(def?.name ?? e.perk)}.` }, pid);
       }
       return;
     }
@@ -713,7 +716,7 @@ export class Game {
     }
     if (fresh.length) {
       const text: Partial<Record<PlayerId, string>> = {};
-      for (const pid of fresh) text[pid] = `${this.ix.ui('new_clue')} «${def.title}»`;
+      for (const pid of fresh) text[pid] = `${this.ix.ui('new_clue')} ${quoted(def.title)}`;
       this.logRaw('find', text);
     }
   }
