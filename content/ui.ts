@@ -159,7 +159,14 @@ export const ui: Record<string, string> = {
   near_fight: '{partner} тут б\'ється:',
 
   // ----- household -----
-  residents_hungry: 'У варниці нема що їсти. Люди працюють упівсили.',
+  residents_hungry: 'Громаді забракло харчів: люди голодні й слабнуть.',
+  larder_low: 'Харчів громаді лишилось години на {n}.',
+  resident_rest: 'відпочивати',
+  resident_set: 'ставить',
+  work_sky: 'погода',
+  work_bonus: 'добрий лад у домі',
+  work_hunger: 'голод',
+  work_dish: 'страва',
   resident_hurt: 'поранено на роботі. Відлежиться.',
   job_needs: 'на складі потрібен',
 

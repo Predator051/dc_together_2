@@ -9066,3 +9066,138 @@ body.sheet-open {
   content: '✦ ';
   color: var(--cinnabar-ink);
 }
+
+/* the household's food: eaten, brought, what it comes to; how long it lasts; dishes */
+.larder {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule-2);
+  border-radius: 10px;
+  background: var(--leaf);
+  font-family: var(--sans);
+}
+.larder.short {
+  border-color: rgba(216, 105, 76, 0.6);
+}
+.larder-nums {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.larder-nums > span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.larder-nums small {
+  color: var(--faded);
+  font-size: 0.78rem;
+}
+.larder-nums b {
+  font-size: 1.05rem;
+}
+.loss {
+  color: var(--cinnabar-ink);
+  font-weight: 500;
+}
+.larder-line {
+  margin: 8px 0 0;
+  color: var(--ink-2);
+  font-size: 0.88rem;
+}
+.larder-line b {
+  color: var(--ink);
+}
+.larder-line .warn-text {
+  color: var(--cinnabar-ink);
+}
+.larder-dishes {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 8px;
+  color: var(--ink-2);
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+.larder-dishes input {
+  margin-top: 3px;
+  accent-color: var(--ochre);
+}
+.larder-dishes small {
+  color: var(--faded);
+}
+.larder-hint {
+  display: block;
+  font-size: 0.78rem;
+}
+/* how full a resident is */
+.belly {
+  margin: 10px 0 0;
+  font-family: var(--sans);
+}
+.belly-bar {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(230, 217, 188, 0.08);
+  overflow: hidden;
+}
+.belly-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--verdigris);
+  transition: width 0.4s ease;
+}
+.belly.s-low .belly-bar > span {
+  background: var(--ochre);
+}
+.belly small {
+  display: block;
+  margin-top: 4px;
+  color: var(--faded);
+  font-size: 0.82rem;
+}
+.belly small b {
+  color: var(--ink-2);
+}
+.belly.s-hungry small b,
+.belly.s-weak small b {
+  color: var(--cinnabar-ink);
+}
+.folk-rate {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.folk-why {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+}
+.folk-why li {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(230, 217, 188, 0.06);
+  color: var(--ink-2);
+}
+.folk-why li.up {
+  color: var(--verdigris);
+}
+.folk-why li.down {
+  color: var(--cinnabar-ink);
+}
+.folk-food.gain {
+  color: var(--verdigris);
+}
+.folk-food.loss {
+  color: var(--cinnabar-ink);
+}

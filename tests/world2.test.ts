@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { content } from '../content/index.js';
 import type { PlayerId } from '../shared/src/content.js';
 import { Rng } from '../shared/src/rng.js';
 import { levelFromXp, xpForLevel } from '../shared/src/rules.js';
 import { bagCap, bagLoad, gainXp } from '../server/src/engine/hero.js';
-import { settleWork } from '../server/src/engine/travel.js';
+import { settleWork } from '../server/src/engine/household.js';
 import { pair, World } from './world.js';
 
 /** After the hut: both at home. */
@@ -321,12 +322,87 @@ describe('the household', () => {
     w.now += 2 * 3_600_000;
     settleWork(w.g());
     expect(w.state.res['r_02']).toBeGreaterThan(20);
-    expect(w.state.res['r_05']).toBe(8);
+    // she came in fed for three hours of work and ate once when it ran low
+    expect(w.state.res['r_05']).toBe(9);
     // a long absence: capped by the store, and hungry when the food runs out
+    w.state.res['r_05'] = 1;
     w.now += 24 * 3_600_000;
     settleWork(w.g());
     expect(w.state.res['r_02']).toBeLessThanOrEqual(w.g().cap('r_02'));
     expect(w.state.residents['h_01']!.hungry).toBe(true);
+    expect(w.view(h).residents[0]!.state).not.toBe('fed');
+  });
+});
+
+describe('the household eats', () => {
+  /** Four residents at home, food in the store, the clock at their last count. */
+  function house(n = 4): { w: World; h: PlayerId } {
+    const r = home();
+    const ids = content.residents.slice(0, n).map((x) => x.id);
+    for (const id of ids) r.w.g().apply([{ resident: id }]);
+    r.w.state.res[content.food!] = 20;
+    r.w.state.workAt = r.w.now;
+    return r;
+  }
+
+  it('as many portions as people need, whatever the server tick (it once ate one a minute)', () => {
+    const { w } = house(4);
+    // the server counts every second: an hour of it
+    for (let t = 0; t < 3_600_000; t += 1000) {
+      w.now += 1000;
+      settleWork(w.g());
+    }
+    // resting: half a belly-hour an hour each, a portion holds three; they came in with three
+    expect(w.state.res[content.food!]).toBeGreaterThanOrEqual(19);
+    for (let t = 0; t < 6 * 3_600_000; t += 60_000) {
+      w.now += 60_000;
+      settleWork(w.g());
+    }
+    // seven hours resting: 4 × 3.5 belly-hours, about 4 portions in all
+    expect(20 - w.state.res[content.food!]!).toBeGreaterThanOrEqual(3);
+    expect(20 - w.state.res[content.food!]!).toBeLessThanOrEqual(6);
+  });
+
+  it('the larder shows what is eaten and brought, and a food job turns the balance', () => {
+    const { w, h } = house(2);
+    const l = w.view(h).larder!;
+    expect(l.eat).toBeGreaterThan(0);
+    expect(l.gain).toBe(0);
+    expect(l.lasts).toBeGreaterThan(0);
+    const r = w.view(h).residents[0]!;
+    const fish = r.jobs.find((j) => j.food !== undefined && j.food > 0 && !j.reason);
+    if (fish) {
+      expect(w.cmd(h, { c: 'job', who: r.id, id: fish.id }).ok).toBe(true);
+      const after = w.view(h).larder!;
+      expect(after.gain).toBeGreaterThan(0);
+      expect(after.lasts).toBeUndefined();
+    }
+  });
+
+  it('hunger comes by steps, each their own; dishes feed longer when the house allows', () => {
+    const { w, h } = house(1);
+    const id = Object.keys(w.state.residents)[0]!;
+    w.state.res[content.food!] = 0;
+    const r = w.state.residents[id]!;
+    r.fed = 0;
+    r.starve = 1;
+    expect(w.view(h).residents[0]!.state).toBe('low');
+    r.starve = 6;
+    expect(w.view(h).residents[0]!.state).toBe('hungry');
+    r.starve = 13;
+    expect(w.view(h).residents[0]!.state).toBe('weak');
+    // a dish in the store: not touched unless allowed
+    const dish = content.resources.find((x) => x.meal && x.id !== content.food)!;
+    w.state.res[dish.id] = 2;
+    w.now += 10 * 60_000;
+    settleWork(w.g());
+    expect(w.state.res[dish.id]).toBe(2);
+    expect(w.cmd(h, { c: 'feed', dishes: true }).ok).toBe(true);
+    w.now += 10 * 60_000;
+    settleWork(w.g());
+    expect(w.state.res[dish.id]).toBe(1);
+    expect(w.view(h).residents[0]!.state).toBe('fed');
+    expect(w.view(h).residents[0]!.good).toBe(true);
   });
 });
 

@@ -303,8 +303,15 @@ export interface ResidentState {
   /** Fraction of the next unit (by resource). */
   acc: Record<string, number>;
   hurtUntil: number;
+  /** Some hunger now (any state but fed; kept for older readers). */
   hungry: boolean;
   since: number;
+  /** Hours of work left in the belly (a working resident burns one an hour, a resting one half). */
+  fed?: number;
+  /** Hours gone without food once the belly was empty. */
+  starve?: number;
+  /** Hours left of a cooked dish's lift. */
+  good?: number;
 }
 
 /** What part one left behind (imported once from its world). */
@@ -366,6 +373,11 @@ export interface WorldState {
   nextFightId: number;
   bestiary: Record<string, { seen: number; beaten: number; known: string[] }>;
   residents: Record<string, ResidentState>;
+  /** Residents may be fed cooked dishes from the store (else plain food only). */
+  feedDishes?: boolean;
+  /** Warned that the household's food runs short / that people go hungry (said once each). */
+  larderLow?: boolean;
+  folkHungry?: boolean;
   legacy: Legacy | null;
   /** Last time residents' work was counted. */
   workAt: number;

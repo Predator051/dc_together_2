@@ -37,6 +37,7 @@ export type Command =
   | { c: 'loot' }
   /** Set a resident to work (action id) or let them rest (null). */
   | { c: 'job'; who: string; id: string | null }
+  | { c: 'feed'; dishes: boolean }
   /** Eat a dish (from the bag, or at home from the store). */
   | { c: 'eat'; id: string }
   /** Light a campfire where you stand (away from home). */
@@ -623,10 +624,40 @@ export interface ResidentView {
   traits: Array<{ name: string; text: string }>;
   job: string | null;
   jobLabel?: string;
-  /** What each can be set to; `icon` is the mark of what it brings. */
-  jobs: Array<{ id: string; label: string; icon?: string; place: string; rate: number; reason?: string }>;
+  /** What each can be set to; `icon` is the mark of what it brings. `rate` — a hour at the pace they would
+   * work now; `food` — how the household's plain food an hour would stand (brought minus eaten) with this one at it. */
+  jobs: Array<{ id: string; label: string; icon?: string; place: string; rate: number; reason?: string; food?: number }>;
   hurt: boolean;
   hungry: boolean;
+  /** fed — full; low — a little slower; hungry — half; weak — does not work. */
+  state: 'fed' | 'low' | 'hungry' | 'weak';
+  /** Hours of work left in the belly; hours until they eat again (0: at the next chance). */
+  fed: number;
+  eatsIn: number;
+  /** Plain food they eat an hour now. */
+  eats: number;
+  /** A cooked dish keeps them working better. */
+  good: boolean;
+  /** What they bring in an hour now at their job, and why it is that much (multipliers). */
+  rate?: number;
+  why?: Array<{ name: string; x: number }>;
+  /** Plain food the household gets/loses an hour as it is now (for the job list). */
+  food: number;
+}
+
+/** The household's food: eaten and brought in an hour, the store, how long it lasts. */
+export interface LarderView {
+  eat: number;
+  gain: number;
+  stock: number;
+  cap: number;
+  /** Hours until it runs out at this pace (absent: it does not). */
+  lasts?: number;
+  /** Cooked dishes in the store, and whether residents may eat them. */
+  dishes: number;
+  feedDishes: boolean;
+  /** Residents not fed now. */
+  hungry: number;
 }
 
 export interface BeastView {
@@ -786,6 +817,7 @@ export interface PlayerView {
   /** A fight of the partner where you stand (you may join). */
   nearFight: { id: number; text: string } | null;
   residents: ResidentView[];
+  larder: LarderView | null;
   bestiary: BeastView[];
   /** Panels opened so far (the interface grows with the game). */
   tabs: string[];

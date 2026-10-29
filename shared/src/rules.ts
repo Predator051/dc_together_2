@@ -129,6 +129,44 @@ export function derive(h: HeroLike, gear: (id: string) => GearDef | undefined, b
   };
 }
 
+/** Numbers of the household: what residents eat and how hunger slows them (see `.design/residents2.md`). */
+export const FOLK = {
+  /** Hours of work a portion of plain food keeps a resident going; a cooked dish. */
+  rawHours: 3,
+  dishHours: 6,
+  /** Most a belly holds; a new resident comes in with this much. */
+  maxFed: 6,
+  startFed: 3,
+  /** A resident reaches for food with this little left. */
+  eatAt: 1.5,
+  /** A resting (or hurt) resident burns this much an hour. */
+  restBurn: 0.5,
+  /** A cooked dish lifts the work while it lasts. */
+  dishLift: 1.1,
+  /** Hunger by hours gone empty: under `low` — a little slower, under `weak` — half, after — no work. */
+  low: 4,
+  weak: 12,
+  lowMult: 0.75,
+  hungryMult: 0.5,
+  /** Counted in steps of this many minutes. */
+  stepMin: 10,
+  /** Warned once when the food will last less than this many hours. */
+  warnHours: 2,
+};
+
+export type FolkState = 'fed' | 'low' | 'hungry' | 'weak';
+
+export function folkState(fed: number, starve: number): FolkState {
+  if (fed > 0) return 'fed';
+  if (starve < FOLK.low) return 'low';
+  if (starve < FOLK.weak) return 'hungry';
+  return 'weak';
+}
+
+export function folkHungerMult(st: FolkState): number {
+  return st === 'fed' ? 1 : st === 'low' ? FOLK.lowMult : st === 'hungry' ? FOLK.hungryMult : 0;
+}
+
 /** Numbers of the perks (see `.design/progression.md`). */
 export const PERK = {
   firstDmg: 2,

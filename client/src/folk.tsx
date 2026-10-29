@@ -3,7 +3,7 @@
 
 import { useState } from 'preact/hooks';
 import { FOLK } from '../../shared/src/pictures.js';
-import type { PlayerView, ResidentView } from '../../shared/src/protocol.js';
+import type { LarderView, PlayerView, ResidentView } from '../../shared/src/protocol.js';
 import { net } from './net.js';
 import { Thing } from './items.js';
 import { markOf, stationSlots, stationUrl } from './pictures.js';
@@ -46,8 +46,8 @@ function Face({ r, cls }: { r: ResidentView; cls: string }) {
 
 function FolkMedal({ r, i, at, on, onPick }: { r: ResidentView; i: number; at: [number, number]; on: boolean; onPick: () => void }) {
   const job = r.jobs.find((j) => j.id === r.job);
-  const warn = r.hungry || r.hurt;
-  const says = [r.name, r.jobLabel ?? T.residentRest, r.hungry ? T.residentHungry : '', r.hurt ? T.residentHurt : ''].filter(Boolean).join(', ');
+  const warn = r.state !== 'fed' || r.hurt;
+  const says = [r.name, r.jobLabel ?? T.residentRest, r.state !== 'fed' ? STATE_WORD[r.state] : '', r.hurt ? T.residentHurt : ''].filter(Boolean).join(', ');
   return (
     <button
       type="button"
@@ -74,9 +74,88 @@ function FolkMedal({ r, i, at, on, onPick }: { r: ResidentView; i: number; at: [
   );
 }
 
+const STATE_WORD: Record<ResidentView['state'], string> = { fed: T.folkFed, low: T.folkLow, hungry: T.folkHungry, weak: T.folkWeak };
+
+/** «+6,2», «−1,3»: a signed number with a Ukrainian comma. */
+export function signed(n: number): string {
+  const s = Math.abs(n).toFixed(1).replace('.', ',').replace(/,0$/, '');
+  return n > 0.04 ? `+${s}` : n < -0.04 ? `−${s}` : '0';
+}
+
+function hours(n: number): string {
+  return n >= 10 ? String(Math.round(n)) : n.toFixed(1).replace('.', ',').replace(/,0$/, '');
+}
+
+/** The household's food: eaten and brought in an hour, what it comes to, how long it lasts, dishes. */
+export function LarderStrip({ l, locked }: { l: LarderView; locked: boolean }) {
+  const sum = l.gain - l.eat;
+  const short = l.lasts !== undefined && l.lasts < 3;
+  return (
+    <section class={`larder ${short ? 'short' : ''}`} aria-label={T.larderNet}>
+      <div class="larder-nums">
+        <span>
+          <small>{T.larderEat}</small>
+          <b class="m loss">
+            {signed(-l.eat)}
+            {T.larderHour}
+          </b>
+        </span>
+        <span>
+          <small>{T.larderGain}</small>
+          <b class="m gain">
+            {signed(l.gain)}
+            {T.larderHour}
+          </b>
+        </span>
+        <span>
+          <small>{T.larderNet}</small>
+          <b class={sum < -0.04 ? 'm loss' : 'm gain'}>
+            {signed(sum)}
+            {T.larderHour}
+          </b>
+        </span>
+      </div>
+      <p class="larder-line">
+        {T.larderStore}: <b>{l.stock}</b>
+        {l.cap ? `/${l.cap}` : ''} · {l.lasts !== undefined ? (
+          <b class={short ? 'warn-text' : ''}>
+            {T.larderLasts} ~{hours(l.lasts)} {T.larderHours}
+          </b>
+        ) : (
+          T.larderEnough
+        )}
+      </p>
+      <label class={`larder-dishes ${l.dishes ? '' : 'none'}`}>
+        <input type="checkbox" checked={l.feedDishes} disabled={locked} onChange={(e) => net.send({ c: 'feed', dishes: (e.target as HTMLInputElement).checked })} />
+        <span>
+          {T.larderDishes} <small>({l.dishes ? l.dishes : T.larderNoDishes})</small>
+          <small class="larder-hint">{T.larderDishesHint}</small>
+        </span>
+      </label>
+    </section>
+  );
+}
+
+/** How full a resident is: a bar of hours in the belly, the state, when they eat again. */
+function Belly({ r, stock }: { r: ResidentView; stock: number }) {
+  const when = r.eatsIn > 0 ? `${T.folkEatsIn} ${T.folkIn} ~${hours(r.eatsIn)} ${T.larderHours}` : stock > 0 ? T.folkEatsSoon : T.folkEatsNow;
+  return (
+    <div class={`belly s-${r.state}`}>
+      <span class="belly-bar" role="img" aria-label={`${STATE_WORD[r.state]}, ${when}`}>
+        <span style={{ width: `${Math.min(100, (r.fed / 6) * 100)}%` }} />
+      </span>
+      <small>
+        <b>{STATE_WORD[r.state]}</b>
+        {r.good && ` · ${T.folkGood}`} · {when} · {T.folkEats} ~{hours(r.eats)}
+        {T.larderHour}
+      </small>
+    </div>
+  );
+}
+
 /** The picked resident: who they are, what they bring now, and the works to set them to. */
-function FolkCard({ r, locked }: { r: ResidentView; locked: boolean }) {
-  const job = r.jobs.find((j) => j.id === r.job);
+function FolkCard({ r, locked, stock }: { r: ResidentView; locked: boolean; stock: number }) {
+  const [why, setWhy] = useState(false);
   return (
     <div class="folk-card">
       <div class="folk-card-head">
@@ -88,14 +167,25 @@ function FolkCard({ r, locked }: { r: ResidentView; locked: boolean }) {
       </div>
       <p class="folk-card-now">
         {T.residentJob}: <b>{r.jobLabel ?? T.residentRest}</b>
-        {job && (
-          <span class="m gain">
-            ~{job.rate} {T.residentPerHour}
-          </span>
+        {r.rate !== undefined && (
+          <button type="button" class="m gain folk-rate" aria-expanded={why} onClick={() => setWhy(!why)} title={T.folkWhy}>
+            ~{hours(r.rate)} {T.residentPerHour}
+            {r.why?.length ? ' ⓘ' : ''}
+          </button>
         )}
-        {r.hungry && <span class="pill warn">{T.residentHungry}</span>}
         {r.hurt && <span class="pill warn">{T.residentHurt}</span>}
       </p>
+      {why && r.why?.length ? (
+        <ul class="folk-why">
+          <li>{T.folkBase}</li>
+          {r.why.map((p) => (
+            <li class={p.x < 1 ? 'down' : 'up'}>
+              {p.name} ×{String(p.x).replace('.', ',')}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <Belly r={r} stock={stock} />
       <ul class="traits">
         {r.traits.map((t) => (
           <li>
@@ -119,6 +209,14 @@ function FolkCard({ r, locked }: { r: ResidentView; locked: boolean }) {
               {j.label}
               <small>
                 {j.place} · {j.reason ?? `~${j.rate} ${T.residentPerHour}`}
+                {j.food !== undefined && !j.reason && (
+                  <span class={`folk-food ${j.food < -0.04 ? 'loss' : 'gain'}`}>
+                    {' '}
+                    · {T.folkFood} {r.job === j.id ? '' : `${signed(r.food)} → `}
+                    {signed(j.food)}
+                    {T.larderHour}
+                  </span>
+                )}
               </small>
             </span>
           </button>
@@ -142,20 +240,21 @@ function FolkCard({ r, locked }: { r: ResidentView; locked: boolean }) {
 export function FolkStage({ v, locked }: { v: PlayerView; locked: boolean }) {
   const slots = stationSlots('folk');
   const [pick, setPick] = useState(() => load('bezgomin.folk'));
-  const shown = v.residents.find((r) => r.id === pick) ?? v.residents.find((r) => r.hungry || r.hurt) ?? v.residents[0];
+  const shown = v.residents.find((r) => r.id === pick) ?? v.residents.find((r) => r.state !== 'fed' || r.hurt) ?? v.residents[0];
   const choose = (id: string) => {
     setPick(id);
     store('bezgomin.folk', id);
   };
   return (
     <>
+      {v.larder && <LarderStrip l={v.larder} locked={locked} />}
       <div class="stage">
         <div class="stage-paint" style={{ backgroundImage: `url(${stationUrl('folk') ?? ''})` }} aria-hidden="true" />
         {v.residents.map((r, i) => (
           <FolkMedal key={r.id} r={r} i={i} at={slots[i % slots.length]!} on={r === shown} onPick={() => choose(r.id)} />
         ))}
       </div>
-      {shown && <FolkCard key={shown.id} r={shown} locked={locked} />}
+      {shown && <FolkCard key={shown.id} r={shown} locked={locked} stock={v.larder?.stock ?? 0} />}
     </>
   );
 }

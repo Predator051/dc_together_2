@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PlayerId } from '../shared/src/content.js';
-import { settleWork } from '../server/src/engine/travel.js';
+import { settleWork } from '../server/src/engine/household.js';
 import { pair, World } from './world.js';
 
 const MIN = 60_000;
