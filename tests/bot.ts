@@ -48,6 +48,8 @@ export class Bot {
     if (v.summary) return { c: 'ack', what: 'summary' };
     if (v.welcome) return { c: 'ack', what: 'welcome' };
     if (v.fight) return this.fight(v);
+    // a won fight's loot waits on the field: take it
+    if (v.fightEnd?.loot) return { c: 'loot' };
     if (v.scene) return v.scene.paused ? null : this.scene(v);
     if (v.proposal && !v.proposal.mine) return { c: 'accept' };
     if (v.hero.perkChoice) return { c: 'perk', id: v.hero.perkChoice[0]!.id };

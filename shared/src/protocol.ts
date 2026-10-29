@@ -34,6 +34,7 @@ export type Command =
   | { c: 'fight'; id: string }
   /** Join a fight going on where you stand. */
   | { c: 'help' }
+  | { c: 'loot' }
   /** Set a resident to work (action id) or let them rest (null). */
   | { c: 'job'; who: string; id: string | null }
   /** Eat a dish (from the bag, or at home from the store). */
@@ -581,6 +582,8 @@ export interface FightView {
   lines: string[];
   /** Set on a fight that has just ended (shown a moment so the last blow is seen). */
   ended?: 'win' | 'lose' | 'fled';
+  /** A won fight's loot waiting on the field for you to take (empty: nothing to take, only to end it). */
+  loot?: Array<{ id: string; name: string; icon?: string; n: number }>;
   /** The partner is fighting here and you could join. */
   canHelp?: boolean;
 }

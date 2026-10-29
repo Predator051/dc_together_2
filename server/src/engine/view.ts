@@ -773,8 +773,15 @@ const AFTERGLOW = 3000;
 
 function fightEndView(g: Game, pid: PlayerId): FightView | null {
   const a = g.s.afterFight?.[pid];
-  if (!a || fightOf(g, pid) || g.now - a.at > AFTERGLOW) return null;
-  return { ...fightViewOf(g, pid, a.fight, false), ended: a.how };
+  // loot left to take keeps the field in sight until it is taken
+  if (!a || fightOf(g, pid) || (!a.loot && g.now - a.at > AFTERGLOW)) return null;
+  const loot = a.loot
+    ? Object.entries(a.loot).map(([id, n]) => {
+        const r = g.ix.res.get(id);
+        return { id, name: r?.name ?? id, n, ...(r?.icon ? { icon: r.icon } : {}) };
+      })
+    : undefined;
+  return { ...fightViewOf(g, pid, a.fight, false), ended: a.how, ...(loot ? { loot } : {}) };
 }
 
 function fightViewOf(g: Game, pid: PlayerId, f: FightState, live = true): FightView {
@@ -796,6 +803,8 @@ function fightViewOf(g: Game, pid: PlayerId, f: FightState, live = true): FightV
         level: def.level,
         traits: known.map((t) => g.ix.c.traits[t as keyof typeof g.ix.c.traits]?.name ?? t),
       };
+      // a fallen foe keeps its cell, so its last blow can be seen landing there
+      if (foe.pos) v.pos = foe.pos;
       const morale = moraleOf(f, def);
       if (morale !== undefined) {
         v.fear = Math.min(foe.fear, morale);
@@ -820,7 +829,6 @@ function fightViewOf(g: Game, pid: PlayerId, f: FightState, live = true): FightV
           if (shown.target) v.aim = shown.target;
           if (shown.line) v.line = shown.line;
         }
-        if (foe.pos) v.pos = foe.pos;
         if (foe.guarding) v.guarding = true;
         if ((foe.open ?? 0) >= f.round) v.open = true;
         if (foe.stun) v.stunned = true;
