@@ -11,6 +11,8 @@ import heroes from '../client/src/art/heroes.json';
 import stations from '../client/src/art/stations.json';
 import stationSlots from '../client/src/art/station-slots.json';
 import grounds from '../client/src/art/grounds.json';
+import perkMarks from '../client/src/art/perks.json';
+import { SKILLS, STATS } from '../shared/src/content.js';
 
 // Every mark of a thing is painted; a new mark needs its cell in an atlas (scripts/art.ts things).
 describe('painted things', () => {
@@ -26,6 +28,21 @@ describe('painted things', () => {
       expect(taken.has(`${n}:${i}`), k).toBe(false);
       taken.add(`${n}:${i}`);
     }
+  });
+});
+
+// Every mark of the hero's growth is painted (scripts/art.ts perks): perks of the tree, branches, strengths, skills.
+describe('painted growth', () => {
+  it('every perk, branch, strength and skill has its cell in an atlas that exists', () => {
+    const cells = perkMarks as unknown as Record<string, [number, number]>;
+    const keys = [
+      ...content.perks.filter((p) => p.branch).map((p) => p.id),
+      ...content.hero.branches.map((b) => `branch_${b.id}`),
+      ...STATS.map((x) => `stat_${x}`),
+      ...SKILLS.map((x) => `skill_${x}`),
+    ];
+    expect(keys.filter((k) => !cells[k])).toEqual([]);
+    for (const [k, [n]] of Object.entries(cells)) expect(existsSync(new URL(`../client/src/art/perks/k${n}.webp`, import.meta.url)), k).toBe(true);
   });
 });
 

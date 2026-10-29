@@ -734,6 +734,21 @@ export function validateContent(c: Content): Report {
   for (const s of c.scenes) if (s.quest && !questIds.has(s.quest)) err(`scene ${s.id}: unknown quest ${s.quest}`);
   for (const a of c.actions) if (a.quest && !questIds.has(a.quest)) err(`action ${a.id}: unknown quest ${a.quest}`);
   const perkIds = new Set(c.perks.map((p) => p.id));
+  // the tree: each step of each branch is a pair (one or the other), steps open at rising levels
+  const branchIds = new Set(c.hero.branches.map((b) => b.id));
+  for (const p of c.perks) {
+    if (p.quest && p.branch) err(`perk ${p.id}: an errand's perk stands outside the tree`);
+    if (!p.quest && (!p.branch || !branchIds.has(p.branch) || !p.tier || p.tier > c.hero.tiers.length)) err(`perk ${p.id}: no place in the tree`);
+  }
+  for (const b of c.hero.branches) {
+    c.hero.tiers.forEach((_, i) => {
+      const n = c.perks.filter((p) => p.branch === b.id && p.tier === i + 1).length;
+      if (n !== 2) err(`perk branch ${b.id} step ${i + 1}: ${n} perks, want a pair`);
+    });
+  }
+  c.hero.tiers.forEach((lv, i) => {
+    if (i > 0 && lv <= c.hero.tiers[i - 1]!) err(`perk steps: levels must rise`);
+  });
   const perkEffects = (effs: Effect[]) => {
     for (const e of effs) if ('perk' in e && !perkIds.has(e.perk)) err(`unknown perk ${e.perk}`);
   };

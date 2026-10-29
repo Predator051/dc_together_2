@@ -43,6 +43,8 @@
 //
 // A sheet of feats is 4×3 things on the ground of a fight seen from above (trees, stones, carts…), cut
 // like things (160 px cells, client/src/art/feats/e<n>.webp, order .design/art/feats.json).
+// A sheet of perks is 4×3 marks of the hero's growth, cut like things (client/src/art/perks/k<n>.webp,
+// order .design/art/perks.json; keys: perk ids, branch_<id>, stat_<id>, skill_<id>).
 // A sheet of tex is 3×3 square grounds painted edge to edge (see `textures`).
 
 import { execFileSync } from 'node:child_process';
@@ -95,13 +97,15 @@ interface AtlasKind {
   prefix: string;
 }
 
-const KINDS: Record<'things' | 'foes' | 'marks' | 'feats', AtlasKind> = {
+const KINDS: Record<'things' | 'foes' | 'marks' | 'feats' | 'perks', AtlasKind> = {
   things: { cols: 4, rows: 3, cell: 128, prefix: 't' },
   // things on the ground of a fight, seen from above
   feats: { cols: 4, rows: 3, cell: 160, prefix: 'e' },
   foes: { cols: 3, rows: 3, cell: 192, prefix: 'f' },
   // marks of spots on plans and of places on the map ('@' + scene)
   marks: { cols: 4, rows: 3, cell: 128, prefix: 'm' },
+  // marks of the hero's growth: perks, their branches, strengths, skills
+  perks: { cols: 4, rows: 3, cell: 128, prefix: 'k' },
 };
 
 /** A painting without real transparency: the flat ground around the things is wiped from the edges in. */
@@ -475,7 +479,7 @@ function texture(src: string, key: string): void {
 
 const [cmd, ...args] = process.argv.slice(2);
 if (cmd === 'map' && args[0] && args[1]) map(resolve(args[0]), args[1], Number(args[2] ?? 6), Number(args[3] ?? 4));
-else if ((cmd === 'things' || cmd === 'foes' || cmd === 'marks' || cmd === 'feats') && args[0] && args[1]) atlas(cmd, resolve(args[0]), Number(args[1]));
+else if ((cmd === 'things' || cmd === 'foes' || cmd === 'marks' || cmd === 'feats' || cmd === 'perks') && args[0] && args[1]) atlas(cmd, resolve(args[0]), Number(args[1]));
 else if (cmd === 'tex' && args[0] && args[1] && /^\d+$/.test(args[1])) textures(resolve(args[0]), Number(args[1]));
 else if (cmd === 'tex' && args[0] && args[1]) texture(resolve(args[0]), args[1]);
 else if (cmd === 'ground' && args[0] && args[1]) ground(resolve(args[0]), args[1]);
@@ -485,6 +489,6 @@ else if (cmd === 'stations' && args[0] && args[1]) stations(resolve(args[0]), Nu
 else if (cmd === 'folk' && args[0] && args[1]) folk(resolve(args[0]), Number(args[1]), Number(args[2] ?? 0.8));
 else if (cmd === 'ally' && args[0] && args[1]) ally(resolve(args[0]), args[1]);
 else {
-  console.error('usage: tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows] | things|foes|marks <painted.png> <n> | ground <painted.png> <scene> | view <painted.png> <key> | hero <painted.png> <role-gender> | stations <painted.png> <n> | folk <painted.png> <n> [crop] | feats <painted.png> <n> | tex <painted.png> <n|key> | ally <painted.png> <key>');
+  console.error('usage: tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows] | things|foes|marks|perks <painted.png> <n> | ground <painted.png> <scene> | view <painted.png> <key> | hero <painted.png> <role-gender> | stations <painted.png> <n> | folk <painted.png> <n> [crop] | feats <painted.png> <n> | tex <painted.png> <n|key> | ally <painted.png> <key>');
   process.exit(1);
 }

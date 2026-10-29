@@ -24,7 +24,7 @@ function calm(w: World): void {
 }
 
 describe('the hero', () => {
-  it('levels follow the curve; each level gives a point, even levels offer perks', () => {
+  it('levels follow the curve; each level gives a stat point and a perk point', () => {
     expect(xpForLevel(1)).toBe(0);
     expect(levelFromXp(xpForLevel(4))).toBe(4);
     expect(levelFromXp(xpForLevel(4) - 1)).toBe(3);
@@ -33,15 +33,37 @@ describe('the hero', () => {
     gainXp(w.g(), h, xpForLevel(3));
     expect(p.level).toBe(3);
     expect(p.points).toBe(2);
-    expect(p.perkChoice?.length).toBeGreaterThan(1);
+    expect(p.perkPoints).toBe(2);
     const agi = p.stats.agi;
     expect(w.cmd(h, { c: 'stat', id: 'agi' }).ok).toBe(true);
     expect(p.stats.agi).toBe(agi + 1);
     expect(w.cmd(h, { c: 'stat', id: 'luck' }).ok).toBe(false);
-    const perk = p.perkChoice![0]!;
-    expect(w.cmd(h, { c: 'perk', id: perk }).ok).toBe(true);
-    expect(p.perks).toContain(perk);
-    expect(p.perkChoice).toBeNull();
+    // the first step is open; the second waits for level 4
+    expect(w.cmd(h, { c: 'perk', id: 'opening' }).ok).toBe(false);
+    expect(w.cmd(h, { c: 'perk', id: 'first' }).ok).toBe(true);
+    expect(p.perks).toContain('first');
+    expect(p.perkPoints).toBe(1);
+    // its pair is closed for good
+    expect(w.cmd(h, { c: 'perk', id: 'flank' }).ok).toBe(false);
+    const blade = w.view(h).hero.branches.find((b) => b.id === 'blade')!;
+    expect(blade.tiers[0]!.perks.map((x) => x.state)).toEqual(['have', 'closed']);
+    expect(blade.tiers[1]!.perks[0]!.state).toBe('locked');
+    gainXp(w.g(), h, xpForLevel(4) - p.xp);
+    expect(w.view(h).hero.branches.find((b) => b.id === 'blade')!.tiers[1]!.perks[0]!.state).toBe('can');
+    // a step needs one taken on the step before in its branch
+    expect(w.cmd(h, { c: 'perk', id: 'flint' }).ok).toBe(false);
+    expect(w.cmd(h, { c: 'perk', id: 'opening' }).ok).toBe(true);
+  });
+
+  it('perks act: health, armour, bag', () => {
+    const { w, h } = home();
+    const p = w.state.players[h];
+    const d0 = w.view(h).hero.derived;
+    p.perks.push('tough', 'bark', 'packer');
+    const d1 = w.view(h).hero.derived;
+    expect(d1.hpMax).toBe(d0.hpMax + 5);
+    expect(d1.armor).toBe(d0.armor + 1);
+    expect(d1.carry).toBe(d0.carry + 6);
   });
 
   it('gear goes on at home only, comes from the shared store, and changes the numbers', () => {

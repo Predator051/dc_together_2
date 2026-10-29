@@ -159,3 +159,13 @@ soft wind ripples and small pebbles; mud — dark wet marsh mud with puddles, tr
 salt — cracked white-grey salt crust over grey clay; dust — dusty dirt road with faint cart ruts and hoof prints;
 cobble — old worn cobblestones, moss in the gaps; water — deep slate-blue river water, gentle ripples, warm glints;
 shallow — shallow clear water over sand and rounded pebbles; planks — weathered causeway planks top to bottom.
+
+### Лист perks 1–4 (значки роста, 4×3, прозрачный фон)
+
+```
+Generate an image, landscape 1536x1152, TRANSPARENT background. A sheet of 12 separate emblem-like objects for
+game icons, arranged in a 4x3 grid, each object centred in its own cell with plenty of empty transparent space
+around it, all at a similar size, seen from a slight three-quarter view, lit from the top left, no ground, no
+shadows outside the object. Row 1: …; Row 2: …; Row 3: … (по строкам из .design/art/perks.json).
+No people except hands where named. Style: <хвост стиля из bible.md>
+```

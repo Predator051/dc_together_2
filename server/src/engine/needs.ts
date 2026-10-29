@@ -1,7 +1,7 @@
 // Needs of the heroes: dishes in their slots, warmth and wetness, rest and tiredness (as in Valheim).
 // Time counts only while the player is in the game and no joint scene holds everyone.
 import type { PlayerId } from '../../../shared/src/content.js';
-import { NEED, bodyMods, coldLevel, mealFading, type BodyMods, type ColdLevel } from '../../../shared/src/rules.js';
+import { NEED, PERK, bodyMods, coldLevel, mealFading, type BodyMods, type ColdLevel } from '../../../shared/src/rules.js';
 import type { NeedsState } from '../../../shared/src/state.js';
 import { addBag, heroOf, ownsCount, refreshHero } from './hero.js';
 import type { Game, Result } from './index.js';
@@ -98,6 +98,7 @@ export function chillRate(g: Game, pid: PlayerId): number {
   rate += skyFor(g, pid)?.chill ?? 0;
   // warm clothes and a hot drink keep the cold off; they do not stop a hot sun warming
   if (rate > 0 && heroOf(g, pid).resist.has('cold')) rate *= NEED.chill.resist;
+  if (rate > 0 && p.perks.includes('hardy')) rate *= PERK.hardyChill;
   if (rate > 0 && n.drink > 0) rate *= NEED.chill.drink;
   return rate;
 }

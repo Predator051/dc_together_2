@@ -9,6 +9,7 @@ import { heroFace, heroFigure } from './portraits.js';
 import { NeedChips } from './needs.js';
 import { Sheet } from './sheet.js';
 import { T } from './strings.js';
+import { Growth } from './growth.js';
 
 function load(key: string): string | null {
   try {
@@ -209,10 +210,10 @@ function HeroCard({ v, onGrowth }: { v: PlayerView; onGrowth: () => void }) {
           )}
         </p>
       )}
-      {(h.points > 0 || h.perkChoice) && (
+      {(h.points > 0 || h.perkPoints > 0) && (
         <button type="button" class="hero-call" onClick={onGrowth}>
           <span class="hero-call-dot" />
-          {h.perkChoice ? T.perkPick : `${T.points}: ${h.points}`}
+          {[h.points > 0 ? `${T.points}: ${h.points}` : '', h.perkPoints > 0 ? `${T.perkPoints}: ${h.perkPoints}` : ''].filter(Boolean).join(' · ')}
           <span class="hero-call-go">→</span>
         </button>
       )}
@@ -458,83 +459,6 @@ function Gear({ v, locked, desktop }: { v: PlayerView; locked: boolean; desktop:
   );
 }
 
-// ---------------------------------------------------------------------------- growth
-
-function Growth({ v, locked }: { v: PlayerView; locked: boolean }) {
-  const h = v.hero;
-  return (
-    <>
-      {h.perkChoice && (
-        <section class="panel perk-choice">
-          <h3>{T.perkPick}</h3>
-          <div class="options">
-            {h.perkChoice.map((p) => (
-              <button class="opt" disabled={locked} onClick={() => net.send({ c: 'perk', id: p.id })}>
-                <span class="opt-body">
-                  <span>{p.name}</span>
-                  <em class="way-note">{p.text}</em>
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-      <section class="growth-block">
-        <h3>
-          {T.stats}
-          {h.points > 0 && (
-            <span class="pill new">
-              {T.points}: {h.points}
-            </span>
-          )}
-        </h3>
-        {h.points > 0 && <p class="meta">{T.pointsHint}</p>}
-        <ul class="stat-cards">
-          {h.stats.map((s) => (
-            <li class="stat-card">
-              <span class="stat-value">{s.value}</span>
-              <span class="stat-name">
-                <b>{s.name}</b>
-                <small>{s.text}</small>
-              </span>
-              {h.points > 0 && (
-                <button class="btn small plus" disabled={locked} aria-label={`+ ${s.name}`} onClick={() => net.send({ c: 'stat', id: s.id })}>
-                  +
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
-      <section class="growth-block">
-        <h3>{T.skills}</h3>
-        <ul class="skill-rows">
-          {h.skills.map((s) => (
-            <li>
-              <span class="skill-name">{s.name}</span>
-              <Bar n={s.p} max={1} cls="skill" />
-              <b class="skill-level">{s.level}</b>
-            </li>
-          ))}
-        </ul>
-      </section>
-      {h.perks.length > 0 && (
-        <section class="growth-block">
-          <h3>{T.perks}</h3>
-          <ul class="perk-list">
-            {h.perks.map((p) => (
-              <li>
-                <b>{p.name}</b>
-                <span>{p.text}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-    </>
-  );
-}
-
 // ---------------------------------------------------------------------------- the page
 
 type HeroTab = 'gear' | 'growth';
@@ -543,7 +467,7 @@ export function HeroPanel({ v, locked, desktop }: { v: PlayerView; locked: boole
   const h = v.hero;
   const [tab, setTab] = useState<HeroTab>(() => (load('bezgomin.heroTab') === 'growth' ? 'growth' : 'gear'));
   useEffect(() => store('bezgomin.heroTab', tab), [tab]);
-  const call = h.points > 0 || !!h.perkChoice;
+  const call = h.points > 0 || h.perkPoints > 0;
   return (
     <div class="hero">
       <HeroCard v={v} onGrowth={() => setTab('growth')} />

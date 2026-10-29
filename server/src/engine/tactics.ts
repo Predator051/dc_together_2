@@ -267,7 +267,7 @@ function strike(g: Game, f: FightState, foe: FoeState, target: PlayerId, kind: E
         reveal(g, f, foe.enemy, 'venom');
         if (heroOf(g, target).resist.has('venom')) say(g, f, 'fight_venom_resisted', target, vars);
         else {
-          g.p(target).poison = 3;
+          g.p(target).poison = g.p(target).perks.includes('will') ? 2 : 3;
           say(g, f, 'fight_poisoned', target, vars);
         }
       }

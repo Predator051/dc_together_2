@@ -362,6 +362,26 @@ export interface SkillView {
   level: number;
   /** Progress to the next level 0..1. */
   p: number;
+  /** What it gives now (empty at 0). */
+  text: string;
+}
+
+/** A perk on the hero screen: where it stands for this hero (see `perkState`). */
+export interface PerkView {
+  id: string;
+  name: string;
+  text: string;
+  state: 'have' | 'can' | 'wait' | 'closed' | 'locked';
+}
+
+export interface PerkBranchView {
+  id: string;
+  name: string;
+  text: string;
+  /** Perks taken in it. */
+  taken: number;
+  /** Steps top-down: the level it opens at and its pair. */
+  tiers: Array<{ level: number; perks: PerkView[] }>;
 }
 
 export interface SlotView {
@@ -380,8 +400,12 @@ export interface HeroView {
   points: number;
   stats: StatView[];
   skills: SkillView[];
-  perks: Array<{ id: string; name: string; text: string }>;
-  perkChoice: Array<{ id: string; name: string; text: string }> | null;
+  /** Unspent perk points. */
+  perkPoints: number;
+  /** The perk tree. */
+  branches: PerkBranchView[];
+  /** Perks from outside the tree (errands). */
+  special: Array<{ id: string; name: string; text: string }>;
   derived: { hpMax: number; armor: number; dodge: number; hit: number; dmg: [number, number]; carry: number; resist: string[]; tools: string[] };
   slots: SlotView[];
   outfits: Array<{ name: string; items: string[] }>;

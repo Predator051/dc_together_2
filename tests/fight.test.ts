@@ -307,6 +307,49 @@ describe('fights', () => {
     expect(ev.some((e) => e.k === 'miss' && e.a === h)).toBe(false);
   });
 
+  it('perks on the field: cheaper blows (a club with quick hands, an open foe), a point back for a felled foe', () => {
+    const { w, m } = field();
+    const s = w.state;
+    s.players[m].equip.weapon = 'g_02'; // a club: it dazes
+    s.players[m].perks.push('swift', 'opening', 'momentum', 'lift');
+    refreshHero(w.g(), m);
+    const f = startFight(w.g(), 'a_02', [{ enemy: 'e_05', n: 2 }], { party: [m] });
+    const [a, b] = f.foes;
+    a!.pos = [3, 6];
+    b!.pos = [5, 1];
+    put(f, m, [3, 7]);
+    turnOf(w, m);
+    let v = w.view(m).fight!;
+    expect(v.moves.find((x) => x.tech === 'stun' && x.target === a!.uid)!.cost).toBe(2);
+    a!.open = f.round + 1;
+    v = w.view(m).fight!;
+    expect(v.moves.find((x) => x.id === `hit:${a!.uid}`)!.cost).toBe(1);
+    // the open foe is felled with a blow of one point: that point comes back
+    a!.hp = 1;
+    w.cmd(m, { c: 'fight', id: `hit:${a!.uid}` });
+    expect(a!.out).toBeTruthy();
+    expect(fightOf(w.g(), m)!.ap).toBe(4);
+    // a second felled foe in the same turn gives nothing more
+    b!.pos = [3, 6];
+    b!.open = f.round + 1;
+    b!.hp = 1;
+    w.cmd(m, { c: 'fight', id: `hit:${b!.uid}` });
+    expect(b!.out).toBeTruthy();
+  });
+
+  it('a will of iron always breaks a hold', () => {
+    const { w, m } = field();
+    w.state.players[m].perks.push('will');
+    const f = startFight(w.g(), 'a_02', [{ enemy: 'e_05' }], { party: [m] });
+    const foe = f.foes[0]!;
+    foe.pos = [3, 6];
+    put(f, m, [3, 7]);
+    foe.holds = m;
+    turnOf(w, m);
+    w.cmd(m, { c: 'fight', id: 'struggle' });
+    expect(foe.holds).toBeNull();
+  });
+
   it('two heroes face tougher foes than one', () => {
     const one = field();
     startFight(one.w.g(), 'a_02', [{ enemy: 'e_05' }], { party: [one.h] });

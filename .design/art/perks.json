@@ -1,0 +1,202 @@
+[
+ [
+  [
+   "branch_blade",
+   "a Cossack sabre standing upright, point up, curved blade, leather-wrapped hilt"
+  ],
+  [
+   "first",
+   "a hand gripping a sabre hilt, the blade half drawn out of its scabbard"
+  ],
+  [
+   "flank",
+   "two spears crossing in an X from left and right, iron heads meeting in the middle"
+  ],
+  [
+   "opening",
+   "a split round wooden shield with a wide crack through it"
+  ],
+  [
+   "finish",
+   "a short hunting dagger pointing straight down"
+  ],
+  [
+   "swift",
+   "two short curved knives crossed"
+  ],
+  [
+   "momentum",
+   "a heavy iron mace with a leather grip, tilted"
+  ],
+  [
+   "master",
+   "a whetstone lying against a long sharpened blade with a bright edge"
+  ],
+  [
+   "fury",
+   "a battle axe with a notched blade and a red cloth wound round the haft"
+  ],
+  [
+   "branch_sight",
+   "a hunting bow with an arrow nocked"
+  ],
+  [
+   "eye",
+   "a wolf paw print pressed in mud, a grey feather beside it"
+  ],
+  [
+   "quiet",
+   "a pair of soft leather moccasins on a tuft of grass"
+  ]
+ ],
+ [
+  [
+   "farshot",
+   "a single long arrow with grey goose fletching, flying left to right"
+  ],
+  [
+   "cold",
+   "a bow at full draw seen from the side, string pulled back"
+  ],
+  [
+   "arrows",
+   "a leather quiver full of arrows"
+  ],
+  [
+   "quick",
+   "a hand holding three arrows together"
+  ],
+  [
+   "deadly",
+   "an arrow with a heavy broad iron head, close up"
+  ],
+  [
+   "watch",
+   "a curved hunting horn with a strap"
+  ],
+  [
+   "branch_guard",
+   "a round wooden shield with an iron rim and boss"
+  ],
+  [
+   "shield",
+   "two round shields overlapping side by side"
+  ],
+  [
+   "tough",
+   "a quilted padded jacket (gambeson)"
+  ],
+  [
+   "flint",
+   "a piece of flint and a steel fire striker"
+  ],
+  [
+   "stance",
+   "a spear planted upright in the ground with a shield leaning on it"
+  ],
+  [
+   "lift",
+   "two hands clasping each other by the forearms"
+  ]
+ ],
+ [
+  [
+   "bark",
+   "a thick curved slab of rough oak bark"
+  ],
+  [
+   "will",
+   "an iron chain broken in the middle, the two ends apart"
+  ],
+  [
+   "riposte",
+   "a small round buckler and a short sword crossed"
+  ],
+  [
+   "branch_craft",
+   "a smith's hammer and tongs crossed"
+  ],
+  [
+   "hands",
+   "a wicker basket full of reeds and wild herbs"
+  ],
+  [
+   "legs",
+   "a walking staff and a pair of woven bast shoes"
+  ],
+  [
+   "steady",
+   "a big bulging leather travelling bag with straps"
+  ],
+  [
+   "handy",
+   "a carpenter's drawknife on a plank with curled wood shavings"
+  ],
+  [
+   "hardy",
+   "a tall sheepskin hat and a thick folded wool cloak"
+  ],
+  [
+   "learner",
+   "a wooden tally stick with many notches and a small knife"
+  ],
+  [
+   "double",
+   "two sheaves of wheat tied with straw"
+  ],
+  [
+   "packer",
+   "a neat travelling bundle wrapped in cloth and tied tight with rope"
+  ]
+ ],
+ [
+  [
+   "stat_str",
+   "a big round river stone"
+  ],
+  [
+   "stat_agi",
+   "a hunting knife and a bird feather crossed"
+  ],
+  [
+   "stat_end",
+   "a thick oak log, cut end showing rings"
+  ],
+  [
+   "stat_per",
+   "a grey owl perched, looking forward"
+  ],
+  [
+   "stat_wil",
+   "an iron nail driven deep into an oak plank"
+  ],
+  [
+   "skill_melee",
+   "a short sword and a wooden cudgel crossed"
+  ],
+  [
+   "skill_ranged",
+   "a target of woven straw with an arrow in it"
+  ],
+  [
+   "skill_gather",
+   "a sickle lying on a bundle of cut reeds"
+  ],
+  [
+   "skill_craft",
+   "a hammer resting on a small anvil"
+  ],
+  [
+   "skill_trail",
+   "a carved wooden way-post at a fork of a footpath, small tuft of grass"
+  ],
+  [
+   "spare1",
+   "a coil of rope"
+  ],
+  [
+   "spare2",
+   "a clay jug"
+  ]
+ ]
+]

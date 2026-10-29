@@ -3,6 +3,11 @@ import type { WorldState } from '../../shared/src/state.js';
 import { STATE_VERSION } from '../../shared/src/state.js';
 import { normalizeWorld } from './engine/index.js';
 import { ui } from '../../content/ui.js';
+import { perks } from '../../content/core.js';
+import { perkPointsFor } from '../../shared/src/rules.js';
+
+/** Perks that stand in the tree (an errand's perk is not paid for with a point). */
+const TREE = new Set(perks.filter((x) => x.branch).map((x) => x.id));
 
 /**
  * World-state migrations. Key N upgrades a state of version N to N+1.
@@ -32,6 +37,16 @@ export const migrations: Record<number, Migration> = {
   11: (s) => {
     for (const p of Object.values(s.players ?? {}) as Array<{ fight: number | null }>) p.fight = null;
     return { ...s, fights: [], afterFight: {}, version: 12 };
+  },
+  // 12 -> 13: perks become a tree with a point a level; a hero gets the points for every level passed,
+  // less the perks of the tree already taken (an offer left waiting is dropped — its point stays).
+  12: (s) => {
+    for (const p of Object.values(s.players ?? {}) as Array<{ level?: number; perks?: string[]; perkChoice?: unknown; perkPoints?: number }>) {
+      const taken = (p.perks ?? []).filter((id) => TREE.has(id)).length;
+      p.perkPoints = Math.max(0, perkPointsFor(p.level ?? 1) - taken);
+      delete p.perkChoice;
+    }
+    return { ...s, version: 13 };
   },
 };
 

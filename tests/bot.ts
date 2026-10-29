@@ -20,6 +20,12 @@ export interface BotOptions {
 /** Shillings of act two. */
 const COIN = 'r_22';
 
+/** Perks each role reaches for first (any other that can be taken comes after). */
+export const PERK_PLAN: Record<Role, string[]> = {
+  hunter: ['eye', 'tough', 'cold', 'legs', 'arrows', 'flint', 'watch', 'flank', 'steady', 'opening', 'bark', 'hardy', 'momentum', 'will', 'double', 'master'],
+  maker: ['first', 'tough', 'opening', 'hands', 'flint', 'swift', 'bark', 'handy', 'master', 'eye', 'riposte', 'learner', 'cold', 'packer', 'arrows', 'watch'],
+};
+
 const STAT_PLAN: Record<Role, string[]> = {
   hunter: ['agi', 'end', 'per', 'agi', 'end'],
   maker: ['str', 'end', 'end', 'str', 'agi'],
@@ -52,7 +58,14 @@ export class Bot {
     if (v.fightEnd?.loot) return { c: 'loot' };
     if (v.scene) return v.scene.paused ? null : this.scene(v);
     if (v.proposal && !v.proposal.mine) return { c: 'accept' };
-    if (v.hero.perkChoice) return { c: 'perk', id: v.hero.perkChoice[0]!.id };
+    if (v.hero.perkPoints > 0) {
+      const can = v.hero.branches.flatMap((b) => b.tiers.flatMap((t) => t.perks)).filter((x) => x.state === 'can').map((x) => x.id);
+      if (can.length) {
+        const plan = PERK_PLAN[v.me.role];
+        const id = this.o.careless ? this.rng.pick(can) : (plan.find((x) => can.includes(x)) ?? can[0]!);
+        return { c: 'perk', id };
+      }
+    }
     if (v.hero.points > 0) {
       const plan = STAT_PLAN[v.me.role];
       const id = this.o.careless ? this.rng.pick(['str', 'agi', 'end', 'per', 'wil']) : plan[(v.hero.level - 2) % plan.length]!;
