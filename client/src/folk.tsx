@@ -153,6 +153,58 @@ function Belly({ r, stock }: { r: ResidentView; stock: number }) {
   );
 }
 
+const pct = (x: number) => `+${Math.round((x - 1) * 100)}%`;
+
+/** Their hand in the trade of their job: the step, the way to the next one, teaching the last; other trades. */
+function Trade({ r, locked }: { r: ResidentView; locked: boolean }) {
+  const t = r.trade;
+  const others = r.trades.filter((x) => x.name !== t?.name);
+  if (!t && !others.length) return null;
+  return (
+    <div class="folk-trade">
+      {t && (
+        <>
+          <p class="folk-trade-now">
+            <small>{T.folkTrade}:</small> <b>{t.name}</b> — {t.rankName}
+            {t.x > 1 && ' '}
+            {t.x > 1 && <span class="m gain">{pct(t.x)}</span>}
+          </p>
+          {t.p !== undefined && (
+            <div class="folk-trade-next">
+              <span class="belly-bar trade" role="img" aria-label={`${T.folkNext}: ${Math.round(t.p * 100)}%`}>
+                <span style={{ width: `${t.p * 100}%` }} />
+              </span>
+              <small>
+                {T.folkNext} «{T.folkRanks[t.rank + 1]}» — ~{hours(t.left ?? 0)} {T.folkWorkHours}
+              </small>
+            </div>
+          )}
+          {r.teach && (
+            <div class="folk-teach">
+              <small>{T.folkTeachLast}</small>
+              <button type="button" class="btn small primary" disabled={locked || !!r.teach.reason} onClick={() => net.send({ c: 'teach', who: r.id })}>
+                {T.folkTeach} · {pct(1.3)}
+              </button>
+              <small class={r.teach.reason ? 'warn-text' : ''}>{r.teach.reason ?? T.folkTeachHint}</small>
+            </div>
+          )}
+        </>
+      )}
+      {others.length > 0 && (
+        <p class="folk-trade-others">
+          <small>{T.folkOther}:</small>{' '}
+          {others.map((x, i) => (
+            <span>
+              {i > 0 && ' · '}
+              {x.name.toLowerCase()} — {x.rankName}
+            </span>
+          ))}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** The picked resident: who they are, what they bring now, and the works to set them to. */
 function FolkCard({ r, locked, stock }: { r: ResidentView; locked: boolean; stock: number }) {
   const [why, setWhy] = useState(false);
@@ -186,6 +238,7 @@ function FolkCard({ r, locked, stock }: { r: ResidentView; locked: boolean; stoc
         </ul>
       ) : null}
       <Belly r={r} stock={stock} />
+      <Trade r={r} locked={locked} />
       <ul class="traits">
         {r.traits.map((t) => (
           <li>
@@ -209,6 +262,7 @@ function FolkCard({ r, locked, stock }: { r: ResidentView; locked: boolean; stoc
               {j.label}
               <small>
                 {j.place} · {j.reason ?? `~${j.rate} ${T.residentPerHour}`}
+                {j.rank ? ` · ${T.folkRanks[j.rank]}` : ''}
                 {j.food !== undefined && !j.reason && (
                   <span class={`folk-food ${j.food < -0.04 ? 'loss' : 'gain'}`}>
                     {' '}

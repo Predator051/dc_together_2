@@ -406,6 +406,58 @@ describe('the household eats', () => {
   });
 });
 
+describe('residents grow in their trade', () => {
+  it('hours of work make the hand surer, the last step only a hero of that trade can teach', () => {
+    const { w, h, m } = home();
+    w.g().apply([{ resident: 'h_01' }]);
+    const r = w.state.residents['h_01']!;
+    w.state.res[content.food!] = 30;
+    w.state.workAt = w.now;
+    w.state.flags.p2_well_ok = 1;
+    // water from home: a trade both heroes know
+    expect(w.cmd(h, { c: 'job', who: 'h_01', id: 'x_15' }).ok).toBe(true);
+    let v = w.view(h).residents[0]!;
+    expect(v.trade?.rank).toBe(0);
+    expect(v.trade?.left).toBeGreaterThan(0);
+    const rate0 = w.view(h).residents[0]!.rate!;
+    // a long while at it (fed all along): used to it, then skilled
+    for (let i = 0; i < 6; i++) {
+      w.state.res[content.food!] = 30;
+      w.now += 10 * 3_600_000;
+      settleWork(w.g());
+    }
+    v = w.view(h).residents[0]!;
+    expect(v.trade?.rank).toBe(2);
+    expect(v.rate!).toBeGreaterThan(rate0);
+    expect(v.why?.some((x) => x.x > 1)).toBe(true);
+    // teaching: a hero needs the hand for gathering
+    expect(v.teach).toBeDefined();
+    expect(v.teach?.reason).toBeTruthy();
+    for (const pid of [h, m]) w.state.players[pid].skills.gather = 6 * 5 * 5;
+    expect(w.view(h).residents[0]!.teach?.reason).toBeUndefined();
+    expect(w.cmd(h, { c: 'teach', who: 'h_01' }).ok).toBe(true);
+    expect(r.master).toContain('salt');
+    expect(w.state.players[h].busy).not.toBeNull();
+    v = w.view(m).residents[0]!;
+    expect(v.trade?.rank).toBe(3);
+    expect(v.teach).toBeUndefined();
+    expect(w.cmd(m, { c: 'teach', who: 'h_01' }).ok).toBe(false);
+  });
+
+  it('a trade is taught only by the role that knows it', () => {
+    const { w, h, m } = home();
+    w.g().apply([{ resident: 'h_01' }]);
+    const r = w.state.residents['h_01']!;
+    r.job = 'x_02'; // driftwood: the maker's trade
+    r.exp = { wood: 60 };
+    for (const pid of [h, m]) w.state.players[pid].skills.gather = 6 * 5 * 5;
+    const maker = w.state.players[h].role === 'maker' ? h : m;
+    const hunter = maker === h ? m : h;
+    expect(w.cmd(hunter, { c: 'teach', who: 'h_01' }).ok).toBe(false);
+    expect(w.cmd(maker, { c: 'teach', who: 'h_01' }).ok).toBe(true);
+  });
+});
+
 describe('playing alone', () => {
   it('one hero alone can do the routine, but no story moves without the other', () => {
     const { w, h, m } = home(4);

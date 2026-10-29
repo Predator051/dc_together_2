@@ -9201,3 +9201,50 @@ body.sheet-open {
 .folk-food.loss {
   color: var(--cinnabar-ink);
 }
+
+/* a resident's hand in their trade */
+.folk-trade {
+  margin: 10px 0 0;
+  padding: 8px 0 0;
+  border-top: 1px dashed var(--rule);
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  color: var(--ink-2);
+}
+.folk-trade p {
+  margin: 0;
+}
+.folk-trade small {
+  color: var(--faded);
+}
+.folk-trade-now b {
+  color: var(--ink);
+}
+.folk-trade-next {
+  margin-top: 6px;
+}
+.folk-trade-next small {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.8rem;
+}
+.belly-bar.trade > span {
+  background: var(--ochre);
+}
+.folk-teach {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 8px;
+}
+.folk-teach > small:first-child {
+  flex-basis: 100%;
+}
+.folk-teach .warn-text {
+  color: var(--cinnabar-ink);
+}
+.folk-trade-others {
+  margin-top: 6px !important;
+  font-size: 0.82rem;
+}

@@ -30,12 +30,12 @@ import { perkState, skillLevel, skillXpFor, xpForLevel } from '../../../shared/s
 import { bagCap, bagLoad, gearNote, heroOf, ownsCount, perkTree, useNote } from './hero.js';
 import { HERO_AP, activeFoes, activeId, enemyOf, fid, fightMoves, fightOf, holder, moraleOf, walkable } from './fight.js';
 import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, routeLegs, routeTo, travelTime, walkOf } from './travel.js';
-import { foodOf, jobYield, larder, residentJobs, stateOf, workMult, workingAt } from './household.js';
+import { foodOf, jobYield, larder, rankIn, residentJobs, stateOf, teachBlock, tradeOf, workMult, workingAt } from './household.js';
 import { byFire, campBlock, chillRate, comfortOf, dryOf, eatBlock, restBlock, restLength, tired } from './needs.js';
 import { outside, weatherNow } from './weather.js';
 import { eventsView } from './events.js';
 import { bedCount, gardenView } from './garden.js';
-import { FOLK, NEED, coldLevel, mealFading } from '../../../shared/src/rules.js';
+import { FOLK, NEED, TRADE, coldLevel, mealFading } from '../../../shared/src/rules.js';
 
 const LOG_SEND = 120;
 
@@ -979,6 +979,7 @@ function residentsView(g: Game, pid: PlayerId): ResidentView[] {
           rate: a.id === g.ix.c.garden?.tend ? a.job!.rate : Math.round(per),
           ...(j.missing ? { reason: `${g.ix.ui('job_needs')} ${g.ix.ui(`tool_${j.missing}`)}` } : {}),
           ...(y[food] || st.job === j.id || (st.job && g.ix.actions.get(st.job)?.yield?.[food]) ? { food: r1(after.gain - after.eat) } : {}),
+          ...(tradeOf(g, j.id) && rankIn(st, tradeOf(g, j.id)!.id) > 0 ? { rank: rankIn(st, tradeOf(g, j.id)!.id) } : {}),
         };
       });
       const cur = st.job ? g.ix.actions.get(st.job) : undefined;
@@ -1007,8 +1008,33 @@ function residentsView(g: Game, pid: PlayerId): ResidentView[] {
         ...(rate !== undefined && cur?.id !== g.ix.c.garden?.tend ? { rate: Math.round(rate * 10) / 10 } : {}),
         ...(why?.length ? { why } : {}),
         food: net,
+        ...tradeView(g, pid, r.id),
       };
     });
+}
+
+/** A resident's hand in trades: the one of their job (with the way to the next step), all they know, teaching. */
+function tradeView(g: Game, pid: PlayerId, id: string): Pick<ResidentView, 'trade' | 'trades' | 'teach'> {
+  const st = g.s.residents[id]!;
+  const name = (rank: number) => g.ix.ui(`folk_rank_${rank}`);
+  const trades = (g.ix.c.trades ?? [])
+    .filter((t) => (st.exp?.[t.id] ?? 0) > 0 || st.master?.includes(t.id))
+    .map((t) => ({ name: t.name, rank: rankIn(st, t.id), rankName: name(rankIn(st, t.id)) }));
+  const t = st.job ? tradeOf(g, st.job) : undefined;
+  if (!t) return { trades };
+  const rank = rankIn(st, t.id);
+  const hours = st.exp?.[t.id] ?? 0;
+  const next = TRADE.hours[rank];
+  const prev = rank > 0 ? TRADE.hours[rank - 1]! : 0;
+  const trade = {
+    name: t.name,
+    rank,
+    rankName: name(rank),
+    x: TRADE.mult[rank]!,
+    ...(next !== undefined ? { p: Math.max(0, Math.min(1, (hours - prev) / (next - prev))), left: r1(Math.max(0, next - hours)) } : {}),
+  };
+  const reason = teachBlock(g, pid, id);
+  return { trade, trades, ...(rank === 2 ? { teach: reason ? { reason } : {} } : {}) };
 }
 
 function larderView(g: Game): LarderView | null {

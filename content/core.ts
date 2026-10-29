@@ -101,3 +101,13 @@ export const roleTitles: Content['roleTitles'] = {
   hunter: { m: 'Ловець', f: 'Ловчиня' },
   maker: { m: 'Майстер', f: 'Майстриня' },
 };
+
+/** Trades residents grow in by working, the last step taught by a hero (see `.design/residents2.md`). */
+export const trades: Content['trades'] = [
+  { id: 'wood', name: 'Дерево й лоза', teach: ['maker'], jobs: ['x_02', 'x_62', 'x_152'] },
+  { id: 'earth', name: 'Камінь, глина й руда', teach: ['maker'], jobs: ['x_07', 'x_59', 'x_60', 'x_90', 'x_91'] },
+  { id: 'salt', name: 'Вода, ропа й сіль', teach: ['maker', 'hunter'], jobs: ['x_15', 'x_33', 'x_34'] },
+  { id: 'catch', name: 'Лови', teach: ['hunter'], jobs: ['x_03', 'x_74', 'x_123', 'x_124'] },
+  { id: 'herbs', name: 'Очерет, трави й ягоди', teach: ['hunter'], jobs: ['x_06', 'x_92', 'x_114'] },
+  { id: 'garden', name: 'Город', teach: ['maker', 'hunter'], jobs: ['x_204'] },
+];

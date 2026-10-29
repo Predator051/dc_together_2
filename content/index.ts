@@ -11,7 +11,7 @@ import { areas, locations } from './a1/places.js';
 import { resources } from './a1/resources.js';
 import { scenes1 } from './a1/scenes.js';
 import { ambient } from './ambient.js';
-import { hero, perks, roleTitles, traits } from './core.js';
+import { hero, perks, roleTitles, trades, traits } from './core.js';
 import { ui } from './ui.js';
 import { weather } from './weather.js';
 import { events } from './events.js';
@@ -53,6 +53,7 @@ export const content: Content = {
   npcs: [...npcs, ...npcs2, ...sideNpcs1, ...sideNpcs2],
   enemies: [...enemies, ...enemies2, ...sideEnemies1, ...sideEnemies2],
   residents: [...residents, ...residents2, ...sideResidents2],
+  trades,
   perks,
   traits,
   hero,

@@ -428,6 +428,20 @@ export function ResidentsPanel({ v, locked }: { v: PlayerView; locked: boolean }
             {r.hurt && ' '}
             {r.hurt && <span class="pill warn">{T.residentHurt}</span>}
           </p>
+          {r.trade && (
+            <p class="meta">
+              {T.folkTrade}: <b>{r.trade.name}</b> — {r.trade.rankName}
+              {r.trade.left !== undefined && ` (${T.folkNext}: ~${Math.round(r.trade.left)} ${T.folkWorkHours})`}
+              {r.teach && (
+                <>
+                  {' '}
+                  <button class="btn small" disabled={locked || !!r.teach.reason} title={r.teach.reason} onClick={() => net.send({ c: 'teach', who: r.id })}>
+                    {T.folkTeach}
+                  </button>
+                </>
+              )}
+            </p>
+          )}
           <div class="slot-options jobs">
             {r.jobs.map((j) => (
               <button

@@ -38,6 +38,7 @@ export type Command =
   /** Set a resident to work (action id) or let them rest (null). */
   | { c: 'job'; who: string; id: string | null }
   | { c: 'feed'; dishes: boolean }
+  | { c: 'teach'; who: string }
   /** Eat a dish (from the bag, or at home from the store). */
   | { c: 'eat'; id: string }
   /** Light a campfire where you stand (away from home). */
@@ -626,7 +627,7 @@ export interface ResidentView {
   jobLabel?: string;
   /** What each can be set to; `icon` is the mark of what it brings. `rate` — a hour at the pace they would
    * work now; `food` — how the household's plain food an hour would stand (brought minus eaten) with this one at it. */
-  jobs: Array<{ id: string; label: string; icon?: string; place: string; rate: number; reason?: string; food?: number }>;
+  jobs: Array<{ id: string; label: string; icon?: string; place: string; rate: number; reason?: string; food?: number; rank?: number }>;
   hurt: boolean;
   hungry: boolean;
   /** fed — full; low — a little slower; hungry — half; weak — does not work. */
@@ -643,6 +644,12 @@ export interface ResidentView {
   why?: Array<{ name: string; x: number }>;
   /** Plain food the household gets/loses an hour as it is now (for the job list). */
   food: number;
+  /** Their step in the trade of the job they are at: progress to the next step by work (absent at the top). */
+  trade?: { name: string; rank: number; rankName: string; x: number; p?: number; left?: number };
+  /** Every trade they have some hand in. */
+  trades: Array<{ name: string; rank: number; rankName: string }>;
+  /** The last step of their trade is taught by a hero: why this one cannot now (absent: can). */
+  teach?: { reason?: string };
 }
 
 /** The household's food: eaten and brought in an hour, the store, how long it lasts. */

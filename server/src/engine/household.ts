@@ -1,13 +1,14 @@
 // The household: residents work in real time and eat from the home store. Each has a belly of hours of work
 // (`fed`); they reach for food when it runs low, the hungriest first, and hunger slows them by steps.
 // Counted in steps of ten minutes so the store can run out part way and a long absence plays out in order.
-import type { ActionDef } from '../../../shared/src/content.js';
-import { FOLK, folkHungerMult, folkState, type FolkState } from '../../../shared/src/rules.js';
+import type { ActionDef, PlayerId, Role, TradeDef } from '../../../shared/src/content.js';
+import { FOLK, TRADE, folkHungerMult, folkState, tradeRank, type FolkState } from '../../../shared/src/rules.js';
 import type { ResidentState } from '../../../shared/src/state.js';
 import type { Game, Result } from './index.js';
 import { tendGarden } from './garden.js';
 import { areaDef, areaKnown } from './travel.js';
 import { skyAt } from './weather.js';
+import { gainXp, skillOf } from './hero.js';
 
 const HOUR = 3_600_000;
 /** Work is counted in steps; at most this much absence counts (the store fills up anyway). */
@@ -36,9 +37,19 @@ export function workingAt(g: Game, id: string): ActionDef | undefined {
   return a;
 }
 
+/** The trade a job belongs to. */
+export function tradeOf(g: Game, job: string): TradeDef | undefined {
+  return (g.ix.c.trades ?? []).find((t) => t.jobs.includes(job));
+}
+
+/** A resident's step in a trade (0–3). */
+export function rankIn(r: ResidentState, trade: string): number {
+  return tradeRank(r.exp?.[trade] ?? 0, !!r.master?.includes(trade));
+}
+
 /** One part of how fast a resident works: a trait, the weather, a blessing on the house, hunger, a good meal. */
 export interface WorkPart {
-  key: 'trait' | 'sky' | 'bonus' | 'hunger' | 'dish';
+  key: 'trait' | 'skill' | 'sky' | 'bonus' | 'hunger' | 'dish';
   x: number;
   name?: string;
 }
@@ -53,6 +64,9 @@ export function workMult(g: Game, id: string, a: ActionDef): { mult: number; par
     if (a.skill) x *= t.mult?.[`skill:${a.skill}`] ?? 1;
     if (x !== 1) parts.push({ key: 'trait', x, name: t.name });
   }
+  const trade = tradeOf(g, a.id);
+  const rank = r && trade ? rankIn(r, trade.id) : 0;
+  if (rank > 0) parts.push({ key: 'skill', x: TRADE.mult[rank]!, name: g.ix.ui(`folk_rank_${rank}`) });
   const sky = skyAt(g, g.ix.areaOf(a.group))?.jobs ?? 1;
   if (sky !== 1) parts.push({ key: 'sky', x: sky });
   let bonus = 1;
@@ -139,6 +153,17 @@ export function settleWork(g: Game): boolean {
 function workStep(g: Game, id: string, r: ResidentState, a: ActionDef, hours: number): boolean {
   let changed = false;
   const { mult } = workMult(g, id, a);
+  // the hands learn the work they do
+  const trade = tradeOf(g, a.id);
+  if (trade) {
+    const before = rankIn(r, trade.id);
+    (r.exp ??= {})[trade.id] = (r.exp[trade.id] ?? 0) + hours;
+    const after = rankIn(r, trade.id);
+    if (after > before) {
+      g.log({ all: `${residentName(g, id)}: ${g.ix.ui(`folk_rank_${after}`)} — ${trade.name.toLowerCase()}.`, kind: 'find' });
+      changed = true;
+    }
+  }
   const units = a.job!.rate * hours * mult;
   // at the garden: watering, not gathering
   if (a.id === g.ix.c.garden?.tend) return tendGarden(g, units);
@@ -153,8 +178,7 @@ function workStep(g: Game, id: string, r: ResidentState, a: ActionDef, hours: nu
   const danger = areaDef(g, g.ix.areaOf(a.group))?.danger ?? 0;
   if (danger >= 3 && g.rng.chance(Math.min(0.5, 0.04 * hours * (danger - 2)))) {
     r.hurtUntil = g.now + 2 * HOUR;
-    const def = g.ix.c.residents.find((x) => x.id === id);
-    g.log({ all: `${def ? g.render(def.name, g.joinedIds()[0] ?? 'p1') : id}: ${g.ix.ui('resident_hurt')}`, kind: 'warn' });
+    g.log({ all: `${residentName(g, id)}: ${g.ix.ui('resident_hurt')}`, kind: 'warn' });
     changed = true;
   }
   return changed;
@@ -245,5 +269,51 @@ export function setJob(g: Game, who: string, id: string | null, by?: import('../
 export function setFeed(g: Game, dishes: boolean): Result {
   settleWork(g);
   g.s.feedDishes = dishes;
+  return { ok: true };
+}
+
+function residentName(g: Game, id: string): string {
+  const def = g.ix.c.residents.find((x) => x.id === id);
+  return def ? g.render(def.name, g.joinedIds()[0] ?? 'p1') : id;
+}
+
+/**
+ * Why this hero cannot teach this resident the trade of the job they are at (null: can). The last step
+ * of a trade is only taught: by one of the roles that know it, skilled at gathering, at home and free.
+ */
+export function teachBlock(g: Game, pid: PlayerId, who: string): string | null {
+  const r = g.s.residents[who];
+  const p = g.p(pid);
+  const trade = r?.job ? tradeOf(g, r.job) : undefined;
+  if (!r || !trade) return g.ix.ui('teach_no_job');
+  const rank = rankIn(r, trade.id);
+  if (rank >= 3) return g.ix.ui('teach_done');
+  if (rank < 2) return g.ix.ui('teach_not_yet');
+  if (!p.role || !trade.teach.includes(p.role)) {
+    // named as the one who holds that role is called
+    const title = (role: Role) => g.ix.c.roleTitles[role][g.joinedIds().map((x) => g.p(x)).find((x) => x.role === role)?.gender === 'f' ? 'f' : 'm'];
+    return g.ix.ui('teach_role').replace('{who}', trade.teach.map(title).join(' / '));
+  }
+  if (skillOf(g, pid, 'gather') < TRADE.teachSkill) return g.ix.ui('teach_skill').replace('{n}', String(TRADE.teachSkill));
+  if (!g.atHome(pid)) return g.ix.ui('teach_home');
+  if (g.sceneBlocksRoutine()) return g.ix.ui('err_in_scene');
+  if (p.fight !== null) return g.ix.ui('err_in_fight');
+  if ((p.busy && p.busy.until > g.now) || p.travel) return g.ix.ui('err_busy');
+  return null;
+}
+
+/** A hero spends a while showing a resident the last of a trade: a master's hand from now on. */
+export function teach(g: Game, pid: PlayerId, who: string): Result {
+  const block = teachBlock(g, pid, who);
+  if (block) return { ok: false, err: block };
+  settleWork(g);
+  const r = g.s.residents[who]!;
+  const trade = tradeOf(g, r.job!)!;
+  (r.master ??= []).push(trade.id);
+  g.p(pid).busy = { action: `teach:${who}`, until: g.now + TRADE.teachMs };
+  const name = residentName(g, who);
+  const what = `${name} ${g.ix.ui('teach_log')} ${trade.name.toLowerCase()}.`;
+  g.log({ self: `${g.ix.ui('teach_self')} ${what}`, other: `{name} ${g.ix.ui('teach_other')} ${what}`, kind: 'find' }, pid);
+  gainXp(g, pid, TRADE.teachXp);
   return { ok: true };
 }
