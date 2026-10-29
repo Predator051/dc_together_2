@@ -67,6 +67,10 @@ export type SpotIcon = (typeof SPOT_ICONS)[number];
 export const PORTRAITS = ['rat', 'viper', 'oldviper', 'dog', 'leech', 'boar', 'greyboar', 'catfish', 'hound', 'cloak', 'chief', 'wolf', 'snatcher', 'hook', 'matka', 'elder', 'shewolf'] as const;
 export type PortraitId = (typeof PORTRAITS)[number];
 
+/** How a crop looks on its bed, from sowing to ripe. */
+export const CROP_LOOKS = ['garlic', 'thyme', 'beet', 'flax', 'pumpkin'] as const;
+export type CropLook = (typeof CROP_LOOKS)[number];
+
 /** Small marks of things: materials, things to take along, gear. */
 export const ITEM_ICONS = [
   'wood', 'reed', 'rope', 'water', 'food', 'hide', 'saltraw', 'brine', 'salt', 'clay', 'leather', 'bone', 'bark', 'oak',

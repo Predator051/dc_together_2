@@ -172,3 +172,34 @@ No people except hands where named. Style: <хвост стиля из bible.md>
 
 ### Лист things 9 (знаряддя жителів, 2026-10-29)
 Шаблон шага 3 (1536x1024, прозрачный фон, 4×3), строки из `things.json` (лист 9), пустые клетки — «leave this cell empty».
+
+## Город 2.0 (2026-10-29) — проект «Ілюстрації»
+
+### Культура по стадиям (по одной картинке на культуру; `tsx scripts/art.ts crops <png> <look>`)
+```
+Generate an image, landscape 1536x1024, TRANSPARENT background. Five growth stages of one <CROP> plant side by
+side in a single row, left to right from just sown to ripe, all standing on one shared invisible ground line near
+the bottom edge, painted at the same real-world scale so the later stages are clearly bigger, each centred in its
+own fifth of the width with clear empty space between them. Each plant grows from a small clump of dark earth at
+its root (no soil strip, no ground plane, only a soft contact shadow). Seen from the side and slightly above, as
+it would look growing in a garden bed. 1) <…>; 2) <…>; 3) <…>; 4) <…>; 5) <…>. Style: <хвост стиля из bible.md>
+```
+Стадии: garlic — clove tip peeking from a mound / two-three thin shoots / fan of flat blue-green leaves / tall
+leaves, white head swelling / ripe: leaves yellowing and bending, big white-violet bulb on the earth.
+thyme — tiny cutting / a few sprigs / low cushion of grey-green leaves / bigger cushion, first lilac flowers /
+full bush covered in small lilac flowers. beet — corky seeds on a mound / two seedling leaves on red stems /
+rosette of glossy leaves with red veins / bigger rosette, dark red shoulder of the root / ripe: lush leaves, big
+round dark red beetroot half out of the earth. flax — tiny shiny seeds / thin seedlings / clump of slender stems /
+tall slender stems with sky-blue flowers / ripe: golden dry stems with round seed bolls. pumpkin — flat white
+seed on a mound / two rounded seed leaves / short vine with big lobed leaves / sprawling vine, yellow flower and a
+small green fruit / ripe: big orange ribbed pumpkin among leaves.
+
+### Пустая грядка (`tsx scripts/art.ts bed <png>`)
+```
+Generate an image, landscape 1536x1024, TRANSPARENT background. One single long raised vegetable bed, seen from
+the front and somewhat above (three-quarter view), centred, about four times as wide as it is deep: a rectangle
+of dark freshly tilled earth with furrows along its length, edged on all sides with a low woven willow wattle,
+empty — nothing planted. Soft contact shadow only. Style: <хвост стиля>
+```
+
+### Значки города — лист things 10 (шаблон шага 3, 4×3, прозрачный фон), строки из `things.json`.

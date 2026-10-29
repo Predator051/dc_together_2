@@ -6,7 +6,7 @@ export type Gender = 'm' | 'f';
 export type PlayerId = 'p1' | 'p2';
 export const PLAYER_IDS: readonly PlayerId[] = ['p1', 'p2'];
 
-import type { ItemIcon, PortraitId, SceneId, SpotIcon } from './pictures.js';
+import type { CropLook, ItemIcon, PortraitId, SceneId, SpotIcon } from './pictures.js';
 
 /** Condition evaluated against the world (and, where relevant, a viewing/acting player). */
 export type Cond =
@@ -850,6 +850,10 @@ export interface CropDef {
   grows: number;
   /** What a ripe bed gives (into the store). */
   yield: Record<string, number | [number, number]>;
+  /** How it is drawn on the bed. */
+  look: CropLook;
+  /** What it is while it grows: sown, come up, growing, nearly ripe. */
+  stages: [string, string, string, string];
 }
 
 export interface GardenDef {

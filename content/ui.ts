@@ -430,6 +430,8 @@ export const ui: Record<string, string> = {
   wx_garden_fast: 'Город росте швидше на {n}',
   wx_garden_slow: 'Город росте повільніше на {n}',
   garden_ripe: 'На городі дозріло — можна збирати.',
+  garden_why_wet: 'Полито',
+  garden_why_rain: 'Дощ поливає',
   garden_sow_self: 'Ти садиш на грядку',
   garden_sow_other: 'садить на грядку',
   garden_gather_self: 'Ти збираєш урожай із грядки',

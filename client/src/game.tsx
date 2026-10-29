@@ -26,7 +26,7 @@ import { FolkStage } from './folk.js';
 import { NeedsBar, NeedsSheet } from './needs.js';
 import { WeatherChip } from './weather.js';
 import { EventCards } from './events.js';
-import { GardenBeds } from './garden.js';
+import { BedCard, firstBed, GardenBeds, GardenScene, GardenWater, gardenWants, sceneHeight, useGardenClock } from './garden.js';
 
 type Tab = 'work' | 'map' | 'hero' | 'notes' | 'log';
 
@@ -477,8 +477,20 @@ function useSeats(id: string, keys: string[], room: number): Record<string, numb
  * A workplace's painting with its works standing on it, and under it the card of the picked one.
  * When there are more works than places, works of a kind share a stack that opens on a tap.
  */
+/** On the garden the medals stand along the fence, clear of the beds. */
+const GARDEN_SLOTS: Array<[number, number]> = [
+  [11, 15],
+  [89, 15],
+  [30, 12],
+  [70, 12],
+  [50, 10],
+];
+
 function WorkStage({ g, c, icon }: { g: GroupView; c: Ctx; icon: string }) {
-  const slots = stationSlots(icon);
+  const garden = c.v.garden && c.v.garden.group === g.id ? c.v.garden : null;
+  const slots = garden ? GARDEN_SLOTS : stationSlots(icon);
+  const gnow = useGardenClock(c.offset);
+  const [bed, setBed] = useState<number | null>(() => firstBed(c.v, gnow));
   const items = stageItems(g.entries, slots.length, STACK_ORDER);
   const seats = useSeats(g.id, items.map((it) => it.key), slots.length);
   const [pick, setPick] = useState(() => load(`bezgomin.work.${g.id}`));
@@ -495,9 +507,11 @@ function WorkStage({ g, c, icon }: { g: GroupView; c: Ctx; icon: string }) {
   const chosen = (pick ? byId.get(pick) : undefined) ?? running ?? g.entries.find((e) => e.enabled) ?? g.entries[0];
   const choose = (id: string) => {
     setPick(id);
+    setBed(null);
     store(`bezgomin.work.${g.id}`, id);
     fold();
   };
+  const shownBed = garden && bed !== null && bed < garden.beds.length ? bed : null;
   const placed = items.map((it, n) => {
     const list = it.ids.map((id) => byId.get(id)).filter((e): e is EntryView => !!e);
     const at = slots[seats[it.key] ?? n] ?? slots[0]!;
@@ -506,8 +520,12 @@ function WorkStage({ g, c, icon }: { g: GroupView; c: Ctx; icon: string }) {
   const open = placed.find((p) => p.it.key === fan);
   return (
     <>
-      <div class="stage" ref={box}>
-        <div class="stage-paint" style={{ backgroundImage: `url(${stationUrl(icon) ?? ''})` }} aria-hidden="true" />
+      <div class={`stage ${garden ? 'garden-stage' : ''}`} style={garden ? { aspectRatio: `900 / ${sceneHeight(garden.beds.length)}` } : undefined} ref={box}>
+        {garden ? (
+          <GardenScene v={c.v} now={gnow} picked={shownBed} onPick={(i) => setBed(shownBed === i ? null : i)} locked={c.locked} />
+        ) : (
+          <div class="stage-paint" style={{ backgroundImage: `url(${stationUrl(icon) ?? ''})` }} aria-hidden="true" />
+        )}
         {placed.map(({ it, list, at, n }) => (
           <Medal
             key={it.key}
@@ -516,7 +534,7 @@ function WorkStage({ g, c, icon }: { g: GroupView; c: Ctx; icon: string }) {
             sort={it.sort}
             c={c}
             place={icon}
-            on={!!chosen && list.includes(chosen)}
+            on={shownBed === null && !!chosen && list.includes(chosen)}
             at={at}
             i={n}
             onPick={() => (it.sort ? setFan(it.key) : choose(it.ids[0]!))}
@@ -525,12 +543,13 @@ function WorkStage({ g, c, icon }: { g: GroupView; c: Ctx; icon: string }) {
         {open && (
           <Fan name={STACK_NAMES[open.it.sort ?? ''] ?? ''} at={open.at} onClose={fold}>
             {open.list.map((e, n) => (
-              <Medal key={e.id} list={[e]} shown={e} c={c} place={icon} on={e === chosen} i={n} named onPick={() => choose(e.id)} />
+              <Medal key={e.id} list={[e]} shown={e} c={c} place={icon} on={e === chosen && shownBed === null} i={n} named onPick={() => choose(e.id)} />
             ))}
           </Fan>
         )}
       </div>
-      {chosen && <WorkCard e={chosen} c={c} place={icon} />}
+      {garden && <GardenWater gv={garden} now={gnow} />}
+      {shownBed !== null ? <BedCard v={c.v} now={gnow} bed={shownBed} locked={c.locked} /> : chosen && <WorkCard e={chosen} c={c} place={icon} />}
     </>
   );
 }
@@ -590,7 +609,6 @@ function Group({ g, c }: { g: GroupView; c: Ctx }) {
       <section class={`group staged ${g.base ? 'base' : ''}`}>
         <WorkStage g={g} c={c} icon={stage} />
         {(g.desc || g.progress) && <PlaceHead g={g} />}
-        {c.v.garden && c.v.garden.group === g.id && <GardenBeds v={c.v} offset={c.offset} locked={c.locked} />}
         {g.partner && g.partner.length > 0 && <MateList items={g.partner} name={c.v.partner.name} face={heroFace(c.v.partner.role, c.v.partner.gender)} />}
       </section>
     );
@@ -1019,9 +1037,9 @@ export function Game({ s }: { s: NetState }) {
     const [spots, rest] = groupSpots(groups, (g) => <Group g={g} c={ctx} />);
     if (spots.length > 0) {
       const gate = spots.findIndex((x) => x.id === 'paths');
-      // ripe beds count as things to do in the garden
+      // ripe beds, and empty ones while there is seed, count as things to do in the garden
       const gardenSpot = v.garden && spots.find((x) => x.id === v.garden!.group);
-      if (gardenSpot) gardenSpot.ready += v.garden!.beds.filter((b) => b.ready).length;
+      if (gardenSpot) gardenSpot.ready += gardenWants(v.garden!, v, now);
       const extra: Spot[] = [];
       if (v.atHome && v.residents.length > 0) {
         const warn = v.residents.some((r) => r.state !== 'fed' || r.hurt) || (v.larder?.lasts !== undefined && v.larder.lasts < 3);

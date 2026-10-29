@@ -17,7 +17,7 @@ import type {
 } from '../../shared/src/content.js';
 import { PLAN_FIXED } from '../../shared/src/content.js';
 import { fieldProblems } from './engine/terrain.js';
-import { ITEM_ICONS, PORTRAITS, SCENES, SPOT_ICONS } from '../../shared/src/pictures.js';
+import { CROP_LOOKS, ITEM_ICONS, PORTRAITS, SCENES, SPOT_ICONS } from '../../shared/src/pictures.js';
 
 export interface Report {
   errors: string[];
@@ -381,6 +381,8 @@ export function validateContent(c: Content): Report {
       if (!res.has(cr.seed)) err(`${w}: unknown seed ${cr.seed}`);
       checkRes(w, cr.yield);
       if (!(cr.grows > 0)) err(`${w}: growing time must be positive`);
+      if (!(CROP_LOOKS as readonly string[]).includes(cr.look)) err(`${w}: unknown look ${cr.look}`);
+      if (cr.stages.length !== 4 || cr.stages.some((t) => !t.trim())) err(`${w}: four stages, each named`);
     }
     if (gd.tend && !c.actions.find((a) => a.id === gd.tend)?.job) err(`garden: the tending action ${gd.tend} is not a job`);
     if (!(gd.wet >= 1) || !(gd.wetFor > 0)) err('garden: bad watering');

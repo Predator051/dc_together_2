@@ -46,12 +46,15 @@
 // A sheet of perks is 4×3 marks of the hero's growth, cut like things (client/src/art/perks/k<n>.webp,
 // order .design/art/perks.json; keys: perk ids, branch_<id>, stat_<id>, skill_<id>).
 // A sheet of tex is 3×3 square grounds painted edge to edge (see `textures`).
+//
+//   tsx scripts/art.ts crops <painted.png> <look>   — five stages of a crop (see `crops`)
+//   tsx scripts/art.ts bed <painted.png>            — an empty raised bed (see `bed`)
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { FOLK, HEROES, SCENES, SPOT_ICONS, VIEWS } from '../shared/src/pictures.js';
+import { CROP_LOOKS, FOLK, HEROES, SCENES, SPOT_ICONS, VIEWS } from '../shared/src/pictures.js';
 
 const ROOT = resolve(import.meta.dirname, '..');
 
@@ -477,6 +480,121 @@ function texture(src: string, key: string): void {
   console.log(`tex ${key}: x${file}.webp`);
 }
 
+// ---------------------------------------------------------------------------- the garden
+
+/** Blots of paint grouped into columns by where their middle falls: each column's box and, per pixel, its column (-1: none). */
+function cellBlots(px: Buffer, w: number, h: number, cols: number): { boxes: Array<[number, number, number, number] | null>; cellOf: Int8Array } {
+  for (let i = 3; i < px.length; i += 4) if (px[i]! < 40) px[i] = 0;
+  const cellOf = new Int8Array(w * h).fill(-1);
+  const seen = new Uint8Array(w * h);
+  const boxes: Array<[number, number, number, number] | null> = Array.from({ length: cols }, () => null);
+  const solid = (i: number) => px[i * 4 + 3]! > 32;
+  for (let start = 0; start < w * h; start++) {
+    if (seen[start] || !solid(start)) continue;
+    const stack = [start];
+    const blot: number[] = [];
+    seen[start] = 1;
+    let sx = 0;
+    let x0 = w;
+    let y0 = h;
+    let x1 = 0;
+    let y1 = 0;
+    while (stack.length) {
+      const i = stack.pop()!;
+      const x = i % w;
+      const y = (i / w) | 0;
+      blot.push(i);
+      sx += x;
+      x0 = Math.min(x0, x);
+      y0 = Math.min(y0, y);
+      x1 = Math.max(x1, x);
+      y1 = Math.max(y1, y);
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          const j = ny * w + nx;
+          if (seen[j] || !solid(j)) continue;
+          seen[j] = 1;
+          stack.push(j);
+        }
+      }
+    }
+    if (blot.length < 150) continue;
+    const c = Math.min(cols - 1, Math.floor((sx / blot.length / w) * cols));
+    for (const i of blot) cellOf[i] = c;
+    const b = boxes[c];
+    boxes[c] = b ? [Math.min(b[0], x0), Math.min(b[1], y0), Math.max(b[2], x1), Math.max(b[3], y1)] : [x0, y0, x1, y1];
+  }
+  return { boxes, cellOf };
+}
+
+/**
+ * A crop painted in five stages side by side on one ground line (sown → ripe), on a transparent or flat
+ * ground. Each stage is cut out and set on a canvas shared by all five, root at the bottom middle, so the
+ * stages keep the sizes they were painted at: client/src/art/crops/c<look>s<stage>.webp, the look's
+ * number in CROP_LOOKS; the painted looks and the canvas proportion go to client/src/art/crops.json.
+ */
+function crops(src: string, look: string): void {
+  const li = (CROP_LOOKS as readonly string[]).indexOf(look);
+  if (li < 0) throw new Error(`unknown look ${look}`);
+  const [w, h] = sizeOf(src);
+  const px = execFileSync('magick', [src, '-depth', '8', 'RGBA:-'], { maxBuffer: 64 << 20 });
+  const wiped = clearGround(px, w, h);
+  const { boxes, cellOf } = cellBlots(px, w, h, 5);
+  if (boxes.some((b) => !b)) throw new Error(`a stage is missing: ${boxes.map((b) => (b ? 'ok' : '–')).join(' ')}`);
+  const tmp = mkdtempSync(join(tmpdir(), 'crops-'));
+  // each stage on its own: the leaves of a neighbour reaching into its box are not its own
+  const only = (k: number) => {
+    const out = Buffer.from(px);
+    for (let i = 0; i < w * h; i++) if (cellOf[i] !== k) out[i * 4 + 3] = 0;
+    const f = join(tmp, `only${k}.png`);
+    execFileSync('magick', ['-size', `${w}x${h}`, '-depth', '8', 'RGBA:-', f], { input: out });
+    return f;
+  };
+  const cw = Math.round(Math.max(...boxes.map((b) => b![2] - b![0] + 1)) * 1.04);
+  const ch = Math.round(Math.max(...boxes.map((b) => b![3] - b![1] + 1)) * 1.02);
+  const outW = 256;
+  const outH = Math.round((ch / cw) * outW);
+  const outDir = join(ROOT, 'client/src/art/crops');
+  mkdirSync(outDir, { recursive: true });
+  boxes.forEach((b, i) => {
+    const [x0, y0, x1, y1] = b!;
+    magick(only(i), '-crop', `${x1 - x0 + 1}x${y1 - y0 + 1}+${x0}+${y0}`, '+repage', '-background', 'none', '-gravity', 'south', '-extent', `${cw}x${ch}`, '-filter', 'Lanczos', '-resize', `${outW}x${outH}!`, '-quality', '84', '-define', 'webp:alpha-quality=90', join(outDir, `c${li + 1}s${i}.webp`));
+  });
+  const manifestPath = join(ROOT, 'client/src/art/crops.json');
+  const manifest = (existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : {}) as Record<string, number>;
+  manifest[look] = Math.round((outH / outW) * 1000) / 1000;
+  writeFileSync(manifestPath, JSON.stringify(Object.fromEntries(Object.entries(manifest).sort(([a], [b]) => a.localeCompare(b))), null, 1) + '\n');
+  keep(src, `crops-${look}`);
+  console.log(`crops ${look}: ${wiped ? 'flat ground wiped' : 'transparent'}, canvas ${outW}×${outH}`);
+}
+
+/** A raised bed, empty, painted alone: cut to what is painted, client/src/art/crops/bed.webp. */
+function bed(src: string): void {
+  const [w, h] = sizeOf(src);
+  const px = execFileSync('magick', [src, '-depth', '8', 'RGBA:-'], { maxBuffer: 64 << 20 });
+  const wiped = clearGround(px, w, h);
+  const boxes = cellBoxes(px, w, h, 1, 1);
+  const b = boxes[0];
+  if (!b) throw new Error('nothing painted');
+  const tmp = mkdtempSync(join(tmpdir(), 'bed-'));
+  const clean = join(tmp, 'clean.png');
+  execFileSync('magick', ['-size', `${w}x${h}`, '-depth', '8', 'RGBA:-', clean], { input: px });
+  const outDir = join(ROOT, 'client/src/art/crops');
+  mkdirSync(outDir, { recursive: true });
+  const bw = b[2] - b[0] + 1;
+  const bh = b[3] - b[1] + 1;
+  magick(clean, '-crop', `${bw}x${bh}+${b[0]}+${b[1]}`, '+repage', '-filter', 'Lanczos', '-resize', '720x', '-quality', '84', '-define', 'webp:alpha-quality=90', join(outDir, 'bed.webp'));
+  const manifestPath = join(ROOT, 'client/src/art/crops.json');
+  const manifest = (existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : {}) as Record<string, number>;
+  manifest.bed = Math.round((bh / bw) * 1000) / 1000;
+  writeFileSync(manifestPath, JSON.stringify(Object.fromEntries(Object.entries(manifest).sort(([a], [c]) => a.localeCompare(c))), null, 1) + '\n');
+  keep(src, 'crops-bed');
+  console.log(`bed: ${wiped ? 'flat ground wiped' : 'transparent'}, ${bw}×${bh}`);
+}
+
 const [cmd, ...args] = process.argv.slice(2);
 if (cmd === 'map' && args[0] && args[1]) map(resolve(args[0]), args[1], Number(args[2] ?? 6), Number(args[3] ?? 4));
 else if ((cmd === 'things' || cmd === 'foes' || cmd === 'marks' || cmd === 'feats' || cmd === 'perks') && args[0] && args[1]) atlas(cmd, resolve(args[0]), Number(args[1]));
@@ -488,6 +606,8 @@ else if (cmd === 'hero' && args[0] && args[1]) hero(resolve(args[0]), args[1]);
 else if (cmd === 'stations' && args[0] && args[1]) stations(resolve(args[0]), Number(args[1]));
 else if (cmd === 'folk' && args[0] && args[1]) folk(resolve(args[0]), Number(args[1]), Number(args[2] ?? 0.8));
 else if (cmd === 'ally' && args[0] && args[1]) ally(resolve(args[0]), args[1]);
+else if (cmd === 'crops' && args[0] && args[1]) crops(resolve(args[0]), args[1]);
+else if (cmd === 'bed' && args[0]) bed(resolve(args[0]));
 else {
   console.error('usage: tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows] | things|foes|marks|perks <painted.png> <n> | ground <painted.png> <scene> | view <painted.png> <key> | hero <painted.png> <role-gender> | stations <painted.png> <n> | folk <painted.png> <n> [crop] | feats <painted.png> <n> | tex <painted.png> <n|key> | ally <painted.png> <key>');
   process.exit(1);
