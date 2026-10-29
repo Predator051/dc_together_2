@@ -6750,7 +6750,7 @@ body.sheet-open {
   color: var(--cinnabar-ink);
 }
 /* the hero's face in the seal; the level moves to a small badge on its rim */
-.seal-face {
+.level-face {
   position: absolute;
   inset: 5px;
   border-radius: 50%;
@@ -8440,7 +8440,8 @@ body.sheet-open {
   grid-template-columns: repeat(var(--w), var(--cell));
   grid-template-rows: repeat(var(--h), var(--cell));
 }
-.cell {
+/* scoped: a bag's .cell (cells.tsx) shares the name */
+.field-cells > .cell {
   position: relative;
   display: grid;
   place-items: center;
