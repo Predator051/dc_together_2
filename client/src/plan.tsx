@@ -273,6 +273,8 @@ export function AreaPlan({
   // a tap opens the place: on a phone it slides up over the plan, on a computer it takes the plan's room
   const [pick, setPick] = useState<string | null>(() => load(`bezgomin.spot.${scene}`));
   const [sheet, setSheet] = useState(false);
+  // which way the open place came in from: a swipe slides it in from its side, a tap just opens it
+  const [came, setCame] = useState<-1 | 0 | 1>(0);
   const fallback = spots.find((s) => s.ready > 0)?.id ?? spots[0]?.id ?? null;
   const openId = spots.some((s) => s.id === pick) ? pick : fallback;
   const open = spots.find((s) => s.id === openId) ?? null;
@@ -286,6 +288,17 @@ export function AreaPlan({
   useEffect(() => {
     if (pick) store(`bezgomin.spot.${scene}`, pick);
   }, [pick]);
+  // the close views of this place come ahead, so a swipe to the next one shows it painted at once
+  const icons = spots.map((s) => s.icon).join();
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      for (const icon of new Set(icons.split(','))) {
+        const url = stationUrl(icon);
+        if (url) new Image().src = url;
+      }
+    }, 800);
+    return () => window.clearTimeout(id);
+  }, [icons]);
   // the chip of the open place is always in sight
   const chips = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -297,6 +310,7 @@ export function AreaPlan({
       setSheet(false);
       return;
     }
+    setCame(0);
     setPick(id);
     setSheet(true);
   };
@@ -344,10 +358,13 @@ export function AreaPlan({
           bodyKey={shown.id}
           onClose={() => setSheet(false)}
           low
+          came={came}
           onSwipe={(dir) => {
             const i = spots.findIndex((x) => x.id === shown.id);
             const next = spots[(i + dir + spots.length) % spots.length];
-            if (next) setPick(next.id);
+            if (!next) return;
+            setCame(dir);
+            setPick(next.id);
           }}
           bar={
             <div class="station-chips" role="tablist" ref={chips}>
@@ -357,7 +374,10 @@ export function AreaPlan({
                   role="tab"
                   aria-selected={s.id === shown.id}
                   class={`chip ${s.id === shown.id ? 'on' : ''} ${runsAt === s.id ? 'running' : ''}`}
-                  onClick={() => setPick(s.id)}
+                  onClick={() => {
+                    setCame(0);
+                    setPick(s.id);
+                  }}
                 >
                   {picture(s.icon)}
                   <span>{s.name}</span>

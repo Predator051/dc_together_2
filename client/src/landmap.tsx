@@ -2,7 +2,7 @@
 // seen yet, and the heroes walking the roads as it happens. Places without a spot on the painting
 // keep the old drawn scheme (see MapPanel).
 import type { JSX } from 'preact';
-import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { MapLegView, MapNodeView, MapView } from '../../shared/src/protocol.js';
 import sheet1 from './art/map1.json';
 import { MapIcon } from './mapicons.js';
@@ -43,6 +43,7 @@ export function preloadLand(m: MapView): void {
     img.src = tileUrl(r, c);
   }
   new Image().src = PREVIEW;
+  fogUrl(seenOf(m), new Set());
 }
 
 /** The painting holds every place the map shows now. */
@@ -204,6 +205,84 @@ function tilesOf(seen: Seen): Array<[number, number]> {
   return out;
 }
 
+// The fog is a picture drawn once for what is seen (and kept), at a quarter of the painting's size and
+// stretched over it: it is soft anyway. A blurred mask in the page itself made a phone redraw the
+// fog each time the map opened, and the map stood black meanwhile.
+const FOG_SCALE = 4;
+const FOG_RGB = [34, 28, 21];
+const fogs = new Map<string, string>();
+
+/** One pass of a box blur, along rows (`step` 1) or columns (`step` w), edges held. */
+function boxPass(src: Float32Array, out: Float32Array, n: number, lines: number, step: number, across: number, r: number): void {
+  for (let l = 0; l < lines; l++) {
+    const base = l * across;
+    let sum = 0;
+    for (let i = -r; i <= r; i++) sum += src[base + Math.min(n - 1, Math.max(0, i)) * step]!;
+    for (let i = 0; i < n; i++) {
+      out[base + i * step] = sum / (2 * r + 1);
+      sum += src[base + Math.min(n - 1, i + r + 1) * step]! - src[base + Math.max(0, i - r) * step]!;
+    }
+  }
+}
+
+/** The fog over what is not seen (leaving out the places in `skip`), as a picture's address. */
+function fogUrl(seen: Seen, skip: Set<string>): string {
+  const ways = seen.ways.filter((w) => !skip.has(w.a) && !skip.has(w.b));
+  const clear = seen.clear.filter((c) => !skip.has(c[3]));
+  const key = JSON.stringify([clear, seen.dim, ways.map((w) => w.key)]);
+  const kept = fogs.get(key);
+  if (kept) return kept;
+  const w = Math.ceil(SHEET.w / FOG_SCALE);
+  const h = Math.ceil(SHEET.h / FOG_SCALE);
+  const cv = document.createElement('canvas');
+  cv.width = w;
+  cv.height = h;
+  const ctx = cv.getContext('2d');
+  if (!ctx) return '';
+  // how thick the fog is: white is all fog, grey half, black none (the same as the old mask)
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, w, h);
+  ctx.scale(1 / FOG_SCALE, 1 / FOG_SCALE);
+  ctx.fillStyle = '#777';
+  for (const [x, y, r] of seen.dim) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 70;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const way of ways) ctx.stroke(new Path2D(way.d));
+  ctx.fillStyle = '#000';
+  for (const [x, y, r] of clear) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const img = ctx.getImageData(0, 0, w, h);
+  let a = new Float32Array(w * h);
+  let b = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) a[i] = img.data[i * 4]! / 255;
+  // three box passes each way come close to the old blur
+  const r = Math.max(1, Math.round(BLUR / FOG_SCALE));
+  for (let k = 0; k < 3; k++) {
+    boxPass(a, b, w, h, 1, w, r);
+    boxPass(b, a, h, w, w, 1, r);
+  }
+  for (let i = 0; i < w * h; i++) {
+    img.data[i * 4] = FOG_RGB[0]!;
+    img.data[i * 4 + 1] = FOG_RGB[1]!;
+    img.data[i * 4 + 2] = FOG_RGB[2]!;
+    img.data[i * 4 + 3] = Math.round(Math.min(1, Math.max(0, a[i]!)) * 255);
+  }
+  ctx.putImageData(img, 0, 0);
+  const url = cv.toDataURL('image/png');
+  fogs.set(key, url);
+  return url;
+}
+
 /** The places explored as this browser last saw the map; null before it ever did. */
 function loadMapSeen(): Set<string> | null {
   try {
@@ -256,9 +335,12 @@ function limits(box: HTMLElement): { kMin: number; cover: number; bw: number; bh
   return { kMin: Math.min(cover, Math.max(contain, cover * 0.55)), cover, bw, bh };
 }
 
-/** Land narrower than the box sits in its middle; wider land cannot be dragged off its edge. */
+/** How far wider land may be dragged past its edge, so a place by the edge can come into the open. */
+const SLACK = 90;
+
+/** Land narrower than the box sits in its middle; wider land goes only a little past its edge. */
 function fit(pos: number, span: number, room: number): number {
-  return span <= room ? (room - span) / 2 : Math.min(0, Math.max(room - span, pos));
+  return span <= room ? (room - span) / 2 : Math.min(SLACK, Math.max(room - span - SLACK, pos));
 }
 
 function clamp(box: HTMLElement, c: Cam): Cam {
@@ -316,6 +398,9 @@ export function LandMap({
   const seen = useMemo(() => seenOf(m), [m]);
   const fresh = useFresh(m);
   const tiles = useMemo(() => tilesOf(seen), [seen]);
+  // the fog as it is, and as it was before the places explored since the last look (it lifts off them)
+  const fog = useMemo(() => fogUrl(seen, new Set()), [seen]);
+  const fogBefore = useMemo(() => (fresh.size ? fogUrl(seen, fresh) : null), [seen, fresh.size]);
   const here = m.nodes.find((n) => n.here);
   const mate = m.nodes.find((n) => n.partner);
   const legs = m.legs;
@@ -330,8 +415,8 @@ export function LandMap({
   };
   const meAt = (): Pt | null => (legs.me ? legPoint(legs.me, Date.now() + skew) : here ? (SHEET.at[here.id] ?? null) : null);
 
-  // open on where you stand, a little closer than the whole land
-  useEffect(() => {
+  // open on where you stand, a little closer than the whole land (before the first paint: no jump)
+  useLayoutEffect(() => {
     const box = boxRef.current;
     if (!box) return;
     const { kMin, cover } = limits(box);
@@ -360,18 +445,22 @@ export function LandMap({
     return () => box.removeEventListener('click', off);
   }, []);
 
-  // a picked place near the edge comes towards the middle, so its ring fits on the screen
+  // a picked place near the edge comes towards the middle; its ring opens to where there is room
+  const [face, setFace] = useState(-90);
   useEffect(() => {
     const box = boxRef.current;
     const p = sel ? SHEET.at[sel] : undefined;
     if (!box || !p) return;
-    const c = cam.current;
-    const x = c.x + p[0] * c.k;
-    const y = c.y + p[1] * c.k;
-    const r = box.getBoundingClientRect();
-    if (x > 90 && x < r.width - 90 && y > 130 && y < r.height - 50) return;
-    cam.current = clamp(box, centerOn(box, [p[0], p[1] - 30 / c.k], c.k));
-    apply(true);
+    const at = () => [cam.current.x + p[0] * cam.current.k, cam.current.y + p[1] * cam.current.k] as Pt;
+    const bw = box.clientWidth;
+    const bh = box.clientHeight;
+    let [x, y] = at();
+    if (x < 110 || x > bw - 110 || y < 130 || y > bh - 50) {
+      cam.current = centerOn(box, [p[0], p[1] - 30 / cam.current.k], cam.current.k);
+      apply(true);
+      [x, y] = at();
+    }
+    setFace(faceOf(x, y, bw));
   }, [sel]);
 
   // dragging, pinching and the wheel
@@ -538,32 +627,6 @@ export function LandMap({
             />
           ))}
           <svg class="land-svg" viewBox={`0 0 ${SHEET.w} ${SHEET.h}`} width={SHEET.w} height={SHEET.h} aria-hidden="true">
-            <defs>
-              <filter id="land-soft" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation={BLUR} />
-              </filter>
-              <mask id="land-fog" maskUnits="userSpaceOnUse" x="0" y="0" width={SHEET.w} height={SHEET.h}>
-                <rect width={SHEET.w} height={SHEET.h} fill="#fff" />
-                <g filter="url(#land-soft)">
-                  {seen.dim.map(([x, y, r]) => (
-                    <circle cx={x} cy={y} r={r} fill="#777" />
-                  ))}
-                  {seen.ways.map((w) => (
-                    <path
-                      class={fresh.has(w.a) || fresh.has(w.b) ? 'reveal-way' : ''}
-                      d={w.d}
-                      fill="none"
-                      stroke="#000"
-                      stroke-width={70}
-                      stroke-linecap="round"
-                    />
-                  ))}
-                  {seen.clear.map(([x, y, r, id]) => (
-                    <circle class={fresh.has(id) ? 'reveal' : ''} cx={x} cy={y} r={r} fill="#000" />
-                  ))}
-                </g>
-              </mask>
-            </defs>
             {m.links.map(([a, b]) => {
               const w = wayOf(a, b);
               if (!w) return null;
@@ -575,8 +638,11 @@ export function LandMap({
                 </g>
               );
             })}
-            <rect class="land-fog" width={SHEET.w} height={SHEET.h} mask="url(#land-fog)" />
           </svg>
+          {fog && <img class="land-fog" src={fog} alt="" draggable={false} style={{ width: `${SHEET.w}px`, height: `${SHEET.h}px` }} />}
+          {fogBefore && (
+            <img class="land-fog lifts" src={fogBefore} alt="" draggable={false} style={{ width: `${SHEET.w}px`, height: `${SHEET.h}px` }} />
+          )}
           <div class={`land-tones tones ${sky ? `sky-${sky}` : ''}`}>
             <Tones dusk={dusk} />
           </div>
@@ -584,7 +650,7 @@ export function LandMap({
         {m.nodes.map((n) => (
           <Pin key={n.id} n={n} sel={sel === n.id} fresh={fresh.has(n.id)} onPick={onPick} />
         ))}
-        {sel && SHEET.at[sel] && ring.length > 0 && <PinRing key={sel} at={SHEET.at[sel]!} items={ring} />}
+        {sel && SHEET.at[sel] && ring.length > 0 && <PinRing key={sel} at={SHEET.at[sel]!} face={face} items={ring} />}
         {(here || mePoint) && (
           <span
             ref={meRef}
@@ -653,15 +719,25 @@ function Pin({ n, sel, fresh, onPick }: { n: MapNodeView; sel: boolean; fresh: b
   );
 }
 
-/** The buttons around a picked place, fanned out in an arc above its mark. */
-function PinRing({ at, items }: { at: Pt; items: RingItem[] }) {
+/**
+ * Which way a ring opens (degrees, -90 is up): up, unless the place is by the top edge; away from a
+ * side edge it stands by.
+ */
+function faceOf(x: number, y: number, bw: number): number {
+  const vx = x < 120 ? 1 : x > bw - 120 ? -1 : 0;
+  const vy = y < 140 ? 1 : -1;
+  return (Math.atan2(vy, vx * 1.2) * 180) / Math.PI;
+}
+
+/** The buttons around a picked place, fanned out in an arc on the side `face` looks to. */
+function PinRing({ at, face, items }: { at: Pt; face: number; items: RingItem[] }) {
   const n = items.length;
   const span = n <= 1 ? 0 : Math.min(130, 58 * (n - 1));
   const R = 72;
   return (
     <div class="pin-ring" style={{ left: `${at[0]}px`, top: `${at[1]}px` }} role="menu">
       {items.map((it, i) => {
-        const a = ((-90 - span / 2 + (n <= 1 ? 0 : (span / (n - 1)) * i)) * Math.PI) / 180;
+        const a = ((face - span / 2 + (n <= 1 ? 0 : (span / (n - 1)) * i)) * Math.PI) / 180;
         return (
           <button
             type="button"
