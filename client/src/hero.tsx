@@ -145,7 +145,7 @@ const NUM_PICS: Record<string, () => JSX.Element> = {
 function LevelSeal({ level, p, face }: { level: number; p: number; face: string | null }) {
   return (
     <span class={`level-seal ${face ? 'with-face' : ''}`} aria-hidden="true">
-      {face && <span class="seal-face" style={{ backgroundImage: `url(${face})` }} />}
+      {face && <span class="level-face" style={{ backgroundImage: `url(${face})` }} />}
       <svg viewBox="0 0 64 64">
         <circle class="rim" cx="32" cy="32" r="29" />
         <circle class="fill" cx="32" cy="32" r="29" pathLength={100} style={{ strokeDasharray: `${Math.round(p * 100)} 100` }} />
