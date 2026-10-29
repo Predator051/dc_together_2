@@ -448,7 +448,7 @@ function validCommand(cmd: unknown): Command | null {
     }
     case 'harvest': {
       const x = cmd as { bed?: unknown };
-      if (typeof x.bed !== 'number' || !Number.isInteger(x.bed) || x.bed < 0 || x.bed > 20) return null;
+      if (typeof x.bed !== 'number' || !Number.isInteger(x.bed) || x.bed < -1 || x.bed > 20) return null;
       return { c: 'harvest', bed: x.bed };
     }
     case 'event': {

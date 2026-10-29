@@ -1,6 +1,7 @@
 import type { FightEvent } from './state.js';
 import type { Field } from './field.js';
 import type { AmbientKind, SkyKind, FxKind, Gender, PlayerId, Role, LogKind } from './content.js';
+import type { CropLook } from './pictures.js';
 
 // ---------- Client -> server ----------
 
@@ -50,6 +51,7 @@ export type Command =
   | { c: 'event'; uid: number; choice: number }
   /** The home garden: sow a seed into an empty bed, gather a ripe one. */
   | { c: 'plant'; bed: number; crop: string }
+  /** bed -1: every ripe bed. */
   | { c: 'harvest'; bed: number };
 
 export type ClientMsg =
@@ -775,15 +777,22 @@ export interface SummaryView {
 /** The home garden (at home, once there are beds). Growth is counted on by the client from `rate`. */
 export interface GardenView {
   group: string;
-  beds: Array<{ crop: { id: string; name: string; icon?: string } | null; grown: number; grows: number; ready: boolean }>;
+  beds: Array<{
+    crop: { id: string; name: string; icon?: string; look: CropLook; stages: [string, string, string, string]; gives: string } | null;
+    grown: number;
+    grows: number;
+    ready: boolean;
+  }>;
   /** How many times as fast it grows right now (water, weather). */
   rate: number;
+  /** What makes it grow faster or slower now, with how many times. */
+  why: Array<{ text: string; x: number }>;
   /** Server time until the beds stay moist (0: dry). */
   wetUntil: number;
   /** Rain does the watering now. */
   rain: boolean;
   /** Seeds in the store, by crop. */
-  seeds: Array<{ crop: string; name: string; icon?: string; have: number; grows: number; gives: string }>;
+  seeds: Array<{ crop: string; name: string; icon?: string; look: CropLook; have: number; grows: number; gives: string }>;
 }
 
 /** A small happening waiting for an answer. */

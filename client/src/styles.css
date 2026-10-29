@@ -748,10 +748,27 @@ button.bed:focus-visible {
   gap: 8px;
 }
 .sow-seed {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding-left: 8px;
+  text-align: left;
+}
+.sow-pic {
+  flex: none;
+  width: 34px;
+  height: 38px;
+}
+.sow-text {
+  display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
+  min-width: 0;
   text-align: left;
+}
+.sow-name b {
+  white-space: nowrap;
 }
 .sow-meta {
   font-size: 0.8rem;
@@ -763,6 +780,386 @@ button.bed:focus-visible {
   font-family: var(--sans);
   font-size: 0.84rem;
   color: var(--faded);
+}
+.plant-pic {
+  display: block;
+  overflow: visible;
+}
+.bed .bed-pic {
+  width: 40px;
+  height: 44px;
+  margin: -4px 0 -2px;
+}
+.bed-stage {
+  font-size: 0.8rem;
+  color: var(--ink-2);
+}
+
+/* the garden as a picture: the ground behind the hut, raised beds, what grows on them */
+.garden-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.garden-stage .act-medal.placed {
+  z-index: 2;
+}
+.garden-scene::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, rgba(34, 28, 21, 0.18), transparent 22%, transparent 86%, var(--leaf)),
+    radial-gradient(ellipse at 50% 55%, transparent 55%, rgba(20, 15, 10, 0.45));
+}
+.garden-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.garden-dim {
+  fill: rgba(30, 22, 12, 0.34);
+}
+.garden-path {
+  opacity: 0.75;
+}
+.garden-fence-foot {
+  fill: rgba(20, 14, 8, 0.22);
+}
+.gbed-side {
+  fill: #4b3520;
+  stroke: #24180d;
+  stroke-width: 1.5;
+}
+.gbed-weave {
+  fill: none;
+  stroke: #7a5a37;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.gbed-top {
+  fill: #4a3524;
+  stroke: #2a1c10;
+  stroke-width: 2;
+  transition: fill 1.2s;
+}
+.gbed-soil {
+  fill: none;
+}
+.soil-tex .gbed-soil {
+  fill: url(#gd-mud);
+  opacity: 0.4;
+  mix-blend-mode: multiply;
+}
+.gbed-furrow {
+  fill: none;
+  stroke: rgba(22, 14, 8, 0.6);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.gbed.wet .gbed-top {
+  fill: #33241a;
+}
+.gbed-wet {
+  fill: rgba(120, 140, 160, 0.12);
+  stroke: rgba(170, 190, 200, 0.25);
+  stroke-width: 1;
+  pointer-events: none;
+}
+.gbed-ring {
+  fill: none;
+  stroke: rgba(226, 190, 110, 0.95);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 6px rgba(226, 190, 110, 0.6));
+}
+.gbed-glow {
+  fill: url(#gd-ripe);
+  animation: ripe-glow 2.6s ease-in-out infinite alternate;
+}
+@keyframes ripe-glow {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+/* a plant sways from its root; it grows a little all the time, and springs up when it comes to a new stage */
+.gplant {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: sway 3.4s ease-in-out infinite alternate;
+  animation-delay: calc(-1 * var(--sway, 0s));
+}
+@keyframes sway {
+  from {
+    transform: rotate(-1.6deg);
+  }
+  to {
+    transform: rotate(1.6deg);
+  }
+}
+.gplant-size {
+  transition: transform 1.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.gplant-stage {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: sprout 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards;
+}
+@keyframes sprout {
+  from {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+}
+/* a bed to tap: the whole of it, its tag on the side */
+.bed-hit {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bed-hit:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 2px;
+}
+.bed-tag {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 96%;
+  margin-bottom: -10px;
+  padding: 3px 10px 5px 6px;
+  overflow: hidden;
+  border: 1px solid rgba(196, 154, 69, 0.45);
+  border-radius: 6px;
+  background: rgba(24, 18, 12, 0.86);
+  box-shadow: 0 2px 6px rgba(8, 5, 2, 0.55);
+  font: 600 0.74rem/1.15 var(--sans);
+  color: var(--ink);
+  white-space: nowrap;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.bed-tag .item-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.bed-tag-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bed-tag-name.idle {
+  padding-left: 4px;
+  font-weight: 500;
+  color: var(--faded);
+}
+/* how far it has grown: a thin line along the foot of the tag */
+.bed-tag-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.bed-tag-bar i {
+  display: block;
+  height: 100%;
+  background: var(--verdigris);
+  transition: width 1s linear;
+}
+.bed-tag-ripe {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #f0c56f;
+}
+.bed-hit.ripe .bed-tag {
+  border-color: rgba(240, 197, 111, 0.9);
+  background: rgba(70, 50, 18, 0.92);
+  box-shadow:
+    0 2px 6px rgba(8, 5, 2, 0.55),
+    0 0 10px rgba(240, 197, 111, 0.35);
+}
+.bed-hit.ripe .bed-tag {
+  border-color: rgba(240, 197, 111, 0.85);
+}
+.bed-hit.on .bed-tag {
+  border-color: var(--ochre);
+  background: rgba(58, 44, 24, 0.92);
+}
+@media (hover: hover) {
+  .bed-hit:hover .bed-tag {
+    border-color: var(--ochre);
+  }
+}
+/* the card of a bed under the picture */
+.bed-card {
+  margin: 10px 0 12px;
+  padding: 12px;
+  border: 1px solid var(--rule-2);
+  border-radius: 10px;
+  background: var(--leaf-2);
+  animation: card-in 0.22s ease-out both;
+}
+.bed-card.ripe {
+  border-color: rgba(240, 197, 111, 0.55);
+}
+.bed-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.bed-card-pic {
+  display: grid;
+  flex: none;
+  place-items: end center;
+  width: 56px;
+  height: 56px;
+  padding-bottom: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(196, 154, 69, 0.5);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 30%, #4b3a28, #2a2016 70%);
+}
+.bed-card-pic .plant-pic {
+  width: 46px;
+  height: 44px;
+}
+.bed-card-pic.empty {
+  background:
+    repeating-linear-gradient(170deg, transparent 0 7px, rgba(20, 12, 6, 0.55) 7px 9px),
+    radial-gradient(circle at 50% 30%, #5a4330, #2a2016 70%);
+}
+.bed-card-text {
+  flex: 1;
+  min-width: 0;
+}
+.bed-card-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin: 0;
+  font: 600 1rem/1.3 var(--sans);
+  color: var(--ink);
+}
+.bed-card-no {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--faded);
+}
+.bed-card-stage {
+  margin: 2px 0 6px;
+  font-family: var(--serif);
+  font-size: 0.95rem;
+  color: var(--ink-2);
+}
+.bed-card.ripe .bed-card-stage {
+  color: #f0c56f;
+}
+.stage-bar {
+  position: relative;
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--rule);
+  overflow: hidden;
+}
+.stage-bar i {
+  display: block;
+  height: 100%;
+  background: var(--verdigris);
+  transition: width 1s linear;
+}
+.stage-bar b {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--leaf-2);
+}
+.bed-card-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 6px 0 0;
+  font-family: var(--sans);
+  font-size: 0.86rem;
+  color: var(--ink-2);
+}
+.bed-card-left .why {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+}
+.why.up {
+  background: rgba(141, 176, 143, 0.16);
+  color: var(--verdigris);
+}
+.why.down {
+  background: rgba(190, 110, 90, 0.16);
+  color: #d99a82;
+}
+.bed-card-gives {
+  margin: 6px 0 0;
+  font-family: var(--sans);
+  font-size: 0.84rem;
+  color: var(--faded);
+}
+.bed-card-do {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.bed-card-do .btn {
+  flex: 1 1 140px;
+}
+.bed-card .sow-head {
+  margin-top: 12px;
+}
+.bed-card .sow-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.bed-card .sow-seed {
+  justify-content: flex-start;
+  min-height: 56px;
+}
+.bed-card .sow-pic {
+  width: 42px;
+  height: 44px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gplant,
+  .gplant-stage,
+  .gbed-glow {
+    animation: none;
+  }
+  .gplant-size {
+    transition: none;
+  }
+}
+.garden-stage + .garden-water {
+  margin: 10px 0 0;
 }
 
 /* a small happening: a card at the top of the place, waiting for an answer */

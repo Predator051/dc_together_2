@@ -110,6 +110,42 @@ describe('the garden', () => {
     expect(w.state.garden!.wetUntil).toBeGreaterThan(w.now);
   });
 
+  it('a bed tells what grows, how it is drawn, what it gives and what speeds it; all ripe beds are gathered at once', () => {
+    const { w, h, m } = home();
+    calm(w);
+    dig(w, h);
+    w.state.res['r_50'] = 4;
+    w.state.res['r_30'] = 2;
+    expect(w.cmd(h, { c: 'plant', bed: 0, crop: 'c_garlic' }).ok).toBe(true);
+    expect(w.cmd(h, { c: 'plant', bed: 1, crop: 'c_thyme' }).ok).toBe(true);
+    let gv = w.view(h).garden!;
+    const bed = gv.beds[0]!.crop!;
+    expect(bed.look).toBe('garlic');
+    expect(bed.stages).toHaveLength(4);
+    expect(bed.gives).toMatch(/3–4/);
+    expect(gv.seeds.every((s) => !!s.look)).toBe(true);
+    expect(gv.why).toEqual([]);
+    expect(w.cmd(h, { c: 'act', id: 'x_204' }).ok).toBe(true);
+    expect(w.view(h).garden!.why.map((x) => x.x)).toEqual([1.5]);
+    w.state.weather = { id: 'w_frost', until: w.now + 600 * MIN, next: 'w_clear' };
+    expect(w.view(h).garden!.why.map((x) => x.x)).toEqual([1.5, 0.5]);
+    calm(w);
+    // nothing ripe yet: nothing to gather
+    expect(w.cmd(h, { c: 'harvest', bed: -1 }).ok).toBe(false);
+    w.advance(200 * MIN);
+    gv = w.view(h).garden!;
+    expect(gv.beds.every((b) => b.ready)).toBe(true);
+    const garlic = w.state.res['r_50']!;
+    const thyme = w.state.res['r_30'] ?? 0;
+    expect(w.cmd(h, { c: 'harvest', bed: -1 }).ok).toBe(true);
+    expect(w.view(h).garden!.beds.every((b) => !b.crop)).toBe(true);
+    expect(w.state.res['r_50']!).toBeGreaterThanOrEqual(garlic + 3);
+    expect(w.state.res['r_30']!).toBeGreaterThanOrEqual(thyme + 3);
+    // away from home the beds cannot be reached
+    w.state.players[m].at = 'a_02';
+    expect(w.cmd(m, { c: 'harvest', bed: -1 }).ok).toBe(false);
+  });
+
   it('what grows is good for something: the dishes show up once their crop has been seen', () => {
     const { w, h } = home();
     dig(w, h);
