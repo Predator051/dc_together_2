@@ -40,6 +40,11 @@
 // not in FOLK are spares and dropped); the middle `crop` (0.8 by default) of each quarter becomes
 // client/src/art/folk/f<i>.webp, i — the resident's number in FOLK; the painted ones are listed in
 // client/src/art/folk.json.
+//
+// A sheet of feats is 4×3 things on the ground of a fight seen from above (trees, stones, carts…), cut
+// like things (160 px cells, client/src/art/feats/e<n>.webp, order .design/art/feats.json).
+// A sheet of tex is 3×3 square grounds painted edge to edge (see `textures`).
+
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -90,8 +95,10 @@ interface AtlasKind {
   prefix: string;
 }
 
-const KINDS: Record<'things' | 'foes' | 'marks', AtlasKind> = {
+const KINDS: Record<'things' | 'foes' | 'marks' | 'feats', AtlasKind> = {
   things: { cols: 4, rows: 3, cell: 128, prefix: 't' },
+  // things on the ground of a fight, seen from above
+  feats: { cols: 4, rows: 3, cell: 160, prefix: 'e' },
   foes: { cols: 3, rows: 3, cell: 192, prefix: 'f' },
   // marks of spots on plans and of places on the map ('@' + scene)
   marks: { cols: 4, rows: 3, cell: 128, prefix: 'm' },
@@ -398,15 +405,86 @@ function folk(src: string, n: number, crop: number): void {
   console.log(`folk ${n}: ${made.join(' ')}`);
 }
 
+/**
+ * Grounds of fights: a 3×3 sheet of square textures painted edge to edge (grass, sand, water…). Each ninth
+ * (a little inset, so no seam shows) becomes client/src/art/tex/x<i>.webp; which is which comes from
+ * .design/art/tex.json (sheet n, row by row) and goes to client/src/art/tex.json (key → file number).
+ */
+function textures(src: string, n: number): void {
+  const order = JSON.parse(readFileSync(join(ROOT, '.design/art/tex.json'), 'utf8')) as Array<Array<[string, string]>>;
+  const keys = (order[n - 1] ?? []).map(([k]) => k);
+  if (!keys.length) throw new Error(`no sheet ${n} in .design/art/tex.json`);
+  const [w, h] = sizeOf(src);
+  const cw = Math.floor(w / 3);
+  const ch = Math.floor(h / 3);
+  const inset = Math.round(Math.min(cw, ch) * 0.04);
+  const outDir = join(ROOT, 'client/src/art/tex');
+  mkdirSync(outDir, { recursive: true });
+  const manifestPath = join(ROOT, 'client/src/art/tex.json');
+  const manifest = (existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : {}) as Record<string, number>;
+  let next = Math.max(0, ...Object.values(manifest)) + 1;
+  keys.forEach((k, i) => {
+    if (!k) return;
+    const x = (i % 3) * cw + inset;
+    const y = Math.floor(i / 3) * ch + inset;
+    const file = manifest[k] ?? next++;
+    magick(src, '-crop', `${cw - 2 * inset}x${ch - 2 * inset}+${x}+${y}`, '+repage', '-filter', 'Lanczos', '-resize', '448x448!', '-quality', '80', join(outDir, `x${file}.webp`));
+    manifest[k] = file;
+  });
+  writeFileSync(manifestPath, JSON.stringify(Object.fromEntries(Object.entries(manifest).sort(([a], [b]) => a.localeCompare(b))), null, 1) + '\n');
+  keep(src, `tex${n}`);
+  console.log(`tex ${n}: ${keys.filter(Boolean).join(' ')}`);
+}
+
+/**
+ * A portrait of one of the heroes' own (the hunter's dog): painted alone on a transparent ground, the figure
+ * cut by its outline, centred in a square, client/src/art/allies/a<i>.webp at 192 px; key into allies.json.
+ */
+function ally(src: string, key: string): void {
+  const outDir = join(ROOT, 'client/src/art/allies');
+  mkdirSync(outDir, { recursive: true });
+  const manifestPath = join(ROOT, 'client/src/art/allies.json');
+  const manifest = (existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : {}) as Record<string, number>;
+  const file = manifest[key] ?? Math.max(0, ...Object.values(manifest)) + 1;
+  const box = magick(src, '-alpha', 'extract', '-threshold', '40%', '-format', '%@', 'info:').trim();
+  const m = /^(\d+)x(\d+)\+(\d+)\+(\d+)$/.exec(box);
+  if (!m) throw new Error(`no figure found in ${src} (${box})`);
+  const side = Math.round(Math.max(Number(m[1]), Number(m[2])) * 1.06);
+  magick(src, '-crop', box, '+repage', '-background', 'none', '-gravity', 'center', '-extent', `${side}x${side}`, '-filter', 'Lanczos', '-resize', '192x192', '-quality', '85', '-define', 'webp:alpha-quality=90', join(outDir, `a${file}.webp`));
+  manifest[key] = file;
+  writeFileSync(manifestPath, JSON.stringify(manifest, null, 1) + '\n');
+  keep(src, `ally-${key}`);
+  console.log(`ally ${key}: a${file}.webp`);
+}
+
+/** One ground painted alone at full size: client/src/art/tex/x<i>.webp at 1024 px, key into tex.json. */
+function texture(src: string, key: string): void {
+  const outDir = join(ROOT, 'client/src/art/tex');
+  mkdirSync(outDir, { recursive: true });
+  const manifestPath = join(ROOT, 'client/src/art/tex.json');
+  const manifest = (existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : {}) as Record<string, number>;
+  const file = manifest[key] ?? Math.max(0, ...Object.values(manifest)) + 1;
+  const [w, h] = sizeOf(src);
+  const side = Math.min(w, h);
+  magick(src, '-gravity', 'center', '-crop', `${side}x${side}+0+0`, '+repage', '-filter', 'Lanczos', '-resize', '1024x1024', '-quality', '78', join(outDir, `x${file}.webp`));
+  manifest[key] = file;
+  writeFileSync(manifestPath, JSON.stringify(Object.fromEntries(Object.entries(manifest).sort(([a], [b]) => a.localeCompare(b))), null, 1) + '\n');
+  keep(src, `tex-${key}`);
+  console.log(`tex ${key}: x${file}.webp`);
+}
+
 const [cmd, ...args] = process.argv.slice(2);
 if (cmd === 'map' && args[0] && args[1]) map(resolve(args[0]), args[1], Number(args[2] ?? 6), Number(args[3] ?? 4));
-else if ((cmd === 'things' || cmd === 'foes' || cmd === 'marks') && args[0] && args[1]) atlas(cmd, resolve(args[0]), Number(args[1]));
+else if ((cmd === 'things' || cmd === 'foes' || cmd === 'marks' || cmd === 'feats') && args[0] && args[1]) atlas(cmd, resolve(args[0]), Number(args[1]));
+else if (cmd === 'tex' && args[0] && args[1] && /^\d+$/.test(args[1])) textures(resolve(args[0]), Number(args[1]));
+else if (cmd === 'tex' && args[0] && args[1]) texture(resolve(args[0]), args[1]);
 else if (cmd === 'ground' && args[0] && args[1]) ground(resolve(args[0]), args[1]);
 else if (cmd === 'view' && args[0] && args[1]) view(resolve(args[0]), args[1]);
 else if (cmd === 'hero' && args[0] && args[1]) hero(resolve(args[0]), args[1]);
 else if (cmd === 'stations' && args[0] && args[1]) stations(resolve(args[0]), Number(args[1]));
 else if (cmd === 'folk' && args[0] && args[1]) folk(resolve(args[0]), Number(args[1]), Number(args[2] ?? 0.8));
+else if (cmd === 'ally' && args[0] && args[1]) ally(resolve(args[0]), args[1]);
 else {
-  console.error('usage: tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows] | things|foes|marks <painted.png> <n> | ground <painted.png> <scene> | view <painted.png> <key> | hero <painted.png> <role-gender> | stations <painted.png> <n> | folk <painted.png> <n> [crop]');
+  console.error('usage: tsx scripts/art.ts map <painted.png> <sheet> [cols] [rows] | things|foes|marks <painted.png> <n> | ground <painted.png> <scene> | view <painted.png> <key> | hero <painted.png> <role-gender> | stations <painted.png> <n> | folk <painted.png> <n> [crop] | feats <painted.png> <n> | tex <painted.png> <n|key> | ally <painted.png> <key>');
   process.exit(1);
 }

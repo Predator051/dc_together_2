@@ -125,7 +125,7 @@ export function simulate(foes: Array<{ enemy: string; n?: number }>, stage: stri
     let won = false;
     let k = 0;
     let lastRound = f.round;
-    while (g.s.fights.some((x) => x.id === f.id) && k++ < 200) {
+    while (g.s.fights.some((x) => x.id === f.id) && k++ < 600) {
       for (const pid of party) {
         g = new Game(ix, g.s, g.now);
         const v = buildView(g, pid);

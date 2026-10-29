@@ -27,6 +27,12 @@ export const migrations: Record<number, Migration> = {
     }
     return { ...s, version: 11 };
   },
+  // 11 -> 12: fights move onto a field of cells; a fight begun the old way is dropped (a story fight
+  // starts again on the field, see Game.settle).
+  11: (s) => {
+    for (const p of Object.values(s.players ?? {}) as Array<{ fight: number | null }>) p.fight = null;
+    return { ...s, fights: [], afterFight: {}, version: 12 };
+  },
 };
 
 export class MigrationError extends Error {}

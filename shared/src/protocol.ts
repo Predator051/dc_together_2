@@ -1,3 +1,5 @@
+import type { FightEvent } from './state.js';
+import type { Field } from './field.js';
 import type { AmbientKind, SkyKind, FxKind, Gender, PlayerId, Role, LogKind } from './content.js';
 
 // ---------- Client -> server ----------
@@ -494,6 +496,44 @@ export interface FoeView {
   weak?: string;
   holds?: string;
   calling?: number;
+  /** The kind of its move this round and whom it is for (for the mark over it and the line to the hero). */
+  move?: string;
+  aim?: PlayerId;
+  /** The kind of its next move (seen by the hunter). */
+  nextMove?: string;
+  /** Open to blows; dazed (loses its move). */
+  open?: boolean;
+  stunned?: boolean;
+  /** Where it stands; the run of a charge it has marked. */
+  pos?: [number, number];
+  line?: Array<[number, number]>;
+  guarding?: boolean;
+}
+
+export interface FightMoveView {
+  id: string;
+  label: string;
+  enabled: boolean;
+  reason?: string;
+  group: 'hit' | 'self' | 'help' | 'item' | 'out';
+  /** A move of a hand: its name alone, which hand, price in breath, damage, a short note. */
+  tech?: string;
+  name?: string;
+  note?: string;
+  hand?: 'main' | 'off';
+  cost?: number;
+  dmg?: [number, number];
+  /** Aimed at this foe. */
+  target?: number;
+  /** The item it uses (icon), for the belt of a fight. */
+  icon?: string;
+}
+
+/** What a hero holds in a hand, for the fight's hand cards. */
+export interface HandView {
+  name: string;
+  icon?: string;
+  dmg?: [number, number];
 }
 
 export interface FightView {
@@ -501,9 +541,41 @@ export interface FightView {
   round: number;
   scene: boolean;
   foes: FoeView[];
-  party: Array<{ pid: PlayerId; name: string; hp: number; hpMax: number; down: boolean; held: boolean; poison: number; picked: boolean; me: boolean }>;
+  party: Array<{
+    pid: PlayerId;
+    name: string;
+    hp: number;
+    hpMax: number;
+    down: boolean;
+    held: boolean;
+    poison: number;
+    picked: boolean;
+    me: boolean;
+    pos?: [number, number];
+    /** Cut of the blows until their next turn (0..0.6), a stance held. */
+    guard: number;
+    stance?: string;
+  }>;
   dog?: string;
-  moves: Array<{ id: string; label: string; enabled: boolean; reason?: string; group: 'hit' | 'self' | 'help' | 'item' | 'out' }>;
+  dogPos?: [number, number];
+  /** The ground. */
+  field: Field;
+  /** Who moves in what order this round; whose turn it is. */
+  order: Array<{ id: string; name: string; kind: 'hero' | 'foe' | 'dog'; icon?: string; me?: boolean }>;
+  active?: string;
+  myTurn: boolean;
+  /** Action points left to you (on your turn) and of a full turn. */
+  ap: number;
+  apMax: number;
+  /** Cells you can walk to now and what each costs. */
+  reach: Array<{ c: [number, number]; cost: number }>;
+  moves: FightMoveView[];
+  /** What is in your hands. */
+  hands: { main: HandView; off: HandView | null };
+  /** The place, for the painted ground of the fight. */
+  place?: string;
+  /** The last round, beat by beat. */
+  events: FightEvent[];
   myPick?: string;
   waiting: boolean;
   lines: string[];

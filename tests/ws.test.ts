@@ -304,12 +304,12 @@ describe('synchronisation', () => {
     expect((await b.cmd({ c: 'help' })).ok).toBe(true);
     await settle(a, b);
     expect(b.view!.fight?.party.length).toBe(2);
-    // the maker leaves: the round still resolves on the hunter's move
+    // the maker leaves: the turns go on past them on the hunter's moves
     await b.close();
     await a.until((v) => v.partner.online === false);
     const round = a.view!.fight!.round;
-    const hit = a.view!.fight!.moves.find((m) => m.group === 'hit')!;
-    expect((await a.cmd({ c: 'fight', id: hit.id })).ok).toBe(true);
+    expect(a.view!.fight!.myTurn).toBe(true);
+    expect((await a.cmd({ c: 'fight', id: 'end' })).ok).toBe(true);
     await settle(a);
     expect(a.view!.fight === null || a.view!.fight.round > round).toBe(true);
   });

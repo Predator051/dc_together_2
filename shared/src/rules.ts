@@ -43,6 +43,8 @@ export interface Derived {
   ranged: boolean;
   ammo?: string;
   tags: Set<GearTag>;
+  /** A shield in the other hand (block, bash). */
+  shield: boolean;
   resist: Set<ResistId>;
   tools: Set<string>;
   heavy: boolean;
@@ -76,6 +78,7 @@ export function derive(h: HeroLike, gear: (id: string) => GearDef | undefined, b
   const tools = new Set<string>();
   const toolSpeed = new Map<string, number>();
   let heavy = false;
+  let shield = false;
   for (const slot of SLOTS) {
     const id = h.equip[slot];
     if (!id) continue;
@@ -98,6 +101,7 @@ export function derive(h: HeroLike, gear: (id: string) => GearDef | undefined, b
       ammo = g.ammo;
     } else {
       for (const t of g.tags ?? []) if (t === 'heavy' || t === 'fire' || t === 'noise') tags.add(t);
+      if (slot === 'offhand' && g.tags?.includes('shield')) shield = true;
     }
     if (g.tags?.includes('heavy')) heavy = true;
   }
@@ -116,12 +120,50 @@ export function derive(h: HeroLike, gear: (id: string) => GearDef | undefined, b
     ranged,
     ammo,
     tags,
+    shield,
     resist,
     tools,
     heavy: heavy && !h.perks.includes('steady'),
     toolSpeed,
   };
 }
+
+/** Foes against the heroes: how much tougher than written, and how much more with two heroes. */
+export const FOE = {
+  hp: 1.35,
+  dmg: 1.25,
+  /** Health of foes when both heroes fight them; their blows too. */
+  duoHp: 1.8,
+  duoDmg: 1.25,
+  /** Bosses (foes with phases): their own factors (their blows are written heavy already). */
+  bossHp: 1,
+  bossDuoHp: 1,
+  bossDmg: 0.85,
+  /** The first foes teach the fight: the toughening grows in up to this level. */
+  rampTo: 4,
+  /** A charge that lands. */
+  charge: 2.5,
+  /** Foes this many levels under the weakest hero can be driven off without a fight. */
+  rout: 3,
+};
+
+/** How much tougher than written a foe of this level is (`full` — the factor at full strength). */
+export function foeRamp(full: number, level: number): number {
+  return 1 + (full - 1) * Math.min(1, Math.max(0, (level - 1) / (FOE.rampTo - 1)));
+}
+
+/** Numbers of the strong moves (see `.design/combat2.md`). */
+export const TECH = {
+  /** A blow at an open foe: always lands, more damage, half the armour. */
+  open: 1.5,
+  thrustOpen: 2,
+  thrustAcc: 0.2,
+  stunDmg: 0.6,
+  chop: 1.5,
+  flurryAcc: -0.15,
+  block: 0.3,
+  bashStun: 0.5,
+};
 
 /** Chance to hit a foe with this much evasion. */
 export function hitChance(base: number, evade: number, firstRoundRanged = false): number {

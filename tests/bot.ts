@@ -7,6 +7,7 @@ import { Rng } from '../shared/src/rng.js';
 import type { Game } from '../server/src/engine/index.js';
 import { areaDef, areaKnown, linkTime } from '../server/src/engine/travel.js';
 import { heroOf, ownsCount } from '../server/src/engine/hero.js';
+import { sees } from '../shared/src/field.js';
 
 export interface BotOptions {
   /** Picks at random in fights and scenes, spends on whatever. */
@@ -31,6 +32,7 @@ export class Bot {
   private lastSig = '';
   private lastBlocks = -1;
   private torchUsed = -1;
+  private aimedIn = "";
   private stepsSinceSupper = 0;
 
   constructor(
@@ -166,34 +168,116 @@ export class Bot {
 
   private fight(v: PlayerView): Command | null {
     const f = v.fight!;
-    if (f.myPick || !f.moves.length) return null;
+    if (!f.myTurn || !f.moves.length) return null;
     const moves = f.moves.filter((m) => m.enabled);
-    if (!moves.length) return null;
+    if (!moves.length) return { c: 'fight', id: 'end' };
     const has = (id: string) => moves.find((m) => m.id === id);
-    if (this.o.careless) return { c: 'fight', id: this.rng.pick(moves).id };
-    if (has('free')) return { c: 'fight', id: 'free' };
+    const go = (c: [number, number]): Command => ({ c: 'fight', id: `go:${c[0]},${c[1]}` });
+    if (this.o.careless) {
+      if (f.reach.length && this.rng.chance(0.4)) return go(this.rng.pick(f.reach).c);
+      return { c: 'fight', id: this.rng.pick(moves).id };
+    }
+    const me = f.party.find((p) => p.me)!;
+    const at = me.pos!;
+    const mate = f.party.find((p) => !p.me);
+    const live = f.foes.filter((x) => !x.out && x.pos);
+    // the partner first: lift, free, or go to them to do it
     if (has('lift')) return { c: 'fight', id: 'lift' };
+    if (has('free')) return { c: 'fight', id: 'free' };
+    const needsMe = f.moves.find((m) => (m.id === 'lift' || m.id === 'free') && !m.enabled && m.reason !== undefined);
+    if (needsMe && mate?.pos && f.reach.length) {
+      const close = this.toward(f, mate.pos, 1);
+      if (close) return go(close);
+    }
     if (has('struggle')) return { c: 'fight', id: 'struggle' };
     const pinch = moves.find((m) => m.id === `use:u_04`);
     if (pinch && f.foes.some((x) => !x.out && x.holds && x.traits.includes('Кровосос'))) return { c: 'fight', id: pinch.id };
-    const me = f.party.find((p) => p.me)!;
     const use = (id: string) => moves.find((m) => m.id === `use:${id}`);
     if (me.poison > 0 && use('u_05')) return { c: 'fight', id: 'use:u_05' };
     if (me.hp < me.hpMax * 0.35 && use('u_02')) return { c: 'fight', id: 'use:u_02' };
-    const live = f.foes.filter((x) => !x.out);
-    if (live.some((x) => x.traits.includes('Боїться вогню')) && use('u_03') && this.torchUsed !== f.id) {
+    const near = (x: (typeof live)[number], r = 3) => Math.max(Math.abs(x.pos![0] - at[0]), Math.abs(x.pos![1] - at[1])) <= r;
+    if (live.some((x) => x.traits.includes('Боїться вогню') && near(x)) && use('u_03') && this.torchUsed !== f.id) {
       this.torchUsed = f.id;
       return { c: 'fight', id: 'use:u_03' };
     }
-    if (live.some((x) => x.traits.includes('Боїться гуку') && (x.intent?.includes('схопити') || x.holds)) && use('u_07')) return { c: 'fight', id: 'use:u_07' };
-    if (live.some((x) => x.intent?.startsWith('набирає розгону на: тебе')) && has('guard')) return { c: 'fight', id: 'guard' };
-    const calling = live.find((x) => x.intent?.startsWith('збирається гукнути'));
-    const target = calling ?? [...live].sort((a, b) => a.hp - b.hp)[0];
-    const hit = target ? moves.find((m) => m.id.endsWith(`:${target.uid}`) && (m.id.startsWith('hit:') || m.id.startsWith('shoot:'))) : undefined;
-    if (hit) return { c: 'fight', id: hit.id };
-    const any = moves.find((m) => m.group === 'hit');
-    if (any) return { c: 'fight', id: any.id };
-    return { c: 'fight', id: has('guard') ? 'guard' : moves[0]!.id };
+    if (live.some((x) => x.traits.includes('Боїться гуку') && near(x) && (x.move === 'grab' || x.holds || x.move === 'call')) && use('u_07')) return { c: 'fight', id: 'use:u_07' };
+    if (has('rout')) return { c: 'fight', id: 'rout' };
+    const tech = (t: string, uid?: number) => moves.find((m) => m.tech === t && (uid === undefined || m.target === uid));
+    // a charge marked at me: off the line, or take it on a stance
+    const lane = live.find((x) => x.move === 'charge' && x.line?.some((c) => c[0] === at[0] && c[1] === at[1]));
+    if (lane) {
+      const off = f.reach
+        .filter((r) => !lane.line!.some((c) => c[0] === r.c[0] && c[1] === r.c[1]))
+        .sort((a, b) => a.cost - b.cost)[0];
+      if (off && off.cost <= 1) return go(off.c);
+      const stance = tech('block') ?? tech('keep');
+      if (stance) return { c: 'fight', id: stance.id };
+      if (off) return go(off.c);
+    }
+    // daze the one about to do something nasty
+    const nasty = live.find((x) => !x.stunned && ['grab', 'drag', 'call'].includes(x.move ?? ''));
+    const daze = nasty ? tech('stun', nasty.uid) : undefined;
+    if (daze) return { c: 'fight', id: daze.id };
+    const calling = live.find((x) => x.move === 'call');
+    const open = live.find((x) => x.open);
+    const order = [calling, open, ...[...live].sort((a, b) => a.hp - b.hp)].filter((x): x is (typeof live)[number] => !!x);
+    for (const target of order) {
+      if (target.open) {
+        const t = tech('thrust', target.uid) ?? tech('chop', target.uid);
+        if (t) return { c: 'fight', id: t.id };
+      }
+      const strong = tech('chop', target.uid) ?? (f.ap >= 3 ? tech('flurry', target.uid) : undefined) ?? tech('thrust', target.uid);
+      if (strong) return { c: 'fight', id: strong.id };
+      const hit = moves.find((m) => m.target === target.uid && (m.tech === 'hit' || m.tech === 'shoot'));
+      if (hit) return { c: 'fight', id: hit.id };
+    }
+    // nothing in reach: a shooter takes aim or finds a line; the rest close in
+    const ranged = f.moves.some((m) => m.tech === 'shoot');
+    const target = order[0];
+    if (target && f.reach.length) {
+      if (ranged) {
+        const spot = this.shotSpot(f, live);
+        if (spot) return go(spot);
+      } else {
+        const close = this.toward(f, target.pos!, 1);
+        if (close) return go(close);
+      }
+    }
+    if (tech('aim') && this.aimedIn !== `${f.id}:${f.round}`) {
+      this.aimedIn = `${f.id}:${f.round}`;
+      return { c: 'fight', id: tech('aim')!.id };
+    }
+    // the strongest one stands at me: up with the shield
+    const myLevel = v.hero.level;
+    const strongAtMe = live.some((x) => near(x, 1) && x.level >= myLevel - 1);
+    if (strongAtMe && tech('block')) return { c: 'fight', id: tech('block')!.id };
+    return { c: 'fight', id: 'end' };
+  }
+
+  /** The cheapest reachable cell from which `to` is within `r` (or, failing that, the one nearest to it). */
+  private toward(f: NonNullable<PlayerView['fight']>, to: [number, number], r: number): [number, number] | null {
+    const d = (c: [number, number]) => Math.max(Math.abs(c[0] - to[0]), Math.abs(c[1] - to[1]));
+    const me = f.party.find((p) => p.me)!.pos!;
+    const within = f.reach.filter((x) => d(x.c) <= r && d(x.c) >= 1).sort((a, b) => a.cost - b.cost)[0];
+    if (within) return within.c;
+    const best = [...f.reach].sort((a, b) => d(a.c) - d(b.c) || a.cost - b.cost)[0];
+    return best && d(best.c) < d(me) ? best.c : null;
+  }
+
+  /** A cell to shoot from: a foe in sight, none right next to it, the further from them the better. */
+  private shotSpot(f: NonNullable<PlayerView['fight']>, live: NonNullable<PlayerView['fight']>['foes']): [number, number] | null {
+    const fld = f.field;
+    let best: { c: [number, number]; score: number } | null = null;
+    for (const r of f.reach) {
+      const ds = live.map((x) => Math.max(Math.abs(x.pos![0] - r.c[0]), Math.abs(x.pos![1] - r.c[1])));
+      const closest = Math.min(...ds);
+      if (closest < 2 && live.length) continue;
+      const seen = live.some((x, i) => ds[i]! <= 6 && sees(fld, r.c, x.pos!));
+      if (!seen) continue;
+      const score = Math.min(closest, 4) - r.cost * 0.3;
+      if (!best || score > best.score) best = { c: r.c, score };
+    }
+    return best?.c ?? null;
   }
 
   // ------------------------------------------------------------------ scenes
