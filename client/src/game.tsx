@@ -1024,7 +1024,7 @@ export function Game({ s }: { s: NetState }) {
       if (gardenSpot) gardenSpot.ready += v.garden!.beds.filter((b) => b.ready).length;
       const extra: Spot[] = [];
       if (v.atHome && v.residents.length > 0) {
-        const warn = v.residents.some((r) => r.hungry || r.hurt);
+        const warn = v.residents.some((r) => r.state !== 'fed' || r.hurt) || (v.larder?.lasts !== undefined && v.larder.lasts < 3);
         extra.push(
           extraSpot('folk', T.residents, () => (stationUrl('folk') ? <FolkStage v={v} locked={locked} /> : <ResidentsPanel v={v} locked={locked} />), warn),
         );

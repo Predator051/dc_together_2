@@ -33,7 +33,7 @@ import type { Command } from '../../../shared/src/protocol.js';
 import { Rng } from '../../../shared/src/rng.js';
 import type { LogEntry, PlayerState, WorldState } from '../../../shared/src/state.js';
 import { PART, STATE_VERSION } from '../../../shared/src/state.js';
-import { PERK, gatherMult } from '../../../shared/src/rules.js';
+import { FOLK, PERK, gatherMult } from '../../../shared/src/rules.js';
 import { settleWeather, skyFor, turnWeather, weatherNow } from './weather.js';
 import { answerEvent, placeEvent, settleEvents } from './events.js';
 import { harvest, plant, settleGarden, waterGarden } from './garden.js';
@@ -56,7 +56,8 @@ import {
 } from './hero.js';
 import { activeFoes, dropFight, fightChoose, fightOf, help, maybeResolve, startFight, takeLoot } from './fight.js';
 import { fieldFrom } from './terrain.js';
-import { ambush, areaDef, areaKnown, go, linkTime, setJob, settleTravel, settleWork } from './travel.js';
+import { ambush, areaDef, areaKnown, go, linkTime, settleTravel } from './travel.js';
+import { folkGear, setFeed, setJob, settleWork, teach } from './household.js';
 import { camp, drink, eat, feed, nightRest, paceOf, rest, settleNeeds, soak } from './needs.js';
 
 /** How long a player must have been gone to get a summary on return. */
@@ -650,7 +651,7 @@ export class Game {
       return;
     }
     if ('resident' in e) {
-      if (!this.s.residents[e.resident]) this.s.residents[e.resident] = { job: null, acc: {}, hurtUntil: 0, hungry: false, since: this.now };
+      if (!this.s.residents[e.resident]) this.s.residents[e.resident] = { job: null, acc: {}, hurtUntil: 0, hungry: false, since: this.now, fed: FOLK.startFed, starve: 0, good: 0 };
       this.s.workAt = Math.min(this.s.workAt, this.now);
       return;
     }
@@ -1610,7 +1611,16 @@ export class Game {
         r = takeLoot(this, pid);
         break;
       case 'job':
-        r = setJob(this, cmd.who, cmd.id);
+        r = setJob(this, cmd.who, cmd.id, pid);
+        break;
+      case 'feed':
+        r = setFeed(this, cmd.dishes);
+        break;
+      case 'teach':
+        r = teach(this, pid, cmd.who);
+        break;
+      case 'folkgear':
+        r = folkGear(this, pid, cmd.who, cmd.slot, cmd.id);
         break;
       case 'eat':
         r = eat(this, pid, cmd.id);

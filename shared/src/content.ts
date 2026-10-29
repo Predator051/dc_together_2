@@ -124,6 +124,8 @@ export type Effect =
 export interface ResourceDef {
   id: string;
   name: string;
+  /** A resident's tool: it lifts the work of this trade. */
+  folkTool?: string;
   /** Base storage cap; undefined = unlimited. */
   cap?: number;
   capBonus?: Array<{ if: Cond; add: number }>;
@@ -447,6 +449,15 @@ export interface ResidentTraitDef {
   mult?: Record<string, number>;
   /** Will not work these actions. */
   avoid?: string[];
+}
+
+/** A trade of residents: the jobs it holds, who of the heroes can teach it to a master's hand. */
+export interface TradeDef {
+  id: string;
+  name: string;
+  teach: Role[];
+  /** Job action ids (each job in exactly one trade). */
+  jobs: string[];
 }
 
 export interface ResidentDef {
@@ -1062,6 +1073,8 @@ export interface Content {
   };
   /** Side errands. */
   quests?: QuestDef[];
+  /** Trades residents grow in (see `.design/residents2.md`). */
+  trades?: TradeDef[];
   /** Residents work faster while these hold (multipliers). */
   workBonus?: Array<{ if: Cond; mult: number }>;
   /** Flag prefixes / names that mark story progress (solo play must never change them). */

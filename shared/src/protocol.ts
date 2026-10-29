@@ -37,6 +37,9 @@ export type Command =
   | { c: 'loot' }
   /** Set a resident to work (action id) or let them rest (null). */
   | { c: 'job'; who: string; id: string | null }
+  | { c: 'feed'; dishes: boolean }
+  | { c: 'teach'; who: string }
+  | { c: 'folkgear'; who: string; slot: 'tool' | 'wear'; id: string | null }
   /** Eat a dish (from the bag, or at home from the store). */
   | { c: 'eat'; id: string }
   /** Light a campfire where you stand (away from home). */
@@ -623,10 +626,65 @@ export interface ResidentView {
   traits: Array<{ name: string; text: string }>;
   job: string | null;
   jobLabel?: string;
-  /** What each can be set to; `icon` is the mark of what it brings. */
-  jobs: Array<{ id: string; label: string; icon?: string; place: string; rate: number; reason?: string }>;
+  /** What each can be set to; `icon` is the mark of what it brings. `rate` — a hour at the pace they would
+   * work now; `food` — how the household's plain food an hour would stand (brought minus eaten) with this one at it. */
+  jobs: Array<{ id: string; label: string; icon?: string; place: string; rate: number; reason?: string; food?: number; rank?: number }>;
   hurt: boolean;
   hungry: boolean;
+  /** fed — full; low — a little slower; hungry — half; weak — does not work. */
+  state: 'fed' | 'low' | 'hungry' | 'weak';
+  /** Hours of work left in the belly; hours until they eat again (0: at the next chance). */
+  fed: number;
+  eatsIn: number;
+  /** Plain food they eat an hour now. */
+  eats: number;
+  /** A cooked dish keeps them working better. */
+  good: boolean;
+  /** What they bring in an hour now at their job, and why it is that much (multipliers). */
+  rate?: number;
+  why?: Array<{ name: string; x: number }>;
+  /** Plain food the household gets/loses an hour as it is now (for the job list). */
+  food: number;
+  /** Their step in the trade of the job they are at: progress to the next step by work (absent at the top). */
+  trade?: { name: string; rank: number; rankName: string; x: number; p?: number; left?: number };
+  /** Every trade they have some hand in. */
+  trades: Array<{ name: string; rank: number; rankName: string }>;
+  /** The last step of their trade is taught by a hero: why this one cannot now (absent: can). */
+  teach?: { reason?: string };
+  /** What they have on, and what the store holds for them (changed at home only). */
+  gear: FolkGearView;
+}
+
+export interface FolkGarment {
+  id: string;
+  name: string;
+  icon?: string;
+  guard: boolean;
+  warm: boolean;
+  heavy: boolean;
+}
+
+export interface FolkGearView {
+  tool: { id: string; name: string; icon?: string; trade: string; fits: boolean } | null;
+  wear: FolkGarment | null;
+  tools: Array<{ id: string; name: string; icon?: string; n: number; trade: string; fits: boolean }>;
+  wears: Array<FolkGarment & { n: number }>;
+  canChange: boolean;
+}
+
+/** The household's food: eaten and brought in an hour, the store, how long it lasts. */
+export interface LarderView {
+  eat: number;
+  gain: number;
+  stock: number;
+  cap: number;
+  /** Hours until it runs out at this pace (absent: it does not). */
+  lasts?: number;
+  /** Cooked dishes in the store, and whether residents may eat them. */
+  dishes: number;
+  feedDishes: boolean;
+  /** Residents not fed now. */
+  hungry: number;
 }
 
 export interface BeastView {
@@ -786,6 +844,7 @@ export interface PlayerView {
   /** A fight of the partner where you stand (you may join). */
   nearFight: { id: number; text: string } | null;
   residents: ResidentView[];
+  larder: LarderView | null;
   bestiary: BeastView[];
   /** Panels opened so far (the interface grows with the game). */
   tabs: string[];

@@ -462,6 +462,22 @@ function validCommand(cmd: unknown): Command | null {
       if (x.id !== null && (typeof x.id !== 'string' || x.id.length > 64)) return null;
       return { c: 'job', who: x.who, id: x.id as string | null };
     }
+    case 'folkgear': {
+      const x = cmd as { who?: unknown; slot?: unknown; id?: unknown };
+      if (typeof x.who !== 'string' || x.who.length > 64 || (x.slot !== 'tool' && x.slot !== 'wear')) return null;
+      if (x.id !== null && (typeof x.id !== 'string' || x.id.length > 64)) return null;
+      return { c: 'folkgear', who: x.who, slot: x.slot, id: x.id as string | null };
+    }
+    case 'teach': {
+      const x = cmd as { who?: unknown };
+      if (typeof x.who !== 'string' || x.who.length > 64) return null;
+      return { c: 'teach', who: x.who };
+    }
+    case 'feed': {
+      const x = cmd as { dishes?: unknown };
+      if (typeof x.dishes !== 'boolean') return null;
+      return { c: 'feed', dishes: x.dishes };
+    }
     default:
       return null;
   }

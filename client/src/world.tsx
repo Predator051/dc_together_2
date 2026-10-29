@@ -12,6 +12,7 @@ import { Cell } from './cells.js';
 import { Sheet } from './sheet.js';
 import { IconEye, IconPair, IconSignGo } from './icons.js';
 import { T } from './strings.js';
+import { LarderStrip, signed } from './folk.js';
 
 function secs(ms: number): string {
   return `${Math.max(1, Math.round(ms / 1000))} ${T.sec}`;
@@ -403,6 +404,7 @@ export function ResidentsPanel({ v, locked }: { v: PlayerView; locked: boolean }
       <header class="group-head">
         <h3>{T.residents}</h3>
       </header>
+      {v.larder && <LarderStrip l={v.larder} locked={locked} />}
       {v.residents.map((r) => (
         <article class="resident">
           <div class="resident-head">
@@ -421,11 +423,25 @@ export function ResidentsPanel({ v, locked }: { v: PlayerView; locked: boolean }
           </ul>
           <p class="meta">
             {T.residentJob}: <b>{r.jobLabel ?? T.residentRest}</b>
-            {r.hungry && ' '}
-            {r.hungry && <span class="pill warn">{T.residentHungry}</span>}
+            {r.state !== 'fed' && ' '}
+            {r.state !== 'fed' && <span class="pill warn">{r.state === 'low' ? T.folkLow : r.state === 'weak' ? T.folkWeak : T.folkHungry}</span>}
             {r.hurt && ' '}
             {r.hurt && <span class="pill warn">{T.residentHurt}</span>}
           </p>
+          {r.trade && (
+            <p class="meta">
+              {T.folkTrade}: <b>{r.trade.name}</b> — {r.trade.rankName}
+              {r.trade.left !== undefined && ` (${T.folkNext}: ~${Math.round(r.trade.left)} ${T.folkWorkHours})`}
+              {r.teach && (
+                <>
+                  {' '}
+                  <button class="btn small" disabled={locked || !!r.teach.reason} title={r.teach.reason} onClick={() => net.send({ c: 'teach', who: r.id })}>
+                    {T.folkTeach}
+                  </button>
+                </>
+              )}
+            </p>
+          )}
           <div class="slot-options jobs">
             {r.jobs.map((j) => (
               <button
@@ -436,6 +452,7 @@ export function ResidentsPanel({ v, locked }: { v: PlayerView; locked: boolean }
                 {j.label}{' '}
                 <small>
                   {j.place} · {j.reason ?? `~${j.rate} ${T.residentPerHour}`}
+                  {j.food !== undefined && !j.reason && ` · ${T.folkFood} ${signed(j.food)}${T.larderHour}`}
                 </small>
               </button>
             ))}

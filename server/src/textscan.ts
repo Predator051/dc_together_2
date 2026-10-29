@@ -141,6 +141,7 @@ export function collectStrings(c: Content): Found[] {
     pushText(out, `trait ${k}`, t.name);
     pushText(out, `trait ${k}.text`, t.text);
   }
+  for (const t of c.trades ?? []) pushText(out, `trade ${t.id}`, t.name);
   for (const p of c.perks ?? []) {
     pushText(out, `perk ${p.id}`, p.name);
     pushText(out, `perk ${p.id}.text`, p.text);

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { content } from '../content/index.js';
 import type { PlayerId } from '../shared/src/content.js';
 import { Rng } from '../shared/src/rng.js';
 import { levelFromXp, xpForLevel } from '../shared/src/rules.js';
 import { bagCap, bagLoad, gainXp } from '../server/src/engine/hero.js';
-import { settleWork } from '../server/src/engine/travel.js';
+import { settleWork } from '../server/src/engine/household.js';
 import { pair, World } from './world.js';
 
 /** After the hut: both at home. */
@@ -321,12 +322,173 @@ describe('the household', () => {
     w.now += 2 * 3_600_000;
     settleWork(w.g());
     expect(w.state.res['r_02']).toBeGreaterThan(20);
-    expect(w.state.res['r_05']).toBe(8);
+    // she came in fed for three hours of work and ate once when it ran low
+    expect(w.state.res['r_05']).toBe(9);
     // a long absence: capped by the store, and hungry when the food runs out
+    w.state.res['r_05'] = 1;
     w.now += 24 * 3_600_000;
     settleWork(w.g());
     expect(w.state.res['r_02']).toBeLessThanOrEqual(w.g().cap('r_02'));
     expect(w.state.residents['h_01']!.hungry).toBe(true);
+    expect(w.view(h).residents[0]!.state).not.toBe('fed');
+  });
+});
+
+describe('the household eats', () => {
+  /** Four residents at home, food in the store, the clock at their last count. */
+  function house(n = 4): { w: World; h: PlayerId } {
+    const r = home();
+    const ids = content.residents.slice(0, n).map((x) => x.id);
+    for (const id of ids) r.w.g().apply([{ resident: id }]);
+    r.w.state.res[content.food!] = 20;
+    r.w.state.workAt = r.w.now;
+    return r;
+  }
+
+  it('as many portions as people need, whatever the server tick (it once ate one a minute)', () => {
+    const { w } = house(4);
+    // the server counts every second: an hour of it
+    for (let t = 0; t < 3_600_000; t += 1000) {
+      w.now += 1000;
+      settleWork(w.g());
+    }
+    // resting: half a belly-hour an hour each, a portion holds three; they came in with three
+    expect(w.state.res[content.food!]).toBeGreaterThanOrEqual(19);
+    for (let t = 0; t < 6 * 3_600_000; t += 60_000) {
+      w.now += 60_000;
+      settleWork(w.g());
+    }
+    // seven hours resting: 4 × 3.5 belly-hours, about 4 portions in all
+    expect(20 - w.state.res[content.food!]!).toBeGreaterThanOrEqual(3);
+    expect(20 - w.state.res[content.food!]!).toBeLessThanOrEqual(6);
+  });
+
+  it('the larder shows what is eaten and brought, and a food job turns the balance', () => {
+    const { w, h } = house(2);
+    const l = w.view(h).larder!;
+    expect(l.eat).toBeGreaterThan(0);
+    expect(l.gain).toBe(0);
+    expect(l.lasts).toBeGreaterThan(0);
+    const r = w.view(h).residents[0]!;
+    const fish = r.jobs.find((j) => j.food !== undefined && j.food > 0 && !j.reason);
+    if (fish) {
+      expect(w.cmd(h, { c: 'job', who: r.id, id: fish.id }).ok).toBe(true);
+      const after = w.view(h).larder!;
+      expect(after.gain).toBeGreaterThan(0);
+      expect(after.lasts).toBeUndefined();
+    }
+  });
+
+  it('hunger comes by steps, each their own; dishes feed longer when the house allows', () => {
+    const { w, h } = house(1);
+    const id = Object.keys(w.state.residents)[0]!;
+    w.state.res[content.food!] = 0;
+    const r = w.state.residents[id]!;
+    r.fed = 0;
+    r.starve = 1;
+    expect(w.view(h).residents[0]!.state).toBe('low');
+    r.starve = 6;
+    expect(w.view(h).residents[0]!.state).toBe('hungry');
+    r.starve = 13;
+    expect(w.view(h).residents[0]!.state).toBe('weak');
+    // a dish in the store: not touched unless allowed
+    const dish = content.resources.find((x) => x.meal && x.id !== content.food)!;
+    w.state.res[dish.id] = 2;
+    w.now += 10 * 60_000;
+    settleWork(w.g());
+    expect(w.state.res[dish.id]).toBe(2);
+    expect(w.cmd(h, { c: 'feed', dishes: true }).ok).toBe(true);
+    w.now += 10 * 60_000;
+    settleWork(w.g());
+    expect(w.state.res[dish.id]).toBe(1);
+    expect(w.view(h).residents[0]!.state).toBe('fed');
+    expect(w.view(h).residents[0]!.good).toBe(true);
+  });
+});
+
+describe('residents grow in their trade', () => {
+  it('hours of work make the hand surer, the last step only a hero of that trade can teach', () => {
+    const { w, h, m } = home();
+    w.g().apply([{ resident: 'h_01' }]);
+    const r = w.state.residents['h_01']!;
+    w.state.res[content.food!] = 30;
+    w.state.workAt = w.now;
+    w.state.flags.p2_well_ok = 1;
+    // water from home: a trade both heroes know
+    expect(w.cmd(h, { c: 'job', who: 'h_01', id: 'x_15' }).ok).toBe(true);
+    let v = w.view(h).residents[0]!;
+    expect(v.trade?.rank).toBe(0);
+    expect(v.trade?.left).toBeGreaterThan(0);
+    const rate0 = w.view(h).residents[0]!.rate!;
+    // a long while at it (fed all along): used to it, then skilled
+    for (let i = 0; i < 6; i++) {
+      w.state.res[content.food!] = 30;
+      w.now += 10 * 3_600_000;
+      settleWork(w.g());
+    }
+    v = w.view(h).residents[0]!;
+    expect(v.trade?.rank).toBe(2);
+    expect(v.rate!).toBeGreaterThan(rate0);
+    expect(v.why?.some((x) => x.x > 1)).toBe(true);
+    // teaching: a hero needs the hand for gathering
+    expect(v.teach).toBeDefined();
+    expect(v.teach?.reason).toBeTruthy();
+    for (const pid of [h, m]) w.state.players[pid].skills.gather = 6 * 5 * 5;
+    expect(w.view(h).residents[0]!.teach?.reason).toBeUndefined();
+    expect(w.cmd(h, { c: 'teach', who: 'h_01' }).ok).toBe(true);
+    expect(r.master).toContain('salt');
+    expect(w.state.players[h].busy).not.toBeNull();
+    v = w.view(m).residents[0]!;
+    expect(v.trade?.rank).toBe(3);
+    expect(v.teach).toBeUndefined();
+    expect(w.cmd(m, { c: 'teach', who: 'h_01' }).ok).toBe(false);
+  });
+
+  it('a trade is taught only by the role that knows it', () => {
+    const { w, h, m } = home();
+    w.g().apply([{ resident: 'h_01' }]);
+    const r = w.state.residents['h_01']!;
+    r.job = 'x_02'; // driftwood: the maker's trade
+    r.exp = { wood: 60 };
+    for (const pid of [h, m]) w.state.players[pid].skills.gather = 6 * 5 * 5;
+    const maker = w.state.players[h].role === 'maker' ? h : m;
+    const hunter = maker === h ? m : h;
+    expect(w.cmd(hunter, { c: 'teach', who: 'h_01' }).ok).toBe(false);
+    expect(w.cmd(maker, { c: 'teach', who: 'h_01' }).ok).toBe(true);
+  });
+});
+
+describe('residents\' gear', () => {
+  it('a tool lifts its own trade only; a garment guards, warms or weighs; things come from the store and go back', () => {
+    const { w, h } = home();
+    w.g().apply([{ resident: 'h_01' }]);
+    w.state.flags.p2_well_ok = 1;
+    expect(w.cmd(h, { c: 'job', who: 'h_01', id: 'x_15' }).ok).toBe(true); // water: the salt trade
+    const rate = () => w.view(h).residents[0]!.rate!;
+    const base = rate();
+    // a tool of another trade does nothing here
+    w.state.res['r_73'] = 1;
+    expect(w.cmd(h, { c: 'folkgear', who: 'h_01', slot: 'tool', id: 'r_73' }).ok).toBe(true);
+    expect(w.state.res['r_73']).toBe(0);
+    expect(rate()).toBeCloseTo(base, 1);
+    expect(w.view(h).residents[0]!.gear.tool?.fits).toBe(false);
+    // its own trade's tool: +20%, the other goes back to the store
+    w.state.res['r_72'] = 1;
+    expect(w.cmd(h, { c: 'folkgear', who: 'h_01', slot: 'tool', id: 'r_72' }).ok).toBe(true);
+    expect(w.state.res['r_73']).toBe(1);
+    expect(rate()).toBeCloseTo(base * 1.2, 1);
+    // a heavy coat slows the work; it counts as owned by the household
+    w.state.res['g_15'] = 1;
+    expect(w.cmd(h, { c: 'folkgear', who: 'h_01', slot: 'wear', id: 'g_15' }).ok).toBe(true);
+    expect(rate()).toBeCloseTo(base * 1.2 * 0.9, 1);
+    expect(w.view(h).residents[0]!.gear.wear?.warm).toBe(true);
+    expect(w.view(h).residents[0]!.gear.wear?.guard).toBe(true);
+    // a hero's own slot is not a resident's: boots do not go on as a garment
+    w.state.res['g_06'] = 1;
+    expect(w.cmd(h, { c: 'folkgear', who: 'h_01', slot: 'wear', id: 'g_06' }).ok).toBe(false);
+    // away from home nothing changes hands
+    w.state.players[h].at = 'a_02';
+    expect(w.cmd(h, { c: 'folkgear', who: 'h_01', slot: 'wear', id: null }).ok).toBe(false);
   });
 });
 

@@ -25,16 +25,17 @@ import type { Game } from './index.js';
 import { questProgress } from './index.js';
 import { resolveParas } from './text.js';
 import { SKILLS, SLOTS, STATS, type SkillId } from '../../../shared/src/content.js';
-import type { BagView, BeastView, EntrySort, FightView, HeroView, MapView, ResidentView, WeatherView } from '../../../shared/src/protocol.js';
+import type { BagView, BeastView, EntrySort, FightView, HeroView, LarderView, MapView, ResidentView, WeatherView } from '../../../shared/src/protocol.js';
 import { perkState, skillLevel, skillXpFor, xpForLevel } from '../../../shared/src/rules.js';
 import { bagCap, bagLoad, gearNote, heroOf, ownsCount, perkTree, useNote } from './hero.js';
 import { HERO_AP, activeFoes, activeId, enemyOf, fid, fightMoves, fightOf, holder, moraleOf, walkable } from './fight.js';
-import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, residentJobs, routeLegs, routeTo, travelTime, walkOf } from './travel.js';
+import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, routeLegs, routeTo, travelTime, walkOf } from './travel.js';
+import { foodOf, garmentOf, jobYield, larder, rankIn, residentJobs, stateOf, teachBlock, tradeOf, workMult, workingAt } from './household.js';
 import { byFire, campBlock, chillRate, comfortOf, dryOf, eatBlock, restBlock, restLength, tired } from './needs.js';
 import { outside, weatherNow } from './weather.js';
 import { eventsView } from './events.js';
 import { bedCount, gardenView } from './garden.js';
-import { NEED, coldLevel, mealFading } from '../../../shared/src/rules.js';
+import { FOLK, NEED, TRADE, coldLevel, mealFading } from '../../../shared/src/rules.js';
 
 const LOG_SEND = 120;
 
@@ -952,28 +953,43 @@ function nearFight(g: Game, pid: PlayerId): PlayerView['nearFight'] {
   return { id: f.id, text: `${g.render(g.ix.ui('near_fight'), pid)} ${[...new Set(names)].join(', ')}` };
 }
 
+const r1 = (n: number) => Math.round(n * 10) / 10;
+
 function residentsView(g: Game, pid: PlayerId): ResidentView[] {
+  const food = foodOf(g);
+  const now = larder(g);
+  const net = r1(now.gain - now.eat);
   return g.ix.c.residents
     .filter((r) => g.s.residents[r.id])
     .map((r) => {
       const st = g.s.residents[r.id]!;
       const jobs = residentJobs(g, r.id).map((j) => {
         const a = g.ix.actions.get(j.id)!;
-        let mult = 1;
-        for (const t of r.traits) mult *= t.mult?.[a.id] ?? 1;
-        const per = Object.values(a.yield ?? {}).reduce((s: number, y) => s + (Array.isArray(y) ? (y[0] + y[1]) / 2 : y), 0);
+        // the pace they would keep there now: traits, weather, the house's blessings, hunger, a good meal
+        const y = jobYield(g, a, workMult(g, r.id, a).mult);
+        const per = Object.values(y).reduce((s2, n) => s2 + n, 0);
         const icon = actionIcon(g, a);
+        const after = larder(g, { id: r.id, job: j.id });
         return {
           id: j.id,
           label: g.render(a.label, pid),
           ...(icon ? { icon } : {}),
           place: areaDef(g, j.area)?.name ?? j.area,
           // at the garden: water a hour, not a yield
-          rate: a.id === g.ix.c.garden?.tend ? a.job!.rate : Math.round(a.job!.rate * per * mult),
+          rate: a.id === g.ix.c.garden?.tend ? a.job!.rate : Math.round(per),
           ...(j.missing ? { reason: `${g.ix.ui('job_needs')} ${g.ix.ui(`tool_${j.missing}`)}` } : {}),
+          ...(y[food] || st.job === j.id || (st.job && g.ix.actions.get(st.job)?.yield?.[food]) ? { food: r1(after.gain - after.eat) } : {}),
+          ...(tradeOf(g, j.id) && rankIn(st, tradeOf(g, j.id)!.id) > 0 ? { rank: rankIn(st, tradeOf(g, j.id)!.id) } : {}),
         };
       });
       const cur = st.job ? g.ix.actions.get(st.job) : undefined;
+      const at = workingAt(g, r.id);
+      const state = stateOf(st);
+      const fed = st.fed ?? FOLK.startFed;
+      const burn = at ? 1 : FOLK.restBurn;
+      const w = at ? workMult(g, r.id, at) : null;
+      const rate = at && w ? Object.values(jobYield(g, at, w.mult)).reduce((s2, n) => s2 + n, 0) : undefined;
+      const why = w?.parts.map((p) => ({ name: p.key === 'trait' ? p.name! : g.ix.ui(`work_${p.key}`), x: Math.round(p.x * 100) / 100 }));
       return {
         id: r.id,
         name: g.render(r.name, pid),
@@ -984,8 +1000,79 @@ function residentsView(g: Game, pid: PlayerId): ResidentView[] {
         jobs,
         hurt: st.hurtUntil > g.now,
         hungry: st.hungry,
+        state,
+        fed: r1(fed),
+        eatsIn: r1(Math.max(0, fed - FOLK.eatAt) / burn),
+        eats: r1(burn / FOLK.rawHours),
+        good: (st.good ?? 0) > 0 && state === 'fed',
+        ...(rate !== undefined && cur?.id !== g.ix.c.garden?.tend ? { rate: Math.round(rate * 10) / 10 } : {}),
+        ...(why?.length ? { why } : {}),
+        food: net,
+        ...tradeView(g, pid, r.id),
+        gear: folkGearView(g, pid, r.id),
       };
     });
+}
+
+/** A resident's hand in trades: the one of their job (with the way to the next step), all they know, teaching. */
+function tradeView(g: Game, pid: PlayerId, id: string): Pick<ResidentView, 'trade' | 'trades' | 'teach'> {
+  const st = g.s.residents[id]!;
+  const name = (rank: number) => g.ix.ui(`folk_rank_${rank}`);
+  const trades = (g.ix.c.trades ?? [])
+    .filter((t) => (st.exp?.[t.id] ?? 0) > 0 || st.master?.includes(t.id))
+    .map((t) => ({ name: t.name, rank: rankIn(st, t.id), rankName: name(rankIn(st, t.id)) }));
+  const t = st.job ? tradeOf(g, st.job) : undefined;
+  if (!t) return { trades };
+  const rank = rankIn(st, t.id);
+  const hours = st.exp?.[t.id] ?? 0;
+  const next = TRADE.hours[rank];
+  const prev = rank > 0 ? TRADE.hours[rank - 1]! : 0;
+  const trade = {
+    name: t.name,
+    rank,
+    rankName: name(rank),
+    x: TRADE.mult[rank]!,
+    ...(next !== undefined ? { p: Math.max(0, Math.min(1, (hours - prev) / (next - prev))), left: r1(Math.max(0, next - hours)) } : {}),
+  };
+  const reason = teachBlock(g, pid, id);
+  return { trade, trades, ...(rank === 2 ? { teach: reason ? { reason } : {} } : {}) };
+}
+
+/** A resident's tool and garment, and the ones in the store that could go on. */
+function folkGearView(g: Game, pid: PlayerId, id: string): ResidentView['gear'] {
+  const st = g.s.residents[id]!;
+  const trade = st.job ? tradeOf(g, st.job) : undefined;
+  const tradeName = (t?: string) => (g.ix.c.trades ?? []).find((x) => x.id === t)?.name ?? '';
+  const garment = (gid: string) => {
+    const w = garmentOf(g, { ...st, gear: { wear: gid } })!;
+    const def = g.ix.res.get(gid)!;
+    return { id: gid, name: def.name, ...(def.icon ? { icon: def.icon } : {}), guard: w.guard, warm: w.warm, heavy: w.heavy };
+  };
+  const toolDef = st.gear?.tool ? g.ix.res.get(st.gear.tool) : undefined;
+  return {
+    tool: toolDef ? { id: toolDef.id, name: toolDef.name, ...(toolDef.icon ? { icon: toolDef.icon } : {}), trade: tradeName(toolDef.folkTool), fits: toolDef.folkTool === trade?.id } : null,
+    wear: st.gear?.wear ? garment(st.gear.wear) : null,
+    tools: g.ix.c.resources
+      .filter((x) => x.folkTool && (g.s.res[x.id] ?? 0) > 0)
+      .map((x) => ({ id: x.id, name: x.name, ...(x.icon ? { icon: x.icon } : {}), n: g.s.res[x.id] ?? 0, trade: tradeName(x.folkTool), fits: x.folkTool === trade?.id })),
+    wears: g.ix.c.resources.filter((x) => x.gear?.slot === 'body' && (g.s.res[x.id] ?? 0) > 0).map((x) => ({ ...garment(x.id), n: g.s.res[x.id] ?? 0 })),
+    canChange: g.atHome(pid),
+  };
+}
+
+function larderView(g: Game): LarderView | null {
+  if (!Object.keys(g.s.residents).length) return null;
+  const l = larder(g);
+  return {
+    eat: r1(l.eat),
+    gain: r1(l.gain),
+    stock: l.stock,
+    cap: Number.isFinite(l.cap) ? l.cap : 0,
+    ...(l.lasts !== null ? { lasts: r1(l.lasts) } : {}),
+    dishes: l.dishes,
+    feedDishes: !!g.s.feedDishes,
+    hungry: Object.values(g.s.residents).filter((r) => r.hungry).length,
+  };
 }
 
 /** The ground of the plan where the player stands (none on the road). */
@@ -1211,6 +1298,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     fightEnd: fightEndView(g, pid),
     nearFight: nearFight(g, pid),
     residents: residentsView(g, pid),
+    larder: larderView(g),
     bestiary: bestiaryView(g, pid),
     tabs: tabsOf(g, pid),
     atHome: g.atHome(pid),

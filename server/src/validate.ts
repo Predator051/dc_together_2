@@ -733,6 +733,17 @@ export function validateContent(c: Content): Report {
   }
   for (const s of c.scenes) if (s.quest && !questIds.has(s.quest)) err(`scene ${s.id}: unknown quest ${s.quest}`);
   for (const a of c.actions) if (a.quest && !questIds.has(a.quest)) err(`action ${a.id}: unknown quest ${a.quest}`);
+  // every job of residents stands in exactly one trade, and a trade holds only jobs
+  for (const a of c.actions) {
+    if (!a.job) continue;
+    const n = (c.trades ?? []).filter((t) => t.jobs.includes(a.id)).length;
+    if (n !== 1) err(`job ${a.id}: in ${n} trades, want one`);
+  }
+  for (const r of c.resources) if (r.folkTool && !(c.trades ?? []).some((t) => t.id === r.folkTool)) err(`resource ${r.id}: tool of an unknown trade ${r.folkTool}`);
+  for (const t of c.trades ?? []) {
+    if (!t.teach.length) err(`trade ${t.id}: nobody to teach it`);
+    for (const j of t.jobs) if (!c.actions.some((a) => a.id === j && a.job)) err(`trade ${t.id}: ${j} is not a job`);
+  }
   const perkIds = new Set(c.perks.map((p) => p.id));
   // the tree: each step of each branch is a pair (one or the other), steps open at rising levels
   const branchIds = new Set(c.hero.branches.map((b) => b.id));
