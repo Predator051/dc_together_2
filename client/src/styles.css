@@ -3428,22 +3428,16 @@ mark {
   box-shadow: inset 0 0 44px 12px rgba(16, 11, 6, 0.72);
   pointer-events: none;
 }
+/* the land is placed before it is first painted, so it is there at once, without a fade */
 .land-world {
   position: absolute;
   left: 0;
   top: 0;
   transform-origin: 0 0;
   will-change: transform;
-  opacity: 0;
 }
-.land.ready .land-world {
-  opacity: 1;
-  transition: opacity 0.3s ease-out;
-}
-.land.ready .land-world.glide {
-  transition:
-    opacity 0.3s ease-out,
-    transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+.land-world.glide {
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 /* the painting's own edges dissolve into the dark instead of ending in a straight line */
 .land-ground {
@@ -3465,11 +3459,11 @@ mark {
   background-repeat: no-repeat;
   pointer-events: none;
 }
+/* a tile comes sharp over its blurry stand-in, with no fade from the dark */
 .land-tile {
   position: absolute;
   display: block;
   pointer-events: none;
-  animation: tile-in 0.6s ease-out backwards;
 }
 @keyframes tile-in {
   from {
@@ -3483,8 +3477,13 @@ mark {
   overflow: visible;
   pointer-events: none;
 }
+/* the fog: a soft picture made once for what is seen (landmap.tsx fogUrl), stretched over the land */
 .land-fog {
-  fill: var(--page);
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  pointer-events: none;
 }
 /* the evening and the weather over the land, under the marks of places */
 .land-tones {
@@ -3492,23 +3491,18 @@ mark {
   inset: 0;
   pointer-events: none;
 }
-/* a place explored since the map was last looked at: the fog draws back from it */
-.land-svg .reveal {
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: land-reveal 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s backwards;
+/* a place explored since the map was last looked at: the fog as it was lifts off it */
+.land-fog.lifts {
+  animation: fog-lifts 1.5s ease-out 0.2s forwards;
 }
-@keyframes land-reveal {
-  from {
-    transform: scale(0.05);
+@keyframes fog-lifts {
+  to {
+    opacity: 0;
   }
 }
-.land-svg .reveal-way {
-  animation: land-reveal-way 1.5s ease-out 0.2s backwards;
-}
-@keyframes land-reveal-way {
-  from {
-    opacity: 0;
+@media (prefers-reduced-motion: reduce) {
+  .land-fog.lifts {
+    display: none;
   }
 }
 .land-pin.fresh .pin-badge {
@@ -3875,14 +3869,11 @@ mark {
   .life-birds {
     display: none;
   }
-  .land-tile,
   .ring-btn,
   .station-body.came-right,
   .station-body.came-left,
   .land-way.ahead .over,
   .land-hero.me::after,
-  .land-svg .reveal,
-  .land-svg .reveal-way,
   .land-pin.fresh .pin-badge,
   .plan-paint img,
   .plan-paint-glow {
@@ -5496,7 +5487,6 @@ span.spot-pic.painted {
   z-index: -1;
   background-position: center;
   background-size: cover;
-  animation: tile-in 0.5s ease-out backwards;
 }
 .stage-paint::after {
   content: '';
@@ -5522,13 +5512,13 @@ span.spot-pic.painted {
   text-align: center;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  animation: medal-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
-  animation-delay: calc(var(--i, 0) * 40ms + 120ms);
+  animation: medal-in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 25ms);
 }
 @keyframes medal-in {
   from {
-    opacity: 0;
-    transform: scale(0.6);
+    opacity: 0.3;
+    transform: scale(0.75);
   }
 }
 /* on the painting the disc's centre is the place; the name of a stack hangs below it */
@@ -6159,16 +6149,17 @@ body.sheet-open {
 .station-body.came-left {
   animation: came-left 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
+/* it slides in without going dark first: the next place is there at once, only moving */
 @keyframes came-right {
   from {
-    opacity: 0;
-    transform: translateX(36px);
+    opacity: 0.6;
+    transform: translateX(42px);
   }
 }
 @keyframes came-left {
   from {
-    opacity: 0;
-    transform: translateX(-36px);
+    opacity: 0.6;
+    transform: translateX(-42px);
   }
 }
 .chip.running {

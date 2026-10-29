@@ -65,6 +65,7 @@ export function Sheet({
   onClose,
   low = false,
   onSwipe,
+  came = 0,
   children,
 }: {
   desktop: boolean;
@@ -80,6 +81,8 @@ export function Sheet({
   low?: boolean;
   /** A sideways swipe over the body: -1 to the one before, 1 to the next. */
   onSwipe?: (dir: -1 | 1) => void;
+  /** Which way the body came in from (the last swipe; 0 when it was picked otherwise). */
+  came?: -1 | 0 | 1;
   children: ComponentChildren;
 }) {
   // it slides away before it is gone
@@ -93,16 +96,7 @@ export function Sheet({
     timer.current = window.setTimeout(onClose, OUT_MS);
   };
   useSheetKeys(!desktop, close);
-  // which way the body came in from, after a swipe
-  const [came, setCame] = useState<-1 | 1 | 0>(0);
-  const cameTimer = useRef(0);
-  useEffect(() => () => window.clearTimeout(cameTimer.current), []);
-  const swipe = useSwipe((dir) => {
-    setCame(dir);
-    window.clearTimeout(cameTimer.current);
-    cameTimer.current = window.setTimeout(() => setCame(0), 400);
-    onSwipe?.(dir);
-  });
+  const swipe = useSwipe((dir) => onSwipe?.(dir));
   return (
     <>
       {!desktop && <div class={`sheet-shade ${closing ? 'closing' : ''}`} onClick={close} />}
