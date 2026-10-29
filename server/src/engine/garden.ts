@@ -169,13 +169,13 @@ function yieldText(g: Game, c: CropDef): string {
 }
 
 /** What speeds the beds up or holds them back now. */
-function reasons(g: Game, s: GardenState): Array<{ text: string; x: number }> {
+function reasons(g: Game, s: GardenState): Array<{ text: string; x: number; icon: string }> {
   const def = g.ix.c.garden!;
-  const out: Array<{ text: string; x: number }> = [];
-  if (raining(g)) out.push({ text: g.ix.ui('garden_why_rain'), x: def.wet });
-  else if (s.wetUntil > g.now) out.push({ text: g.ix.ui('garden_why_wet'), x: def.wet });
+  const out: Array<{ text: string; x: number; icon: string }> = [];
+  if (raining(g)) out.push({ text: g.ix.ui('garden_why_rain'), x: def.wet, icon: 'g_rain' });
+  else if (s.wetUntil > g.now) out.push({ text: g.ix.ui('garden_why_wet'), x: def.wet, icon: 'g_wet' });
   const w = weatherNow(g);
-  if (w?.grow && w.grow !== 1) out.push({ text: w.name, x: w.grow });
+  if (w?.grow && w.grow !== 1) out.push({ text: w.name, x: w.grow, icon: w.grow < 1 ? 'g_frost' : 'g_warm' });
   return out;
 }
 

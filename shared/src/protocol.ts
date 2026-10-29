@@ -786,7 +786,7 @@ export interface GardenView {
   /** How many times as fast it grows right now (water, weather). */
   rate: number;
   /** What makes it grow faster or slower now, with how many times. */
-  why: Array<{ text: string; x: number }>;
+  why: Array<{ text: string; x: number; icon: string }>;
   /** Server time until the beds stay moist (0: dry). */
   wetUntil: number;
   /** Rain does the watering now. */

@@ -4,8 +4,8 @@
 
 import { useEffect, useState } from 'preact/hooks';
 import type { GardenView, PlayerView } from '../../shared/src/protocol.js';
-import { PER_BED, Plant, PlantPic, STAGE_AT, stageOf, withinStage } from './crops.js';
-import { Thing } from './items.js';
+import { bedArt, PER_BED, Plant, PlantPic, STAGE_AT, stageOf, withinStage } from './crops.js';
+import { hasMark, Thing } from './items.js';
 import { net } from './net.js';
 import { stationUrl } from './pictures.js';
 import { T } from './strings.js';
@@ -149,15 +149,23 @@ function BedArt({ b, l, at, on, wet, i }: { b: Bed; l: Lay; at: BedNow; on: bool
   const grow = 0.8 + 0.2 * withinStage(at.share);
   const ps = l.s * 1.7 * (at.ready ? 1 : grow);
   const baseY = l.cy + l.d * 0.12;
+  const art = bedArt();
   return (
-    <g class={`gbed ${on ? 'on' : ''} ${at.ready ? 'ripe' : ''} ${wet ? 'wet' : ''}`}>
-      <path d={sideFace(l)} class="gbed-side" />
-      <path d={weave(l)} class="gbed-weave" />
-      <path d={topFace(l)} class="gbed-top" />
-      <path d={topFace(l)} class="gbed-soil" />
-      <path d={furrows(l)} class="gbed-furrow" />
-      {wet && <path d={topFace(l)} class="gbed-wet" />}
-      {on && <path d={topFace(l)} class="gbed-ring" />}
+    <g class={`gbed ${on ? 'on' : ''} ${at.ready ? 'ripe' : ''} ${wet ? 'wet' : ''} ${art ? 'painted' : ''}`}>
+      {art ? (
+        // the painted bed: its earth lies about the middle of the picture, where the drawn top would be
+        <image href={art.url} x={l.cx - l.w / 2} y={l.cy + l.f / 2 - (l.w * art.ratio) / 2} width={l.w} height={l.w * art.ratio} class="gbed-paint" />
+      ) : (
+        <>
+          <path d={sideFace(l)} class="gbed-side" />
+          <path d={weave(l)} class="gbed-weave" />
+          <path d={topFace(l)} class="gbed-top" />
+          <path d={topFace(l)} class="gbed-soil" />
+          <path d={furrows(l)} class="gbed-furrow" />
+          {wet && <path d={topFace(l)} class="gbed-wet" />}
+        </>
+      )}
+      {on && !art && <path d={topFace(l)} class="gbed-ring" />}
       {at.ready && <ellipse class="gbed-glow" cx={l.cx} cy={baseY - 30 * l.s} rx={l.w * 0.48} ry={56 * l.s} />}
       {look &&
         per &&
@@ -278,7 +286,7 @@ export function GardenScene({
                   <span class="bed-tag-name">{b.crop.name}</span>
                   {at.ready ? (
                     <span class="bed-tag-ripe" aria-hidden="true">
-                      ✓
+                      {hasMark('g_ripe') ? <Thing icon="g_ripe" /> : '✓'}
                     </span>
                   ) : (
                     <span class="bed-tag-bar" aria-hidden="true">
@@ -287,7 +295,14 @@ export function GardenScene({
                   )}
                 </>
               ) : (
-                <span class="bed-tag-name idle">{gv.seeds.some((s) => s.have > 0) ? `+ ${T.gardenSow}` : T.gardenEmpty}</span>
+                gv.seeds.some((s) => s.have > 0) ? (
+                  <span class="bed-tag-name idle">
+                    {hasMark('g_seed') ? <Thing icon="g_seed" /> : '+ '}
+                    {T.gardenSow}
+                  </span>
+                ) : (
+                  <span class="bed-tag-name idle">{T.gardenEmpty}</span>
+                )
               )}
             </span>
           </button>
@@ -299,8 +314,20 @@ export function GardenScene({
 
 // ------------------------------------------------------------------ under the picture
 export function GardenWater({ gv, now }: { gv: GardenView; now: number }) {
-  if (gv.rain) return <p class="garden-water wet">{T.gardenRain}</p>;
-  if (gv.wetUntil > now) return <p class="garden-water wet">{`${T.gardenWet} ${span(gv.wetUntil - now)}`}</p>;
+  if (gv.rain)
+    return (
+      <p class="garden-water wet">
+        <Thing icon="g_rain" />
+        {T.gardenRain}
+      </p>
+    );
+  if (gv.wetUntil > now)
+    return (
+      <p class="garden-water wet">
+        <Thing icon="g_wet" />
+        {`${T.gardenWet} ${span(gv.wetUntil - now)}`}
+      </p>
+    );
   return <p class="garden-water">{T.gardenDry}</p>;
 }
 
@@ -357,7 +384,9 @@ export function BedCard({ v, now, bed, locked }: { v: PlayerView; now: number; b
     return (
       <div class="bed-card" key={`e${bed}`}>
         <div class="bed-card-head">
-          <span class="bed-card-pic empty" aria-hidden="true" />
+          <span class={`bed-card-pic empty ${hasMark('g_soil') ? 'painted' : ''}`} aria-hidden="true">
+            <Thing icon="g_soil" />
+          </span>
           <div>
             <h4 class="bed-card-name">
               {T.gardenBed} {bed + 1}
@@ -391,6 +420,7 @@ export function BedCard({ v, now, bed, locked }: { v: PlayerView; now: number; b
                 {T.gardenRipens} {span(at.left)}
                 {gv.why.map((w) => (
                   <span class={`why ${w.x >= 1 ? 'up' : 'down'}`}>
+                    <Thing icon={w.icon} />
                     {w.text} ×{String(w.x).replace('.', ',')}
                   </span>
                 ))}

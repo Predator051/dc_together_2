@@ -2,7 +2,33 @@
 // 3 nearly ripe, 4 ripe. A plant stands with its root at (0, 0) and grows up (negative y), about
 // 100 units at its tallest; the garden scene scales it, a picture in a card frames it.
 import type { JSX } from 'preact';
-import type { CropLook } from '../../shared/src/pictures.js';
+import { CROP_LOOKS, type CropLook } from '../../shared/src/pictures.js';
+import paintedCrops from './art/crops.json';
+
+// Painted crops (scripts/art.ts crops): five stages on one canvas each; the number is the canvas's height
+// to its width. A crop not painted yet is drawn in strokes below.
+const PAINTED = paintedCrops as unknown as Partial<Record<CropLook | 'bed', number>>;
+
+/** The painted stage of a crop, or null while the crop is not painted. */
+export function cropUrl(look: CropLook, stage: number): string | null {
+  if (!PAINTED[look]) return null;
+  return new URL(`./art/crops/c${CROP_LOOKS.indexOf(look) + 1}s${stage}.webp`, import.meta.url).href;
+}
+
+/** The painted empty bed and its height to its width, or null. */
+export function bedArt(): { url: string; ratio: number } | null {
+  const ratio = PAINTED.bed;
+  return ratio ? { url: new URL('./art/crops/bed.webp', import.meta.url).href, ratio } : null;
+}
+
+/** How wide a painted crop's canvas stands on a bed of the plain size, in the garden's units. */
+const PAINT_W: Record<CropLook, number> = {
+  garlic: 118,
+  thyme: 112,
+  beet: 122,
+  flax: 70,
+  pumpkin: 160,
+};
 
 /** Where a stage begins, as a share of the growing time (ripe at 1). */
 export const STAGE_AT = [0, 0.12, 0.4, 0.75] as const;
@@ -293,8 +319,15 @@ export const PER_BED: Record<CropLook, { n: number; gap: number }> = {
   pumpkin: { n: 2, gap: 0.24 },
 };
 
-/** One plant of a crop at a stage, with its shadow; `x` its root on the ground. */
+/** One plant of a crop at a stage, with its shadow; its root at (0, 0). */
 export function Plant({ look, stage }: { look: CropLook; stage: number }) {
+  const url = cropUrl(look, stage);
+  if (url) {
+    // the drawn plants are about 100 high at 1.7×; the painted canvas is sized to sit the same
+    const w = PAINT_W[look] / 1.7;
+    const h = w * PAINTED[look]!;
+    return <image href={url} x={-w / 2} y={-h + 2} width={w} height={h} />;
+  }
   const Draw = DRAW[look];
   return (
     <g>
@@ -315,6 +348,8 @@ const FRAME: Record<CropLook, string> = {
 
 /** A crop drawn on its own, for cards and lists. */
 export function PlantPic({ look, stage, class: cls }: { look: CropLook; stage: number; class?: string }) {
+  const url = cropUrl(look, stage);
+  if (url) return <img class={`plant-pic painted ${cls ?? ''}`} src={url} alt="" aria-hidden="true" draggable={false} />;
   return (
     <svg class={`plant-pic ${cls ?? ''}`} viewBox={stage < 2 ? '-24 -32 48 36' : FRAME[look]} aria-hidden="true">
       <Plant look={look} stage={stage} />

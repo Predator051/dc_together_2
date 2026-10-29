@@ -868,6 +868,18 @@ button.bed:focus-visible {
   stroke-width: 1;
   pointer-events: none;
 }
+.gbed.painted.wet .gbed-paint {
+  filter: brightness(0.78) saturate(1.1);
+}
+.gbed-paint {
+  transition: filter 1.2s;
+}
+.gbed.painted.on .gbed-paint {
+  filter: drop-shadow(0 0 3px rgba(240, 200, 120, 0.95)) drop-shadow(0 0 10px rgba(226, 190, 110, 0.55));
+}
+.gbed.painted.wet.on .gbed-paint {
+  filter: brightness(0.78) saturate(1.1) drop-shadow(0 0 3px rgba(240, 200, 120, 0.95)) drop-shadow(0 0 10px rgba(226, 190, 110, 0.55));
+}
 .gbed-ring {
   fill: none;
   stroke: rgba(226, 190, 110, 0.95);
@@ -984,6 +996,11 @@ button.bed:focus-visible {
   background: var(--verdigris);
   transition: width 1s linear;
 }
+.bed-tag-ripe .item-icon {
+  width: 18px;
+  height: 18px;
+  margin: -2px -4px -2px 0;
+}
 .bed-tag-ripe {
   font-size: 0.8rem;
   font-weight: 700;
@@ -1040,6 +1057,24 @@ button.bed:focus-visible {
 .bed-card-pic .plant-pic {
   width: 46px;
   height: 44px;
+}
+img.plant-pic {
+  object-fit: contain;
+  object-position: 50% 100%;
+}
+.bed-card-pic img.plant-pic {
+  width: 52px;
+  height: 50px;
+}
+.bed-card-pic.empty.painted {
+  place-items: center;
+  padding: 0;
+  background: radial-gradient(circle at 50% 30%, #4b3a28, #2a2016 70%);
+}
+.bed-card-pic.empty .item-icon {
+  width: 44px;
+  height: 44px;
+  margin: 0;
 }
 .bed-card-pic.empty {
   background:
@@ -1104,6 +1139,13 @@ button.bed:focus-visible {
   font-family: var(--sans);
   font-size: 0.86rem;
   color: var(--ink-2);
+}
+.bed-card-left .why .item-icon,
+.garden-water .item-icon {
+  width: 16px;
+  height: 16px;
+  margin: 0 4px 0 0;
+  vertical-align: -3px;
 }
 .bed-card-left .why {
   padding: 1px 7px;
