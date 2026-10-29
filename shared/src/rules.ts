@@ -108,12 +108,13 @@ export function derive(h: HeroLike, gear: (id: string) => GearDef | undefined, b
   const bonus = ranged ? Math.floor(s.agi / 2) : Math.floor(s.str / 2);
   const skill = skillLevel(h.skills[ranged ? 'ranged' : 'melee'] ?? 0);
   const skillDmg = Math.floor(skill / 3);
-  const perkCarry = h.perks.includes('steady') ? 4 : 0;
+  const has = (id: string) => h.perks.includes(id);
+  const perkCarry = (has('steady') ? PERK.steadyCarry : 0) + (has('packer') ? PERK.packerCarry : 0);
   const b = body ?? { hp: 0, dmg: 0, hit: 0, dodge: 0 };
   return {
-    hpMax: Math.max(4, 10 + 3 * s.end + 2 * (h.level - 1) + hp + b.hp),
+    hpMax: Math.max(4, 10 + 3 * s.end + 2 * (h.level - 1) + hp + b.hp + (has('tough') ? PERK.toughHp : 0)),
     carry: 8 + 2 * s.str + carry + perkCarry,
-    armor,
+    armor: armor + (has('bark') ? PERK.barkArmor : 0),
     dodge: Math.max(0, Math.min(0.3, 0.025 * s.agi + dodge) + b.dodge),
     hit: 0.7 + 0.03 * s.agi + acc + 0.03 * skill + b.hit,
     dmg: [Math.max(1, wdmg[0] + bonus + skillDmg + b.dmg), Math.max(1, wdmg[1] + bonus + skillDmg + b.dmg)],
@@ -123,9 +124,100 @@ export function derive(h: HeroLike, gear: (id: string) => GearDef | undefined, b
     shield,
     resist,
     tools,
-    heavy: heavy && !h.perks.includes('steady'),
+    heavy: heavy && !has('steady'),
     toolSpeed,
   };
+}
+
+/** Numbers of the perks (see `.design/progression.md`). */
+export const PERK = {
+  firstDmg: 2,
+  flankAcc: 0.2,
+  flankDmg: 2,
+  masterAcc: 0.05,
+  masterDmg: 1,
+  quietAmbush: 0.67,
+  farRange: 2,
+  coldAcc: 0.05,
+  deadlyAim: 2.5,
+  watchInit: 6,
+  shieldCut: 0.7,
+  toughHp: 5,
+  stanceGuard: 0.2,
+  barkArmor: 1,
+  legsTravel: 0.9,
+  steadyCarry: 4,
+  craftTime: 0.8,
+  hardyChill: 0.67,
+  learner: 1.25,
+  doubleChance: 0.15,
+  handsChance: 0.25,
+  packerCarry: 6,
+  sweepPart: 0.5,
+  duelDmg: 3,
+  loreAcc: 0.1,
+  loreDmg: 2,
+  loreBeaten: 3,
+  bulwarkReach: 2,
+  secondBelow: 0.25,
+  secondHeal: 1 / 3,
+  thriftyChance: 0.2,
+  executeBelow: 0.2,
+  twinAcc: -0.2,
+  unbrokenHp: 1 / 3,
+  porterWeight: 0.75,
+  lungeAcc: 0.1,
+  rollGuard: 0.3,
+  desperateBelow: 1 / 3,
+  desperateMult: 2,
+  desperateAcc: 0.1,
+  ramMult: 1.5,
+  ramOpen: 0.5,
+  rainAcc: -0.1,
+  dashReach: 4,
+  porterFrom: 2,
+  foragerChance: 0.1,
+  artisanTime: 0.67,
+  pathfinderTravel: 0.85,
+  pathfinderAmbush: 0.5,
+};
+
+/** What the perk tree needs: its branches, the level each step opens at, the perks in it. */
+export interface PerkTree {
+  tiers: number[];
+  perks: Array<{ id: string; branch?: string; tier?: number; quest?: boolean }>;
+}
+
+export type PerkState = 'have' | 'can' | 'wait' | 'closed' | 'locked';
+
+/**
+ * Where a perk stands for this hero: taken; can be taken now; open but no point to spend (`wait`);
+ * the other of its pair was taken (`closed`); its step is not open yet (`locked`: a lower level, or
+ * nothing taken on the step before in its branch).
+ */
+export function perkState(t: PerkTree, h: { level: number; perks: string[]; perkPoints: number }, id: string): PerkState {
+  if (h.perks.includes(id)) return 'have';
+  const def = t.perks.find((x) => x.id === id);
+  if (!def?.branch || !def.tier) return 'locked';
+  const same = (tier: number) => t.perks.filter((x) => x.branch === def.branch && x.tier === tier);
+  if (same(def.tier).some((x) => h.perks.includes(x.id))) return 'closed';
+  if (h.level < (t.tiers[def.tier - 1] ?? Infinity)) return 'locked';
+  if (def.tier > 1 && !same(def.tier - 1).some((x) => h.perks.includes(x.id))) return 'locked';
+  return h.perkPoints > 0 ? 'can' : 'wait';
+}
+
+/**
+ * How much a won foe of this level teaches a hero of that one: in full up to one level beneath,
+ * then a quarter less for each level more (a tenth at least). Grinding weak beasts does not raise a hero.
+ */
+export function foeXpFactor(heroLevel: number, foeLevel: number): number {
+  const gap = heroLevel - foeLevel - 1;
+  return gap <= 0 ? 1 : Math.max(0.1, 1 - 0.25 * gap);
+}
+
+/** Perk points a hero of this level has earned in all (one a level from the second). */
+export function perkPointsFor(level: number): number {
+  return Math.max(0, level - 1);
 }
 
 /** Foes against the heroes: how much tougher than written, and how much more with two heroes. */
@@ -136,9 +228,9 @@ export const FOE = {
   duoHp: 1.8,
   duoDmg: 1.25,
   /** Bosses (foes with phases): their own factors (their blows are written heavy already). */
-  bossHp: 1,
+  bossHp: 1.3,
   bossDuoHp: 1,
-  bossDmg: 0.85,
+  bossDmg: 1,
   /** The first foes teach the fight: the toughening grows in up to this level. */
   rampTo: 4,
   /** A charge that lands. */

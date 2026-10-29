@@ -33,7 +33,7 @@ import type { Command } from '../../../shared/src/protocol.js';
 import { Rng } from '../../../shared/src/rng.js';
 import type { LogEntry, PlayerState, WorldState } from '../../../shared/src/state.js';
 import { PART, STATE_VERSION } from '../../../shared/src/state.js';
-import { gatherMult } from '../../../shared/src/rules.js';
+import { PERK, gatherMult } from '../../../shared/src/rules.js';
 import { settleWeather, skyFor, turnWeather, weatherNow } from './weather.js';
 import { answerEvent, placeEvent, settleEvents } from './events.js';
 import { harvest, plant, settleGarden, waterGarden } from './garden.js';
@@ -773,6 +773,8 @@ export class Game {
     } else if (a.knack && a.knack.role === this.p(pid).role) {
       t /= a.knack.x;
     }
+    if ((a.kind === 'craft' || a.kind === 'build') && this.p(pid).perks.includes('handy')) t *= PERK.craftTime;
+    if ((a.kind === 'craft' || a.kind === 'build') && this.p(pid).perks.includes('artisan')) t *= PERK.artisanTime;
     return Math.round(t);
   }
 
@@ -809,18 +811,28 @@ export class Game {
 
     if (p.travel) return this.fail('err_busy');
     this.payCostFor(pid, a.cost);
+    // a thrifty hand saves a piece of what went in
+    if ((a.kind === 'craft' || a.kind === 'build') && a.cost && p.perks.includes('thrifty') && this.rng.chance(PERK.thriftyChance)) {
+      const r = Object.entries(a.cost).sort((x, y) => y[1] - x[1])[0]![0];
+      this.payCostFor(pid, { [r]: -1 });
+    }
     const home = this.atHome(pid);
     const put = (r: string, n: number): number => (home ? this.addRes(r, n) : addBag(this, pid, r, n));
     const rolls = a.rollsPer ? Math.max(1, this.s.res[a.rollsPer] ?? 0) : 1;
     const gained: Record<string, number> = {};
-    const lucky = p.perks.includes('hands') && a.kind === 'gather' && this.rng.chance(0.25);
+    const lucky = p.perks.includes('hands') && a.kind === 'gather' && this.rng.chance(PERK.handsChance);
+    const rich = p.perks.includes('double') && a.kind === 'gather' && this.rng.chance(PERK.doubleChance);
     for (let i = 0; i < rolls; i++) {
       for (const [r, y] of Object.entries(a.yield ?? {})) {
         let n = Array.isArray(y) ? this.rng.int(y[0], y[1]) : y;
+        if (rich) n *= 2;
         if (lucky && i === 0) n += 1;
         if (n) gained[r] = (gained[r] ?? 0) + put(r, n);
       }
     }
+    // nothing goes by a sharp eye: a bite to eat as well
+    const food = this.ix.c.food;
+    if (food && a.kind === 'gather' && p.perks.includes('forager') && this.rng.chance(PERK.foragerChance)) gained[food] = (gained[food] ?? 0) + put(food, 1);
     // Main log (or a one-time vignette) first, chance logs after it.
     const mainId = this.s.meta.nextLogId;
     const beatIdx = (a.beats ?? []).findIndex((b, i) => !this.flag(`beat:${a.id}:${i}`) && (!b.if || this.test(b.if, pid)));

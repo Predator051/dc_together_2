@@ -998,7 +998,7 @@ export function Game({ s }: { s: NetState }) {
   const groups = useMemo(() => v.groups.filter((g) => g.entries.length > 0 || g.desc), [v.groups]);
   const hasMap = v.tabs.includes('map');
   const hasHero = v.tabs.includes('hero');
-  const heroBadge = v.hero.points > 0 || !!v.hero.perkChoice;
+  const heroBadge = v.hero.points > 0 || v.hero.perkPoints > 0;
   // a tab that is not open (yet) falls back to the work
   const view: Tab = (tab === 'map' && !hasMap) || (tab === 'hero' && !hasHero) ? 'work' : tab;
 

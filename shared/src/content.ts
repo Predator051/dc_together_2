@@ -460,8 +460,20 @@ export interface PerkDef {
   id: string;
   name: string;
   text: string;
-  /** Earned on an errand only, never offered on a level. */
+  /** Earned on an errand only, never on a level (outside the tree). */
   quest?: boolean;
+  /** Where it stands in the tree: the branch and the step (1-based); each step is a pair, one or the other. */
+  branch?: string;
+  tier?: number;
+  /** A move of its own in a fight (a `tech` of the same id), not a standing gain. */
+  active?: boolean;
+}
+
+/** A branch of the perk tree. */
+export interface PerkBranchDef {
+  id: string;
+  name: string;
+  text: string;
 }
 
 /**
@@ -1032,8 +1044,10 @@ export interface Content {
   traits: Record<TraitId, { name: string; text: string }>;
   hero: {
     base: Record<Role, Record<StatId, number>>;
-    /** Perk ids offered at each perk level (by level). */
-    perkLevels: number[];
+    /** The branches of the perk tree. */
+    branches: PerkBranchDef[];
+    /** The hero level each step of the tree opens at (index 0 — step 1). */
+    tiers: number[];
   };
   /** What residents eat (one an hour each). */
   food?: string;

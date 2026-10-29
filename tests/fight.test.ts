@@ -307,6 +307,99 @@ describe('fights', () => {
     expect(ev.some((e) => e.k === 'miss' && e.a === h)).toBe(false);
   });
 
+  it('perks on the field: cheaper blows (a club with quick hands, an open foe)', () => {
+    const { w, m } = field();
+    const s = w.state;
+    s.players[m].equip.weapon = 'g_02'; // a club: it dazes
+    s.players[m].perks.push('swift', 'opening');
+    refreshHero(w.g(), m);
+    const f = startFight(w.g(), 'a_02', [{ enemy: 'e_05', n: 2 }], { party: [m] });
+    const [a, b] = f.foes;
+    a!.pos = [3, 6];
+    b!.pos = [5, 1];
+    put(f, m, [3, 7]);
+    turnOf(w, m);
+    let v = w.view(m).fight!;
+    expect(v.moves.find((x) => x.tech === 'stun' && x.target === a!.uid)!.cost).toBe(2);
+    a!.open = f.round + 1;
+    v = w.view(m).fight!;
+    expect(v.moves.find((x) => x.id === `hit:${a!.uid}`)!.cost).toBe(1);
+    a!.hp = 1;
+    w.cmd(m, { c: 'fight', id: `hit:${a!.uid}` });
+    expect(a!.out).toBeTruthy();
+    // one point spent: three left
+    expect(fightOf(w.g(), m)!.ap).toBe(3);
+  });
+
+  it('step five: a wide swing catches a second foe standing by', () => {
+    const { w, h } = field();
+    const p = w.state.players[h];
+    p.perks.push('sweep');
+    const f = startFight(w.g(), 'a_02', [{ enemy: 'e_05', n: 2 }], { party: [h] });
+    f.field!.cells = f.field!.cells.map(() => '');
+    const [a, b] = f.foes;
+    a!.pos = [3, 6];
+    b!.pos = [4, 6];
+    put(f, h, [3, 7]);
+    turnOf(w, h);
+    a!.open = f.round + 1;
+    const hpB = b!.hp;
+    w.cmd(h, { c: 'fight', id: `hit:${a!.uid}` });
+    expect(b!.hp).toBeLessThan(hpB);
+  });
+
+  it('moves of perks: each shows why it cannot be made, and the lunge steps in and strikes', () => {
+    const { w, m } = field();
+    const s = w.state;
+    s.players[m].equip.weapon = 'g_02';
+    s.players[m].perks.push('lunge', 'desperate', 'ram', 'shove');
+    refreshHero(w.g(), m);
+    const f = startFight(w.g(), 'a_02', [{ enemy: 'e_05' }], { party: [m] });
+    f.field!.cells = f.field!.cells.map(() => '');
+    const foe = f.foes[0]!;
+    foe.pos = [3, 5];
+    put(f, m, [3, 7]);
+    turnOf(w, m);
+    const v = w.view(m).fight!;
+    const mv = (t: string) => v.moves.find((x) => x.tech === t && x.target === foe.uid)!;
+    expect(mv('lunge').enabled).toBe(true);
+    expect(mv('lunge').perk).toBe(true);
+    expect(mv('desperate').enabled).toBe(false);
+    expect(mv('desperate').reason).toBeTruthy();
+    expect(mv('ram').enabled).toBe(true);
+    expect(mv('shove').enabled).toBe(false);
+    w.cmd(m, { c: 'fight', id: mv('lunge').id });
+    const cur = fightOf(w.g(), m);
+    if (cur) expect(cur.pos![m]).toEqual([3, 6]);
+  });
+
+  it('a pinned foe does not leave its cell on its turn', () => {
+    const { w, h } = field();
+    const f = startFight(w.g(), 'a_02', [{ enemy: 'e_05' }], { party: [h] });
+    const foe = f.foes[0]!;
+    foe.pos = [3, 1];
+    put(f, h, [3, 7]);
+    foe.rooted = true;
+    f.turn = f.order!.indexOf(`f${foe.uid}`) - 1;
+    if (f.turn < 0) f.turn = f.order!.length - 1;
+    turnOf(w, h);
+    w.cmd(h, { c: 'fight', id: 'end' });
+    expect(foe.pos).toEqual([3, 1]);
+  });
+
+  it('a will of iron always breaks a hold', () => {
+    const { w, m } = field();
+    w.state.players[m].perks.push('will');
+    const f = startFight(w.g(), 'a_02', [{ enemy: 'e_05' }], { party: [m] });
+    const foe = f.foes[0]!;
+    foe.pos = [3, 6];
+    put(f, m, [3, 7]);
+    foe.holds = m;
+    turnOf(w, m);
+    w.cmd(m, { c: 'fight', id: 'struggle' });
+    expect(foe.holds).toBeNull();
+  });
+
   it('two heroes face tougher foes than one', () => {
     const one = field();
     startFight(one.w.g(), 'a_02', [{ enemy: 'e_05' }], { party: [one.h] });

@@ -5,7 +5,7 @@ import type { Gender, PlayerId, Role, LogKind, Slot, StatId, SkillId } from './c
  * Part two starts its own line of world versions at 10 (part one ended at 3): a part-one world is
  * never migrated into part two — it is read once as the legacy and a new world begins.
  */
-export const STATE_VERSION = 12;
+export const STATE_VERSION = 13;
 export const PART = 2;
 
 export interface PlayerState {
@@ -38,8 +38,8 @@ export interface PlayerState {
   points: number;
   stats: Record<StatId, number>;
   perks: string[];
-  /** Perks offered and waiting for a pick. */
-  perkChoice: string[] | null;
+  /** Unspent perk points (one per level from the second, v13). */
+  perkPoints: number;
   /** Skill experience. */
   skills: Record<SkillId, number>;
   /** Worn things (item ids). */
@@ -221,6 +221,10 @@ export interface FoeState {
   idle?: number;
   /** The round it last cast a net (a net is gathered up again for two rounds). */
   netAt?: number;
+  /** Struck by a hero who draws it on: its next turn goes at that hero only. */
+  taunt?: PlayerId;
+  /** Pinned by a shot: on its next turn it does not leave its cell. */
+  rooted?: boolean;
 }
 
 /** One beat of a fight, for it to be played out on screen: who did what to whom. */
@@ -287,6 +291,10 @@ export interface FightState {
   /** Damage cut until each one's next turn (points left unspent), and stances held. */
   guard?: Record<string, number>;
   stance?: Record<string, 'keep' | 'block' | 'cover'>;
+  /** Once-a-fight or once-a-turn perks already used (`<pid>:<perk>[:<round>]`). */
+  used?: string[];
+  /** Shots let fly by each hero (some come back after a win). */
+  shots?: Partial<Record<PlayerId, number>>;
 }
 
 export interface ResidentState {

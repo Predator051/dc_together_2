@@ -24,10 +24,10 @@ import type { FightState } from '../../../shared/src/state.js';
 import type { Game } from './index.js';
 import { questProgress } from './index.js';
 import { resolveParas } from './text.js';
-import { SKILLS, SLOTS, STATS } from '../../../shared/src/content.js';
+import { SKILLS, SLOTS, STATS, type SkillId } from '../../../shared/src/content.js';
 import type { BagView, BeastView, EntrySort, FightView, HeroView, MapView, ResidentView, WeatherView } from '../../../shared/src/protocol.js';
-import { skillLevel, skillXpFor, xpForLevel } from '../../../shared/src/rules.js';
-import { bagCap, bagLoad, gearNote, heroOf, ownsCount, useNote } from './hero.js';
+import { perkState, skillLevel, skillXpFor, xpForLevel } from '../../../shared/src/rules.js';
+import { bagCap, bagLoad, gearNote, heroOf, ownsCount, perkTree, useNote } from './hero.js';
 import { HERO_AP, activeFoes, activeId, enemyOf, fid, fightMoves, fightOf, holder, moraleOf, walkable } from './fight.js';
 import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, residentJobs, routeLegs, routeTo, travelTime, walkOf } from './travel.js';
 import { byFire, campBlock, chillRate, comfortOf, dryOf, eatBlock, restBlock, restLength, tired } from './needs.js';
@@ -605,14 +605,37 @@ function stealthView(g: Game, pid: PlayerId, n: StealthNode): StealthView {
 
 // ----- part two panels ---------------------------------------------------------
 
+/** What a skill of this level gives (the numbers of `derive`, `gatherMult`, `travelMult`, `ambushRoll`). */
+function skillText(g: Game, id: SkillId, lv: number): string {
+  if (lv <= 0) return '';
+  const n = Math.min(10, lv);
+  const a = id === 'trail' ? 4 * n : id === 'melee' || id === 'ranged' ? 3 * lv : 5 * n;
+  const b = id === 'trail' ? 5 * n : Math.floor(lv / 3);
+  const out = [g.ix.ui(`skill_${id}_text`).replace('{n}', String(a))];
+  // «удар +0» says nothing
+  if (b > 0 && (id === 'melee' || id === 'ranged' || id === 'trail')) out.push(g.ix.ui(`skill_${id}_more`).replace('{n}', String(b)));
+  return out.join(', ');
+}
+
 function heroView(g: Game, pid: PlayerId): HeroView {
   const p = g.p(pid);
   const d = heroOf(g, pid);
   const ui = (k: string) => g.ix.ui(k);
-  const perk = (id: string) => {
-    const def = g.ix.c.perks.find((x) => x.id === id);
-    return { id, name: def?.name ?? id, text: def?.text ?? '' };
-  };
+  const tree = perkTree(g);
+  const branches = g.ix.c.hero.branches.map((b) => {
+    const mine = g.ix.c.perks.filter((x) => x.branch === b.id);
+    return {
+      id: b.id,
+      name: b.name,
+      text: b.text,
+      taken: mine.filter((x) => p.perks.includes(x.id)).length,
+      tiers: g.ix.c.hero.tiers.map((level, i) => ({
+        level,
+        perks: mine.filter((x) => x.tier === i + 1).map((x) => ({ id: x.id, name: x.name, text: x.text, state: perkState(tree, p, x.id), ...(x.active ? { active: true } : {}) })),
+      })),
+    };
+  });
+  const special = g.ix.c.perks.filter((x) => !x.branch && p.perks.includes(x.id)).map((x) => ({ id: x.id, name: x.name, text: x.text }));
   const atHome = g.atHome(pid);
   const slots = SLOTS.map((slot) => {
     const id = p.equip[slot];
@@ -642,10 +665,11 @@ function heroView(g: Game, pid: PlayerId): HeroView {
       const lv = skillLevel(xp);
       const a = skillXpFor(lv);
       const b = skillXpFor(lv + 1);
-      return { id, name: ui(`skill_${id}`), level: lv, p: Math.max(0, Math.min(1, (xp - a) / Math.max(1, b - a))) };
+      return { id, name: ui(`skill_${id}`), level: lv, p: Math.max(0, Math.min(1, (xp - a) / Math.max(1, b - a))), text: skillText(g, id, lv) };
     }),
-    perks: p.perks.map(perk),
-    perkChoice: p.perkChoice ? p.perkChoice.map(perk) : null,
+    perkPoints: p.perkPoints,
+    branches,
+    special,
     derived: {
       hpMax: d.hpMax,
       armor: d.armor,

@@ -20,6 +20,12 @@ export interface BotOptions {
 /** Shillings of act two. */
 const COIN = 'r_22';
 
+/** Perks each role reaches for first (any other that can be taken comes after). */
+export const PERK_PLAN: Record<Role, string[]> = {
+  hunter: ['eye', 'tough', 'cold', 'legs', 'pinshot', 'flint', 'watch', 'flank', 'steady', 'opening', 'shove', 'hardy', 'desperate', 'will', 'double', 'master', 'volley', 'second', 'tireless', 'duel', 'rain', 'ambusher', 'unbroken', 'pathfinder', 'porter', 'dash', 'pierce', 'twin'],
+  maker: ['first', 'tough', 'lunge', 'hands', 'flint', 'roll', 'shove', 'handy', 'master', 'eye', 'riposte', 'learner', 'cold', 'packer', 'arrows', 'watch', 'sweep', 'bulwark', 'thrifty', 'lore', 'ram', 'execute', 'taunt', 'rally', 'artisan', 'forager', 'shieldbreak', 'tempest'],
+};
+
 const STAT_PLAN: Record<Role, string[]> = {
   hunter: ['agi', 'end', 'per', 'agi', 'end'],
   maker: ['str', 'end', 'end', 'str', 'agi'],
@@ -52,7 +58,14 @@ export class Bot {
     if (v.fightEnd?.loot) return { c: 'loot' };
     if (v.scene) return v.scene.paused ? null : this.scene(v);
     if (v.proposal && !v.proposal.mine) return { c: 'accept' };
-    if (v.hero.perkChoice) return { c: 'perk', id: v.hero.perkChoice[0]!.id };
+    if (v.hero.perkPoints > 0) {
+      const can = v.hero.branches.flatMap((b) => b.tiers.flatMap((t) => t.perks)).filter((x) => x.state === 'can').map((x) => x.id);
+      if (can.length) {
+        const plan = PERK_PLAN[v.me.role];
+        const id = this.o.careless ? this.rng.pick(can) : (plan.find((x) => can.includes(x)) ?? can[0]!);
+        return { c: 'perk', id };
+      }
+    }
     if (v.hero.points > 0) {
       const plan = STAT_PLAN[v.me.role];
       const id = this.o.careless ? this.rng.pick(['str', 'agi', 'end', 'per', 'wil']) : plan[(v.hero.level - 2) % plan.length]!;
@@ -220,6 +233,13 @@ export class Bot {
     const nasty = live.find((x) => !x.stunned && ['grab', 'drag', 'call'].includes(x.move ?? ''));
     const daze = nasty ? tech('stun', nasty.uid) : undefined;
     if (daze) return { c: 'fight', id: daze.id };
+    // moves of perks when they fit: a volley, a desperate blow, closing in with a blow, pinning from afar
+    const rain = tech('rain');
+    if (rain) return { c: 'fight', id: rain.id };
+    for (const t of ['desperate', 'ram', 'roll', 'lunge', 'pinshot']) {
+      const m = moves.find((x) => x.tech === t);
+      if (m) return { c: 'fight', id: m.id };
+    }
     const calling = live.find((x) => x.move === 'call');
     const open = live.find((x) => x.open);
     const order = [calling, open, ...[...live].sort((a, b) => a.hp - b.hp)].filter((x): x is (typeof live)[number] => !!x);

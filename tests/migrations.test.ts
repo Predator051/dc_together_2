@@ -71,6 +71,19 @@ describe('world state migrations', () => {
     expect(state.log.map((e) => e.kind)).toEqual(['day', 'goal', 'system', 'story']);
   });
 
+  it('12 -> 13: heroes get a perk point for every level passed, less the perks already taken', () => {
+    const s = { ...newWorld(content, 1, 0), version: 12 } as unknown as Record<string, any>;
+    Object.assign(s.players.p1, { level: 9, perks: ['first', 'eye', 'steady', 'shoulder'], perkChoice: ['flint', 'hands'] });
+    Object.assign(s.players.p2, { level: 1, perks: [], perkChoice: null });
+    delete s.players.p1.perkPoints;
+    delete s.players.p2.perkPoints;
+    const { state } = migrateState(s, content, 0);
+    // 8 levels passed, 3 tree perks taken (the errand's one is free)
+    expect(state.players.p1.perkPoints).toBe(5);
+    expect(state.players.p2.perkPoints).toBe(0);
+    expect('perkChoice' in state.players.p1).toBe(false);
+  });
+
   it('rejects worlds from a newer server and missing steps', () => {
     const s = { ...newWorld(content, 1, 0), version: STATE_VERSION + 5 };
     expect(() => migrateState(s, content, 0)).toThrow(MigrationError);

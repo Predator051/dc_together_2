@@ -5,12 +5,12 @@ import { content } from '../content/index.js';
 import { E, G, U } from '../content/a1/ids.js';
 import { E2, G2 } from '../content/a2/ids.js';
 import type { PlayerId, Slot } from '../shared/src/content.js';
-import { xpForLevel } from '../shared/src/rules.js';
+import { perkState, xpForLevel } from '../shared/src/rules.js';
 import { ContentIndex, Game, newWorld } from '../server/src/engine/index.js';
 import { startFight } from '../server/src/engine/fight.js';
 import { refreshHero } from '../server/src/engine/hero.js';
 import { buildView } from '../server/src/engine/view.js';
-import { Bot } from '../tests/bot.js';
+import { Bot, PERK_PLAN } from '../tests/bot.js';
 
 const ix = new ContentIndex(content);
 /** How the last scene fight ended (the sim runs fights as scene fights to catch the result). */
@@ -97,6 +97,16 @@ function makeWorld(kit: Kit, seed: number, who: 'both' | 'hunter' | 'maker'): Ga
     p.xp = xpForLevel(kit.level);
     const ups = LEVEL_UPS[p.role!];
     for (let i = 0; i < kit.level - 1; i++) p.stats[ups[i % ups.length] as 'str'] += 1;
+    // perks as the bots take them (NOPERKS=1: none, to see what they add)
+    p.perks = [];
+    p.perkPoints = process.env.NOPERKS ? 0 : kit.level - 1;
+    const tree = { tiers: content.hero.tiers, perks: content.perks };
+    while (p.perkPoints > 0) {
+      const id = PERK_PLAN[p.role!].find((x) => perkState(tree, p, x) === 'can') ?? content.perks.find((x) => perkState(tree, p, x.id) === 'can')?.id;
+      if (!id) break;
+      p.perks.push(id);
+      p.perkPoints -= 1;
+    }
     p.equip = { ...(p.role === 'hunter' ? kit.hunter : kit.maker) };
     p.bag = { ...kit.bag };
     refreshHero(g, pid);

@@ -1,7 +1,7 @@
 // The hero: levels, skills, gear, the bag. Functions over a Game (they read and change its world).
 import type { GearDef, PlayerId, SkillId, Slot, StatId } from '../../../shared/src/content.js';
 import { SKILLS, SLOTS, STATS } from '../../../shared/src/content.js';
-import { derive, levelFromXp, skillLevel, type Derived } from '../../../shared/src/rules.js';
+import { PERK, derive, levelFromXp, perkState, skillLevel, type Derived } from '../../../shared/src/rules.js';
 import type { PlayerState } from '../../../shared/src/state.js';
 import type { Game, Result } from './index.js';
 import { bodyOf, learnOf, regenOf } from './needs.js';
@@ -31,7 +31,7 @@ export function gainSkill(g: Game, pid: PlayerId, s: SkillId, n = 1): void {
   const p = g.p(pid);
   const before = skillLevel(p.skills[s] ?? 0);
   // rested heads learn faster, tired ones slower
-  p.skills[s] = (p.skills[s] ?? 0) + n * learnOf(g, pid);
+  p.skills[s] = (p.skills[s] ?? 0) + n * learnOf(g, pid) * (p.perks.includes('learner') ? PERK.learner : 1);
   const after = skillLevel(p.skills[s]);
   if (after > before) {
     g.logRaw('find', { [pid]: `${g.ix.ui('skill_up')} ${g.ix.ui(`skill_${s}`)} — ${after}.` }, pid);
@@ -47,7 +47,7 @@ export function gainXp(g: Game, pid: PlayerId, n: number): void {
   if (after <= before) return;
   for (let lv = before + 1; lv <= after; lv++) {
     p.points += 1;
-    if (g.ix.c.hero.perkLevels.includes(lv)) offerPerks(g, pid);
+    p.perkPoints = (p.perkPoints ?? 0) + 1;
   }
   p.level = after;
   const oldMax = p.hpMax;
@@ -56,21 +56,6 @@ export function gainXp(g: Game, pid: PlayerId, n: number): void {
   g.logRaw('find', { [pid]: `${g.ix.ui('level_up')} ${after}.` }, pid);
   const other = g.other(pid);
   if (g.p(other).joined) g.logRaw('system', { [other]: g.render(g.ix.ui('level_up_other'), other, pid).replace('{n}', String(after)) }, pid);
-}
-
-/** Offer two or three perks the hero does not have yet. */
-function offerPerks(g: Game, pid: PlayerId): void {
-  const p = g.p(pid);
-  if (p.perkChoice) return;
-  const free = g.ix.c.perks.filter((x) => !x.quest && !p.perks.includes(x.id));
-  if (!free.length) return;
-  const pick: string[] = [];
-  const pool = [...free];
-  while (pick.length < 3 && pool.length) {
-    const i = g.rng.int(0, pool.length - 1);
-    pick.push(pool.splice(i, 1)[0]!.id);
-  }
-  p.perkChoice = pick;
 }
 
 export function spendPoint(g: Game, pid: PlayerId, stat: string): Result {
@@ -84,11 +69,19 @@ export function spendPoint(g: Game, pid: PlayerId, stat: string): Result {
   return { ok: true };
 }
 
+export function perkTree(g: Game) {
+  return { tiers: g.ix.c.hero.tiers, perks: g.ix.c.perks };
+}
+
+export function hasPerk(g: Game, pid: PlayerId, id: string): boolean {
+  return g.p(pid).perks.includes(id);
+}
+
 export function pickPerk(g: Game, pid: PlayerId, id: string): Result {
   const p = g.p(pid);
-  if (!p.perkChoice?.includes(id)) return g.fail('err_not_now');
+  if (perkState(perkTree(g), p, id) !== 'can') return g.fail('err_not_now');
   p.perks.push(id);
-  p.perkChoice = null;
+  p.perkPoints -= 1;
   refreshHero(g, pid);
   return { ok: true };
 }
@@ -101,7 +94,11 @@ export function weightOf(g: Game, id: string): number {
 
 export function bagLoad(g: Game, pid: PlayerId): number {
   let w = 0;
-  for (const [id, n] of Object.entries(g.p(pid).bag)) w += n * weightOf(g, id);
+  const porter = g.p(pid).perks.includes('porter');
+  for (const [id, n] of Object.entries(g.p(pid).bag)) {
+    const one = weightOf(g, id);
+    w += n * (porter && one >= PERK.porterFrom ? one * PERK.porterWeight : one);
+  }
   return Math.round(w * 10) / 10;
 }
 
@@ -283,13 +280,13 @@ export function useNote(g: Game, id: string): string {
 
 export function blankHero(): Pick<
   PlayerState,
-  'level' | 'xp' | 'points' | 'stats' | 'perks' | 'perkChoice' | 'skills' | 'equip' | 'sets' | 'bag' | 'travel' | 'fight' | 'poison' | 'regenAt' | 'needs'
+  'level' | 'xp' | 'points' | 'stats' | 'perks' | 'perkPoints' | 'skills' | 'equip' | 'sets' | 'bag' | 'travel' | 'fight' | 'poison' | 'regenAt' | 'needs'
 > {
   const skills = {} as Record<SkillId, number>;
   for (const s of SKILLS) skills[s] = 0;
   const stats = {} as Record<StatId, number>;
   for (const s of STATS) stats[s] = 2;
-  return { level: 1, xp: 0, points: 0, stats, perks: [], perkChoice: null, skills, equip: {}, sets: {}, bag: {}, travel: null, fight: null, poison: 0, regenAt: 0, needs: null };
+  return { level: 1, xp: 0, points: 0, stats, perks: [], perkPoints: 0, skills, equip: {}, sets: {}, bag: {}, travel: null, fight: null, poison: 0, regenAt: 0, needs: null };
 }
 
 /** Rest heals: one point every 15 s by the fire at home, every 45 s elsewhere (never in a fight). */

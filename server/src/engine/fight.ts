@@ -3,8 +3,8 @@
 // Strong moves come from what the hero holds; a dazed or open foe is the other one's chance. The foes'
 // minds are in tactics.ts.
 import type { EnemyDef, EnemyMove, PlayerId, TraitId } from '../../../shared/src/content.js';
-import { FOE, TECH, foeRamp, hitChance } from '../../../shared/src/rules.js';
-import { coverFrom, dist, feature, key, neighbours, reach, sees, type Cell, type Field } from '../../../shared/src/field.js';
+import { FOE, PERK, TECH, foeRamp, foeXpFactor, hitChance } from '../../../shared/src/rules.js';
+import { coverFrom, dist, feature, key, neighbours, reach, run, sees, type Cell, type Field } from '../../../shared/src/field.js';
 import type { FightEvent, FightState, FoeState } from '../../../shared/src/state.js';
 import { addBag, gainSkill, gainXp, heroOf, refreshHero } from './hero.js';
 import { skyAt } from './weather.js';
@@ -73,6 +73,22 @@ export function isOpen(f: FightState, foe: FoeState): boolean {
 }
 
 export const fid = (foe: FoeState) => `f${foe.uid}`;
+
+function perk(g: Game, pid: PlayerId, id: string): boolean {
+  return g.p(pid).perks.includes(id);
+}
+
+/** A once-a-fight (or once-a-turn, with the round in the key) perk: true the first time only. */
+function once(f: FightState, k: string): boolean {
+  if ((f.used ??= []).includes(k)) return false;
+  f.used.push(k);
+  return true;
+}
+
+/** Action points of a hero's turn (one more in the first round for a watchful one). */
+function heroAp(g: Game, f: FightState, pid: PlayerId): number {
+  return HERO_AP + (f.round === 1 && perk(g, pid, 'watch') ? 1 : 0);
+}
 
 /** Keep the last beats; each gets its running number. */
 export function ev(f: FightState, e: FightEvent): void {
@@ -344,7 +360,7 @@ export function startFight(
 /** Who moves first: the quick, the sharp-eyed, then the rest. */
 function initiative(g: Game, f: FightState): string[] {
   const all: Array<{ id: string; v: number }> = [];
-  for (const pid of f.party) all.push({ id: pid, v: 10 + g.p(pid).stats.agi + g.rng.int(0, 3) + 0.1 });
+  for (const pid of f.party) all.push({ id: pid, v: 10 + g.p(pid).stats.agi + (perk(g, pid, 'watch') ? PERK.watchInit : 0) + g.rng.int(0, 3) + 0.1 });
   for (const foe of activeFoes(f)) {
     const def = enemyOf(g, foe.enemy);
     all.push({ id: fid(foe), v: 8 + def.level / 2 + (def.traits.includes('fast') ? 6 : 0) + g.rng.int(0, 3) });
@@ -466,6 +482,12 @@ export function nextTurn(g: Game, f: FightState): void {
       hurtHero(g, f, pid, 2);
       if (!up(g, f, pid)) continue;
     }
+    if (perk(g, pid, 'second') && p.hp < p.hpMax * PERK.secondBelow && once(f, `${pid}:second`)) {
+      const n = Math.max(1, Math.round(p.hpMax * PERK.secondHeal));
+      p.hp = Math.min(p.hpMax, p.hp + n);
+      say(g, f, 'fight_second', pid, {});
+      ev(f, { a: pid, t: pid, k: 'heal', n });
+    }
     if (!p.online) {
       // everyone is away (or it is a story fight, which is fought together): it waits on this turn
       if (f.scene || !f.party.some((x) => x !== pid && up(g, f, x) && g.p(x).online)) {
@@ -476,7 +498,7 @@ export function nextTurn(g: Game, f: FightState): void {
       (f.guard ??= {})[pid] = GUARD_MAX;
       continue;
     }
-    f.ap = HERO_AP;
+    f.ap = heroAp(g, f, pid);
     return;
   }
 }
@@ -485,7 +507,7 @@ export function nextTurn(g: Game, f: FightState): void {
 function endTurn(g: Game, f: FightState, pid: PlayerId): void {
   const left = f.ap ?? 0;
   if (left > 0) {
-    (f.guard ??= {})[pid] = Math.min(GUARD_MAX, left * GUARD_PER_AP);
+    (f.guard ??= {})[pid] = Math.min(GUARD_MAX, left * (perk(g, pid, 'stance') ? PERK.stanceGuard : GUARD_PER_AP));
     say(g, f, 'fight_guard', pid, {});
     ev(f, { a: pid, k: 'guard' });
   }
@@ -502,7 +524,7 @@ export function maybeResolve(g: Game, f: FightState): void {
   if (!id || id.startsWith('f') || id === 'dog') return;
   const pid = id as PlayerId;
   if (g.p(pid).online) {
-    if ((f.ap ?? 0) === 0 && up(g, f, pid)) f.ap = HERO_AP;
+    if ((f.ap ?? 0) === 0 && up(g, f, pid)) f.ap = heroAp(g, f, pid);
     return;
   }
   if (f.scene || !f.party.some((x) => x !== pid && up(g, f, x) && g.p(x).online)) return;
@@ -528,6 +550,8 @@ export interface FightMove {
   target?: number;
   /** How far it reaches. */
   range?: number;
+  /** A move a perk gives. */
+  perk?: boolean;
 }
 
 /** What the things in a hero's hands let them do. */
@@ -552,7 +576,7 @@ export function techsOf(g: Game, pid: PlayerId): Tech[] {
   const long = h.tags.has('reach') ? 2 : 1;
   const out: Tech[] = [];
   if (h.ranged) {
-    out.push({ id: 'shoot', hand: 'main', cost: 2, aimed: true, range: SHOT_RANGE, dmg: h.dmg });
+    out.push({ id: 'shoot', hand: 'main', cost: 2, aimed: true, range: SHOT_RANGE + (perk(g, pid, 'farshot') ? PERK.farRange : 0), dmg: h.dmg });
     out.push({ id: 'aim', hand: 'main', cost: 1, aimed: false, range: 0 });
   } else {
     out.push({ id: 'hit', hand: 'main', cost: 2, aimed: true, range: long, dmg: h.dmg });
@@ -560,13 +584,23 @@ export function techsOf(g: Game, pid: PlayerId): Tech[] {
     if (h.tags.has('cleave')) out.push({ id: 'chop', hand: 'main', cost: 3, aimed: true, range: 1, dmg: scaled(h.dmg, TECH.chop) });
     if (h.tags.has('pierce')) out.push({ id: 'thrust', hand: 'main', cost: 2, aimed: true, range: long, dmg: h.dmg });
     if (h.tags.has('reach')) out.push({ id: 'keep', hand: 'main', cost: 1, aimed: false, range: 0 });
-    if (armed && !['blunt', 'cleave', 'pierce'].some((t) => h.tags.has(t as 'blunt'))) out.push({ id: 'flurry', hand: 'main', cost: 3, aimed: true, range: 1, dmg: h.dmg });
+    const plain = !['blunt', 'cleave', 'pierce'].some((t) => h.tags.has(t as 'blunt'));
+    if (armed && (plain || perk(g, pid, 'tempest'))) out.push({ id: 'flurry', hand: 'main', cost: perk(g, pid, 'tempest') ? 2 : 3, aimed: true, range: 1, dmg: h.dmg });
   }
+  if (perk(g, pid, 'swift')) for (const t of out) if (t.id === 'stun' || t.id === 'chop' || t.id === 'flurry') t.cost -= 1;
   if (h.shield) {
     out.push({ id: 'block', hand: 'off', cost: 2, aimed: false, range: 0 });
     out.push({ id: 'bash', hand: 'off', cost: 2, aimed: true, range: 1, dmg: [1, 3] });
   }
   return out;
+}
+
+/** What a blow at this foe costs now: perks take a point off a blow at an open foe, a first-round shot. */
+function techCost(g: Game, f: FightState, pid: PlayerId, t: Tech, foe: FoeState): number {
+  let c = t.cost;
+  if (perk(g, pid, 'opening') && !heroOf(g, pid).ranged && isOpen(f, foe)) c -= 1;
+  if (t.id === 'shoot' && perk(g, pid, 'volley') && !(f.used ?? []).includes(`${pid}:walked:${f.round}`)) c -= 1;
+  return Math.max(1, c);
 }
 
 function ammoLeft(g: Game, pid: PlayerId, ammo: string): number {
@@ -633,7 +667,8 @@ export function fightMoves(g: Game, f: FightState, pid: PlayerId): FightMove[] {
       const near = inReach(f, at, foe.pos, t.range);
       // held fast: only the one who holds you can be struck
       const heldOff = !!held && held !== foe;
-      const ok = t.cost <= ap && !noAmmo && near && !heldOff;
+      const cost = techCost(g, f, pid, t, foe);
+      const ok = cost <= ap && !noAmmo && near && !heldOff;
       const reason = noAmmo
         ? `${ui('fm_no_ammo')} ${g.ix.res.get(h.ammo!)?.name ?? ''}`.trim()
         : heldOff
@@ -642,12 +677,13 @@ export function fightMoves(g: Game, f: FightState, pid: PlayerId): FightMove[] {
             ? dist(at, foe.pos) > t.range
               ? ui('fm_too_far')
               : ui('fm_no_sight')
-            : t.cost > ap
+            : cost > ap
               ? noAp
               : undefined;
-      out.push({ id, label: `${name}: ${def.name}${dup(f, foe)}`, enabled: ok, ...(reason ? { reason } : {}), group: 'hit', target: foe.uid, ...common });
+      out.push({ id, label: `${name}: ${def.name}${dup(f, foe)}`, enabled: ok, ...(reason ? { reason } : {}), group: 'hit', target: foe.uid, ...common, cost });
     }
   }
+  if (!held) out.push(...perkMoves(g, f, pid));
   if (other && up(g, f, other) && !held) {
     out.push({ id: 'cover', label: g.render(ui('fm_cover'), pid), enabled: ap >= 1, ...(ap >= 1 ? {} : { reason: noAp }), group: 'help', cost: 1 });
   }
@@ -658,8 +694,9 @@ export function fightMoves(g: Game, f: FightState, pid: PlayerId): FightMove[] {
   }
   if (other && f.party.includes(other) && f.down.includes(other) && !(f.lifted ?? []).includes(other) && !held) {
     const near = adjacent(at, heroPos(f, other));
-    const ok = near && ap >= 2;
-    out.push({ id: 'lift', label: g.render(ui('fm_lift'), pid), enabled: ok, ...(ok ? {} : { reason: near ? noAp : ui('fm_come_close') }), group: 'help', cost: 2 });
+    const cost = perk(g, pid, 'lift') ? 1 : 2;
+    const ok = near && ap >= cost;
+    out.push({ id: 'lift', label: g.render(ui('fm_lift'), pid), enabled: ok, ...(ok ? {} : { reason: near ? noAp : ui('fm_come_close') }), group: 'help', cost });
   }
   for (const [id, n] of Object.entries(p.bag)) {
     const def = g.ix.res.get(id);
@@ -674,6 +711,136 @@ export function fightMoves(g: Game, f: FightState, pid: PlayerId): FightMove[] {
   }
   out.push({ id: 'end', label: ui('fm_end'), enabled: true, group: 'self' });
   return out;
+}
+
+// ----- moves of perks (see `.design/progression.md`) ------------------------------------
+
+/** A free cell one can step onto with a single point. */
+function plainFree(g: Game, f: FightState, c: Cell, busy: Set<string>): boolean {
+  const fld = fieldOf(f);
+  return c[0] >= 0 && c[1] >= 0 && c[0] < fld.w && c[1] < fld.h && feature(fld, c).step === 1 && !busy.has(key(c));
+}
+
+/** Where a perk's move takes the hero before the blow (none: the move cannot be made at this foe). */
+export function perkStep(g: Game, f: FightState, pid: PlayerId, tech: string, foe: FoeState): Cell | null | undefined {
+  const at = heroPos(f, pid)!;
+  const to = foe.pos!;
+  const busy = taken(g, f, pid);
+  const d = dist(at, to);
+  if (tech === 'lunge') {
+    if (d !== 2) return undefined;
+    return neighbours(fieldOf(f), at).find((c) => dist(c, to) === 1 && plainFree(g, f, c, busy)) ?? undefined;
+  }
+  if (tech === 'roll') {
+    if (d < 2 || d > 3) return undefined;
+    const ways = reach(fieldOf(f), at, 3, busy);
+    let best: Cell | undefined;
+    let cost = 99;
+    for (const c of neighbours(fieldOf(f), to)) {
+      const w = ways.get(key(c));
+      if (w && w.cost < cost) [best, cost] = [c, w.cost];
+    }
+    return best;
+  }
+  if (tech === 'ram') {
+    if (d < 2 || d > 4) return undefined;
+    const ln = run(at, to, d - 1);
+    if (!ln || !ln.every((c) => plainFree(g, f, c, busy))) return undefined;
+    return ln[ln.length - 1];
+  }
+  return null;
+}
+
+const PERK_TECHS: Record<string, { cost: number; hand: 'main' | 'off'; aimed: boolean }> = {
+  lunge: { cost: 2, hand: 'main', aimed: true },
+  roll: { cost: 3, hand: 'main', aimed: true },
+  desperate: { cost: 2, hand: 'main', aimed: true },
+  ram: { cost: 3, hand: 'main', aimed: true },
+  pinshot: { cost: 3, hand: 'main', aimed: true },
+  rain: { cost: 4, hand: 'main', aimed: false },
+  shove: { cost: 2, hand: 'off', aimed: true },
+};
+
+/** Foes a volley reaches now. */
+function rainTargets(g: Game, f: FightState, pid: PlayerId): FoeState[] {
+  const at = heroPos(f, pid)!;
+  const range = techsOf(g, pid).find((t) => t.id === 'shoot')?.range ?? SHOT_RANGE;
+  return activeFoes(f).filter((x) => x.pos && inReach(f, at, x.pos, range));
+}
+
+/** The moves the hero's perks give, each with why it cannot be made now. */
+function perkMoves(g: Game, f: FightState, pid: PlayerId): FightMove[] {
+  const out: FightMove[] = [];
+  const ui = (k: string) => g.ix.ui(k);
+  const h = heroOf(g, pid);
+  const p = g.p(pid);
+  const at = heroPos(f, pid)!;
+  const ap = f.ap ?? 0;
+  const melee = !h.ranged && !!p.equip.weapon;
+  const ammo = h.ammo ? (p.bag[h.ammo] ?? 0) : Infinity;
+  for (const [tech, d] of Object.entries(PERK_TECHS)) {
+    if (!p.perks.includes(tech)) continue;
+    const common = { tech, hand: d.hand, cost: d.cost, perk: true, ...(tech !== 'shove' ? { dmg: h.dmg } : {}) };
+    if (!d.aimed) {
+      // a volley: at all the foes in reach
+      const n = rainTargets(g, f, pid).length;
+      const reason = !h.ranged ? ui('fm_need_ranged') : n < 2 ? ui('fm_need_two') : ammo < n ? ui('fm_need_ammo') : d.cost > ap ? ui('fm_no_ap') : undefined;
+      out.push({ id: `t:${tech}`, label: ui(`tech_${tech}`), enabled: !reason, ...(reason ? { reason } : {}), group: 'self', ...common });
+      continue;
+    }
+    for (const foe of activeFoes(f)) {
+      if (!foe.pos) continue;
+      const dd = dist(at, foe.pos);
+      let reason: string | undefined;
+      if (tech === 'pinshot') {
+        const range = techsOf(g, pid).find((t) => t.id === 'shoot')?.range ?? SHOT_RANGE;
+        reason = !h.ranged ? ui('fm_need_ranged') : ammo < 1 ? ui('fm_need_ammo') : dd < 3 ? ui('fm_need_far') : !inReach(f, at, foe.pos, range) ? (dd > range ? ui('fm_too_far') : ui('fm_no_sight')) : undefined;
+      } else if (tech === 'shove') {
+        reason = !h.shield && !h.tags.has('blunt') ? ui('fm_need_shield') : dd !== 1 ? ui('fm_come_close') : undefined;
+      } else if (tech === 'desperate') {
+        reason = !melee ? ui('fm_need_melee') : p.hp >= p.hpMax * PERK.desperateBelow ? ui('fm_need_low') : dd !== 1 ? ui('fm_come_close') : undefined;
+      } else {
+        // a move that carries the hero to the foe first
+        const step = perkStep(g, f, pid, tech, foe);
+        reason = !melee
+          ? ui('fm_need_melee')
+          : tech === 'roll' && h.heavy
+            ? ui('fm_need_light')
+            : step
+              ? undefined
+              : tech === 'lunge'
+                ? ui('fm_need_gap')
+                : tech === 'ram'
+                  ? ui('fm_need_line')
+                  : dd > 3
+                    ? ui('fm_too_far')
+                    : ui('fm_come_close');
+      }
+      if (!reason && d.cost > ap) reason = ui('fm_no_ap');
+      const def = enemyOf(g, foe.enemy);
+      out.push({ id: `t:${tech}:${foe.uid}`, label: `${ui(`tech_${tech}`)}: ${def.name}${dup(f, foe)}`, enabled: !reason, ...(reason ? { reason } : {}), group: 'hit', target: foe.uid, range: dd, ...common });
+    }
+  }
+  // a dash to the partner's side
+  const other = f.party.find((x) => x !== pid);
+  if (other && p.perks.includes('dash') && !f.fled.includes(other)) {
+    const there = heroPos(f, other);
+    const ways = reach(fieldOf(f), at, PERK.dashReach, taken(g, f, pid));
+    const near = there && adjacent(at, there);
+    const spot = there && !near ? neighbours(fieldOf(f), there).find((c) => ways.has(key(c))) : undefined;
+    const reason = near ? ui('fm_dash_near') : !spot ? ui('fm_too_far') : ap < 1 ? ui('fm_no_ap') : undefined;
+    out.push({ id: 'dash', label: g.render(ui('fm_dash'), pid), enabled: !reason, ...(reason ? { reason } : {}), group: 'help', cost: 1, perk: true });
+  }
+  return out;
+}
+
+/** The hero moves to a cell as part of a move (no points: the move's price covers it). */
+function carry(g: Game, f: FightState, pid: PlayerId, to: Cell): void {
+  const from = heroPos(f, pid)!;
+  const way = reach(fieldOf(f), from, 99, taken(g, f, pid)).get(key(to));
+  (f.pos ??= {})[pid] = to;
+  ev(f, { a: pid, k: 'move', path: way?.path ?? [to] });
+  once(f, `${pid}:walked:${f.round}`);
 }
 
 /** «Пацюк ·2» when there are several of the same kind. */
@@ -717,6 +884,7 @@ function walk(g: Game, f: FightState, pid: PlayerId, to: string): Result {
   if (!way) return g.fail('err_not_now');
   f.ap = Math.max(0, (f.ap ?? 0) - way.cost);
   (f.pos ??= {})[pid] = cell;
+  once(f, `${pid}:walked:${f.round}`);
   ev(f, { a: pid, k: 'move', path: way.path });
   // a leech hangs on and comes along
   for (const foe of activeFoes(f)) {
@@ -762,9 +930,9 @@ export function foeVars(g: Game, foe: FoeState, f: FightState): Record<string, s
   return { foe: `${def.name}${d}`, foeAcc: `${def.acc}${d}`, foeGen: `${def.gen}${d}`, verb: def.verb };
 }
 
-export function damageFoe(g: Game, f: FightState, foe: FoeState, n: number, by?: PlayerId): void {
+export function damageFoe(g: Game, f: FightState, foe: FoeState, n: number, by?: PlayerId, throughGuard = false): void {
   const def = enemyOf(g, foe.enemy);
-  if (foe.guarding) n = Math.max(1, Math.floor(n / 2));
+  if (foe.guarding && !throughGuard) n = Math.max(1, Math.floor(n / 2));
   foe.hp -= n;
   if (by) foe.hitBy = by;
   if (def.morale !== undefined) foe.fear += Math.ceil(n / 2);
@@ -840,45 +1008,65 @@ function heroHits(g: Game, f: FightState, pid: PlayerId, foe: FoeState, b: Blow 
   const ranged = !!b.ranged;
   const at = heroPos(f, pid)!;
   const to = foe.pos!;
-  if (ranged && h.ammo) addBag(g, pid, h.ammo, -1);
+  if (ranged && h.ammo) {
+    addBag(g, pid, h.ammo, -1);
+    (f.shots ??= {})[pid] = (f.shots[pid] ?? 0) + 1;
+  }
   gainSkill(g, pid, ranged ? 'ranged' : 'melee');
   const open = isOpen(f, foe);
   const aimed = ranged && !!f.aim?.includes(pid);
   if (aimed) f.aim = f.aim!.filter((x) => x !== pid);
+  // the first shot from cover: sure and twice as hard
+  const ambush = ranged && perk(g, pid, 'ambusher') && once(f, `${pid}:ambush`);
   let acc = b.acc ?? 0;
   const d = dist(at, to);
   if (d >= 2) {
     const c = coverFrom(fieldOf(f), at, to);
-    acc -= 0.2 * c.cover + c.inside;
+    acc -= (0.2 * c.cover + c.inside) * (ranged && perk(g, pid, 'farshot') ? 0.5 : 1);
   }
-  if (ranged && activeFoes(f).some((x) => adjacent(x.pos, at))) acc -= 0.2;
+  if (ranged && perk(g, pid, 'cold')) acc += PERK.coldAcc;
+  else if (ranged && activeFoes(f).some((x) => adjacent(x.pos, at))) acc -= 0.2;
+  if (!ranged && perk(g, pid, 'master')) acc += PERK.masterAcc;
+  const known = perk(g, pid, 'lore') && (g.s.bestiary[foe.enemy]?.beaten ?? 0) >= PERK.loreBeaten;
+  if (known) acc += PERK.loreAcc;
   if (feature(fieldOf(f), at).wet) acc -= 0.1;
   const flank = !ranged && d === 1 && flanked(g, f, to, pid, true);
-  if (flank) acc += 0.1;
+  const wideFlank = flank && perk(g, pid, 'flank');
+  if (flank) acc += wideFlank ? PERK.flankAcc : 0.1;
   const chance = hitChance(h.hit + acc, def.evade ?? 0, ranged && f.round === 1);
-  if (!open && !aimed && !g.rng.chance(chance)) {
+  if (!open && !aimed && !ambush && !g.rng.chance(chance)) {
     say(g, f, 'fight_miss', pid, foeVars(g, foe, f));
     ev(f, { a: pid, t: fid(foe), k: 'miss' });
     return 0;
   }
   const dd = b.dmg ?? h.dmg;
-  let n = g.rng.int(dd[0], dd[1]) + (flank ? 1 : 0);
-  if (p.perks.includes('first') && f.round === 1) n += 2;
+  let n = g.rng.int(dd[0], dd[1]) + (flank ? (wideFlank ? PERK.flankDmg : 1) : 0);
+  if (p.perks.includes('first') && once(f, `${pid}:first`)) n += PERK.firstDmg;
+  if (!ranged && p.perks.includes('master')) n += PERK.masterDmg;
+  if (!ranged && p.perks.includes('duel') && activeFoes(f).filter((x) => adjacent(x.pos, at)).length === 1) n += PERK.duelDmg;
+  if (known) n += PERK.loreDmg;
   let mult = b.mult ?? 1;
   if (open) mult *= b.thrust ? TECH.thrustOpen : TECH.open;
-  if (aimed) mult *= 2;
+  if (aimed) mult *= p.perks.includes('deadly') ? PERK.deadlyAim : 2;
+  if (ambush) mult *= 2;
   n = Math.round(n * mult);
   let armor = armorOf(def, foe);
   if (h.tags.has('pierce')) armor = Math.max(0, armor - 2);
   if (h.tags.has('cleave')) armor = Math.max(0, armor - 1);
+  if (ranged && p.perks.includes('pierce')) armor = Math.floor(armor / 2);
   if (p.role === 'maker') armor = Math.floor(armor / 2);
   if (open) armor = Math.floor(armor / 2);
   if (b.through) armor = 0;
-  const dealt = Math.max(1, n - armor);
+  let dealt = Math.max(1, n - armor);
+  // a foe nearly done is finished at a blow (a leader holds: twice the blow)
+  if (p.perks.includes('execute') && foe.hp <= foe.hpMax * PERK.executeBelow) dealt = def.phases ? dealt * 2 : Math.max(dealt, foe.hp);
   if (armor > 0 && def.traits.includes('armored')) reveal(g, f, foe.enemy, 'armored');
   say(g, f, open ? 'fight_hit_open' : ranged ? 'fight_shoot' : 'fight_hit', pid, { ...foeVars(g, foe, f), n: dealt });
   ev(f, { a: pid, t: fid(foe), k: 'hit', n: dealt });
-  damageFoe(g, f, foe, dealt, pid);
+  damageFoe(g, f, foe, dealt, pid, !ranged && p.perks.includes('shieldbreak'));
+  if (!foe.out) {
+    if (!ranged && p.perks.includes('taunt')) foe.taunt = pid;
+  }
   return dealt;
 }
 
@@ -890,6 +1078,12 @@ export function hurtHero(g: Game, f: FightState, pid: PlayerId, n: number): void
       p.flags['flint_used_' + f.id] = 1;
       p.hp = 1;
       say(g, f, 'fight_flint', pid, {});
+      return;
+    }
+    if (p.perks.includes('unbroken') && once(f, `${pid}:unbroken`)) {
+      p.hp = Math.max(1, Math.round(p.hpMax * PERK.unbrokenHp));
+      say(g, f, 'fight_unbroken', pid, {});
+      ev(f, { a: pid, t: pid, k: 'heal', n: p.hp });
       return;
     }
     if (!f.down.includes(pid)) f.down.push(pid);
@@ -912,7 +1106,10 @@ export function meetPoint(g: Game, f: FightState, foe: FoeState, t: PlayerId): b
 /** Who takes a blow aimed at this hero: a partner standing by to cover takes it instead. */
 function coveredBy(g: Game, f: FightState, target: PlayerId): PlayerId {
   const mate = f.party.find((x) => x !== target);
-  if (mate && f.stance?.[mate] === 'cover' && up(g, f, mate) && !pinned(g, f, mate) && adjacent(heroPos(f, mate), heroPos(f, target))) return mate;
+  if (!mate || f.stance?.[mate] !== 'cover' || !up(g, f, mate) || pinned(g, f, mate)) return target;
+  const a = heroPos(f, mate);
+  const b = heroPos(f, target);
+  if (a && b && dist(a, b) <= (perk(g, mate, 'bulwark') ? PERK.bulwarkReach : 1)) return mate;
   return target;
 }
 
@@ -922,12 +1119,14 @@ export function foeStrikes(g: Game, f: FightState, foe: FoeState, target: Player
   const t = coveredBy(g, f, target);
   const covered = t !== target;
   if (!up(g, f, t)) return 0;
+  if (kind === 'charge' && perk(g, t, 'steadfast')) mult = Math.min(mult, 1);
   if (f.stance?.[t] === 'keep' && kind !== 'charge' && meetPoint(g, f, foe, t)) return 0;
   const h = heroOf(g, t);
   const vars = foeVars(g, foe, f);
   if (kind !== 'grab' && g.rng.chance(h.dodge)) {
     say(g, f, 'fight_dodge', t, vars);
     ev(f, { a: fid(foe), t, k: 'dodge' });
+    if (kind === 'attack' && perk(g, t, 'riposte') && adjacent(foe.pos, heroPos(f, t))) openUp(g, f, foe);
     return 0;
   }
   const duo = !!f.duo && (!!def.phases || !bossFight(g, f));
@@ -947,7 +1146,7 @@ export function foeStrikes(g: Game, f: FightState, foe: FoeState, target: Player
     n = Math.round(n * TECH.block);
     openUp(g, f, foe);
   } else if (f.guard?.[t]) n = Math.max(0, Math.round(n * (1 - f.guard[t]!)));
-  if (covered && g.p(t).perks.includes('shield')) n = Math.round(n * 0.7);
+  if (covered && g.p(t).perks.includes('shield')) n = Math.round(n * PERK.shieldCut);
   if (n <= 0) {
     say(g, f, 'fight_blocked', t, vars);
     ev(f, { a: fid(foe), t, k: 'block' });
@@ -976,7 +1175,24 @@ function heroActs(g: Game, f: FightState, pid: PlayerId, pick: string): void {
   const other = f.party.find((x) => x !== pid);
   if (pick.startsWith('hit:') || pick.startsWith('shoot:')) {
     const foe = pickedFoe(f, pick.split(':')[1]);
-    if (foe) heroHits(g, f, pid, foe, { ranged: pick.startsWith('shoot:') });
+    if (!foe) return;
+    const shot = pick.startsWith('shoot:');
+    const dealt = heroHits(g, f, pid, foe, { ranged: shot });
+    // a second arrow off the string
+    if (shot && perk(g, pid, 'twin') && !foe.out) {
+      const ammo = heroOf(g, pid).ammo;
+      if (!ammo || (p.bag[ammo] ?? 0) > 0) heroHits(g, f, pid, foe, { ranged: true, acc: PERK.twinAcc });
+    }
+    // a wide swing catches one more who stands by
+    if (dealt > 0 && pick.startsWith('hit:') && perk(g, pid, 'sweep')) {
+      const by = activeFoes(f).find((x) => x !== foe && adjacent(x.pos, heroPos(f, pid)));
+      if (by) {
+        const n = Math.max(1, Math.floor(dealt * PERK.sweepPart));
+        say(g, f, 'fight_hit', pid, { ...foeVars(g, by, f), n });
+        ev(f, { a: pid, t: fid(by), k: 'hit', n });
+        damageFoe(g, f, by, n, pid);
+      }
+    }
     return;
   }
   if (pick.startsWith('t:')) {
@@ -998,10 +1214,55 @@ function heroActs(g: Game, f: FightState, pid: PlayerId, pick: string): void {
         say(g, f, 'fight_block', pid, {});
         ev(f, { a: pid, k: 'guard' });
         return;
+      case 'rain':
+        for (const x of rainTargets(g, f, pid)) if (!x.out) heroHits(g, f, pid, x, { ranged: true, acc: PERK.rainAcc });
+        return;
     }
     const foe = pickedFoe(f, uid);
     if (!foe) return;
     const t = techsOf(g, pid).find((x) => x.id === tech);
+    if (tech === 'lunge' || tech === 'roll' || tech === 'ram') {
+      const to = perkStep(g, f, pid, tech, foe);
+      if (!to) return;
+      carry(g, f, pid, to);
+      if (tech === 'lunge') heroHits(g, f, pid, foe, { acc: PERK.lungeAcc });
+      else if (tech === 'roll') {
+        heroHits(g, f, pid, foe);
+        (f.guard ??= {})[pid] = Math.max(f.guard[pid] ?? 0, PERK.rollGuard);
+      } else if (heroHits(g, f, pid, foe, { mult: PERK.ramMult }) > 0 && !foe.out) {
+        if (foe.intent?.move === 'charge') foe.intent = { move: 'none' };
+        if (g.rng.chance(PERK.ramOpen)) openUp(g, f, foe);
+      }
+      return;
+    }
+    if (tech === 'desperate') {
+      heroHits(g, f, pid, foe, { mult: PERK.desperateMult, acc: PERK.desperateAcc });
+      return;
+    }
+    if (tech === 'pinshot') {
+      if (heroHits(g, f, pid, foe, { ranged: true }) > 0 && !foe.out) foe.rooted = true;
+      return;
+    }
+    if (tech === 'shove') {
+      const at = heroPos(f, pid)!;
+      const back: Cell = [foe.pos![0] + Math.sign(foe.pos![0] - at[0]), foe.pos![1] + Math.sign(foe.pos![1] - at[1])];
+      const fld = fieldOf(f);
+      const inside = back[0] >= 0 && back[1] >= 0 && back[0] < fld.w && back[1] < fld.h;
+      const free = inside && !taken(g, f, fid(foe)).has(key(back)) && (swimmer(enemyOf(g, foe.enemy)) || standable(fld, back));
+      if (foe.intent?.move === 'charge') foe.intent = { move: 'none' };
+      if (free) {
+        ev(f, { a: fid(foe), k: 'move', path: [back] });
+        foe.pos = back;
+        say(g, f, 'fight_shoved', pid, foeVars(g, foe, f));
+        openUp(g, f, foe);
+      } else {
+        const n = g.rng.int(1, 3);
+        ev(f, { a: pid, t: fid(foe), k: 'hit', n });
+        damageFoe(g, f, foe, n, pid);
+        daze(g, f, foe);
+      }
+      return;
+    }
     if (tech === 'stun') {
       if (heroHits(g, f, pid, foe, { dmg: t?.dmg }) > 0) daze(g, f, foe);
     } else if (tech === 'bash') {
@@ -1015,6 +1276,19 @@ function heroActs(g: Game, f: FightState, pid: PlayerId, pick: string): void {
     return;
   }
   switch (pick) {
+    case 'dash': {
+      const there = other ? heroPos(f, other) : undefined;
+      if (!there) return;
+      const ways = reach(fieldOf(f), heroPos(f, pid)!, PERK.dashReach, taken(g, f, pid));
+      const spot = neighbours(fieldOf(f), there).find((c) => ways.has(key(c)));
+      if (!spot) return;
+      carry(g, f, pid, spot);
+      if (up(g, f, other!)) {
+        (f.stance ??= {})[pid] = 'cover';
+        say(g, f, 'fight_cover', pid, {});
+      }
+      return;
+    }
     case 'cover':
       (f.stance ??= {})[pid] = 'cover';
       say(g, f, 'fight_cover', pid, {});
@@ -1023,7 +1297,7 @@ function heroActs(g: Game, f: FightState, pid: PlayerId, pick: string): void {
     case 'struggle': {
       const foe = holder(f, pid);
       if (!foe) return;
-      if (g.rng.chance(0.15 * p.stats.wil)) {
+      if (perk(g, pid, 'will') || g.rng.chance(0.15 * p.stats.wil)) {
         foe.holds = null;
         say(g, f, 'fight_broke_free', pid, foeVars(g, foe, f));
       } else say(g, f, 'fight_struggle', pid, foeVars(g, foe, f));
@@ -1047,7 +1321,8 @@ function heroActs(g: Game, f: FightState, pid: PlayerId, pick: string): void {
       f.down = f.down.filter((x) => x !== other);
       (f.lifted ??= []).push(other);
       const o = g.p(other);
-      o.hp = Math.max(1, Math.ceil(o.hpMax / 4));
+      o.hp = perk(g, pid, 'rally') ? o.hpMax : Math.max(1, Math.ceil(o.hpMax / (perk(g, pid, 'lift') ? 2 : 4)));
+      if (perk(g, pid, 'rally')) f.ap = (f.ap ?? 0) + 1;
       say(g, f, 'fight_lift', pid, {});
       ev(f, { a: pid, t: other, k: 'heal', n: o.hp });
       return;
@@ -1251,12 +1526,16 @@ function finishFight(g: Game, f: FightState, how: 'win' | 'lose' | 'fled'): void
     p.poison = 0;
   }
   if (how === 'win') {
-    let xp = 0;
+    // experience is reckoned for each hero: foes far beneath them teach little
+    const xpOf: Record<PlayerId, number> = { p1: 0, p2: 0 };
+    const learn = (level: number, n: number) => {
+      for (const pid of party) xpOf[pid] += n * foeXpFactor(g.p(pid).level, level);
+    };
     const loot: Record<string, number> = {};
     for (const foe of f.foes) {
       const def = enemyOf(g, foe.enemy);
       if (foe.out === 'dead' || foe.out === 'down') {
-        xp += def.level * 2;
+        learn(def.level, def.level * 2);
         const b = (g.s.bestiary[foe.enemy] ??= { seen: 1, beaten: 0, known: [] });
         b.beaten += 1;
         // after a few fights everybody knows what the beast is like
@@ -1264,12 +1543,12 @@ function finishFight(g: Game, f: FightState, how: 'win' | 'lose' | 'fled'): void
         for (const [id, [a, z]] of Object.entries(def.loot ?? {})) loot[id] = (loot[id] ?? 0) + g.rng.int(a, z);
         if (def.rare && g.rng.chance(def.rare.p)) for (const [id, n] of Object.entries(def.rare.loot)) loot[id] = (loot[id] ?? 0) + n;
       } else if (foe.out === 'fled') {
-        xp += def.level;
+        learn(def.level, def.level);
         // driven off: what they had is left behind
         if (f.routed) for (const [id, [a, z]] of Object.entries(def.loot ?? {})) loot[id] = (loot[id] ?? 0) + g.rng.int(a, z);
       }
     }
-    xp = Math.round(xp * (skyAt(g, f.area)?.xp ?? 1));
+    for (const pid of party) xpOf[pid] = Math.round(xpOf[pid] * (skyAt(g, f.area)?.xp ?? 1));
     const standing = party.filter((pid) => !f.down.includes(pid) && !f.fled.includes(pid));
     const takers = standing.length ? standing : party;
     // the loot is shared out now (one thing each in turn); each takes their share from the field (takeLoot)
@@ -1285,11 +1564,14 @@ function finishFight(g: Game, f: FightState, how: 'win' | 'lose' | 'fled'): void
       const p = g.p(pid);
       if (f.down.includes(pid)) p.hp = Math.max(1, Math.ceil(p.hpMax / 4));
       if (!f.fled.includes(pid)) {
-        gainXp(g, pid, xp);
+        const back = perk(g, pid, 'arrows') ? Math.floor((f.shots?.[pid] ?? 0) / 2) : 0;
+        const ammo = heroOf(g, pid).ammo;
+        if (back > 0 && ammo) addBag(g, pid, ammo, back);
+        gainXp(g, pid, xpOf[pid]);
         const a = after[pid];
         if (a) a.loot = share[pid];
       }
-      g.logRaw('find', { [pid]: `${g.ix.ui('fight_won')} ${g.ix.ui('xp_short')} +${xp}.` }, pid);
+      g.logRaw('find', { [pid]: `${g.ix.ui('fight_won')} ${g.ix.ui('xp_short')} +${xpOf[pid]}.` }, pid);
     }
     g.s.stats.fights = (g.s.stats.fights ?? 0) + 1;
   } else if (how === 'lose') {
