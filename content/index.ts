@@ -16,6 +16,7 @@ import { ui } from './ui.js';
 import { weather } from './weather.js';
 import { events } from './events.js';
 import { garden, gardenActions, gardenFx, gardenLocations, gardenResources } from './garden.js';
+import { folkActions, folkResources } from './folk.js';
 import { needs, needs1Actions, needs1Fx, needs1Resources } from './a1/needs.js';
 import { needs2Actions, needs2Fx, needs2Resources } from './a2/needs.js';
 import { quests1, sideAreas1, sideClues1, sideComfort1, sideDaily1, sideEnemies1, sideLocations1, sideMysteries, sideNpcs1, sideResources1 } from './side/a1base.js';
@@ -41,8 +42,8 @@ const withBarrels = (list: ResourceDef[]): ResourceDef[] =>
 
 export const content: Content = {
   areas: [...areas, ...areas2, ...sideAreas1],
-  resources: withBarrels([...resources, ...resources2, ...needs1Resources, ...needs2Resources, ...sideResources1, ...sideResources2, ...gardenResources]),
-  actions: [...actions, ...actions2, ...actionsA2, ...needs1Actions, ...needs2Actions, ...sideActions1, ...sideActions2, ...gardenActions],
+  resources: withBarrels([...resources, ...resources2, ...needs1Resources, ...needs2Resources, ...sideResources1, ...sideResources2, ...gardenResources, ...folkResources]),
+  actions: [...actions, ...actions2, ...actionsA2, ...needs1Actions, ...needs2Actions, ...sideActions1, ...sideActions2, ...gardenActions, ...folkActions],
   pools,
   locations: [...locations, ...locations2, ...sideLocations1, ...sideLocations2, ...gardenLocations],
   scenes: [...scenes1, ...scenes2, ...scenesA2, ...scenesA2b, ...suppersA2, ...sideScenes1, ...sideScenes2],

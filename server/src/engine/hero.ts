@@ -190,6 +190,8 @@ export function ownsCount(g: Game, id: string): number {
     n += p.bag[id] ?? 0;
     for (const slot of SLOTS) if (p.equip[slot] === id) n += 1;
   }
+  // what residents have on is the household's too
+  for (const r of Object.values(g.s.residents)) if (r.gear?.tool === id || r.gear?.wear === id) n += 1;
   return n;
 }
 

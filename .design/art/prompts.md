@@ -169,3 +169,6 @@ around it, all at a similar size, seen from a slight three-quarter view, lit fro
 shadows outside the object. Row 1: …; Row 2: …; Row 3: … (по строкам из .design/art/perks.json).
 No people except hands where named. Style: <хвост стиля из bible.md>
 ```
+
+### Лист things 9 (знаряддя жителів, 2026-10-29)
+Шаблон шага 3 (1536x1024, прозрачный фон, 4×3), строки из `things.json` (лист 9), пустые клетки — «leave this cell empty».

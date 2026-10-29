@@ -30,7 +30,7 @@ import { perkState, skillLevel, skillXpFor, xpForLevel } from '../../../shared/s
 import { bagCap, bagLoad, gearNote, heroOf, ownsCount, perkTree, useNote } from './hero.js';
 import { HERO_AP, activeFoes, activeId, enemyOf, fid, fightMoves, fightOf, holder, moraleOf, walkable } from './fight.js';
 import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, routeLegs, routeTo, travelTime, walkOf } from './travel.js';
-import { foodOf, jobYield, larder, rankIn, residentJobs, stateOf, teachBlock, tradeOf, workMult, workingAt } from './household.js';
+import { foodOf, garmentOf, jobYield, larder, rankIn, residentJobs, stateOf, teachBlock, tradeOf, workMult, workingAt } from './household.js';
 import { byFire, campBlock, chillRate, comfortOf, dryOf, eatBlock, restBlock, restLength, tired } from './needs.js';
 import { outside, weatherNow } from './weather.js';
 import { eventsView } from './events.js';
@@ -1009,6 +1009,7 @@ function residentsView(g: Game, pid: PlayerId): ResidentView[] {
         ...(why?.length ? { why } : {}),
         food: net,
         ...tradeView(g, pid, r.id),
+        gear: folkGearView(g, pid, r.id),
       };
     });
 }
@@ -1035,6 +1036,28 @@ function tradeView(g: Game, pid: PlayerId, id: string): Pick<ResidentView, 'trad
   };
   const reason = teachBlock(g, pid, id);
   return { trade, trades, ...(rank === 2 ? { teach: reason ? { reason } : {} } : {}) };
+}
+
+/** A resident's tool and garment, and the ones in the store that could go on. */
+function folkGearView(g: Game, pid: PlayerId, id: string): ResidentView['gear'] {
+  const st = g.s.residents[id]!;
+  const trade = st.job ? tradeOf(g, st.job) : undefined;
+  const tradeName = (t?: string) => (g.ix.c.trades ?? []).find((x) => x.id === t)?.name ?? '';
+  const garment = (gid: string) => {
+    const w = garmentOf(g, { ...st, gear: { wear: gid } })!;
+    const def = g.ix.res.get(gid)!;
+    return { id: gid, name: def.name, ...(def.icon ? { icon: def.icon } : {}), guard: w.guard, warm: w.warm, heavy: w.heavy };
+  };
+  const toolDef = st.gear?.tool ? g.ix.res.get(st.gear.tool) : undefined;
+  return {
+    tool: toolDef ? { id: toolDef.id, name: toolDef.name, ...(toolDef.icon ? { icon: toolDef.icon } : {}), trade: tradeName(toolDef.folkTool), fits: toolDef.folkTool === trade?.id } : null,
+    wear: st.gear?.wear ? garment(st.gear.wear) : null,
+    tools: g.ix.c.resources
+      .filter((x) => x.folkTool && (g.s.res[x.id] ?? 0) > 0)
+      .map((x) => ({ id: x.id, name: x.name, ...(x.icon ? { icon: x.icon } : {}), n: g.s.res[x.id] ?? 0, trade: tradeName(x.folkTool), fits: x.folkTool === trade?.id })),
+    wears: g.ix.c.resources.filter((x) => x.gear?.slot === 'body' && (g.s.res[x.id] ?? 0) > 0).map((x) => ({ ...garment(x.id), n: g.s.res[x.id] ?? 0 })),
+    canChange: g.atHome(pid),
+  };
 }
 
 function larderView(g: Game): LarderView | null {

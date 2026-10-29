@@ -57,7 +57,7 @@ import {
 import { activeFoes, dropFight, fightChoose, fightOf, help, maybeResolve, startFight, takeLoot } from './fight.js';
 import { fieldFrom } from './terrain.js';
 import { ambush, areaDef, areaKnown, go, linkTime, settleTravel } from './travel.js';
-import { setFeed, setJob, settleWork, teach } from './household.js';
+import { folkGear, setFeed, setJob, settleWork, teach } from './household.js';
 import { camp, drink, eat, feed, nightRest, paceOf, rest, settleNeeds, soak } from './needs.js';
 
 /** How long a player must have been gone to get a summary on return. */
@@ -1618,6 +1618,9 @@ export class Game {
         break;
       case 'teach':
         r = teach(this, pid, cmd.who);
+        break;
+      case 'folkgear':
+        r = folkGear(this, pid, cmd.who, cmd.slot, cmd.id);
         break;
       case 'eat':
         r = eat(this, pid, cmd.id);

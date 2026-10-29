@@ -124,6 +124,8 @@ export type Effect =
 export interface ResourceDef {
   id: string;
   name: string;
+  /** A resident's tool: it lifts the work of this trade. */
+  folkTool?: string;
   /** Base storage cap; undefined = unlimited. */
   cap?: number;
   capBonus?: Array<{ if: Cond; add: number }>;

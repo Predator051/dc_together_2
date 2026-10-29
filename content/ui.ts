@@ -164,6 +164,8 @@ export const ui: Record<string, string> = {
   resident_rest: 'відпочивати',
   resident_set: 'ставить',
   work_sky: 'погода',
+  work_tool: 'знаряддя',
+  work_heavy: 'важкий одяг',
   folk_rank_0: 'новачок',
   folk_rank_1: 'звикає',
   folk_rank_2: 'вправна рука',

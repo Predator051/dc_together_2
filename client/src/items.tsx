@@ -538,6 +538,43 @@ const DRAW: Record<ItemIcon, () => JSX.Element> = {
       <path class="thin" d="M9 8c-1-1.3 1-2.2 0-3.8M14 8c-1-1.3 1-2.2 0-3.8" />
     </Ink>
   ),
+  // ----- residents' tools -----
+  billhook: () => (
+    <Ink>
+      <path d="M5 19l8-8" />
+      <path d="M13 11c1-4 4-6 7-5-1 3-3 5-5 6-1 .5-1.5 0-2-1z" />
+    </Ink>
+  ),
+  mattock: () => (
+    <Ink>
+      <path d="M12 8v13" />
+      <path d="M4 6c3 2 13 2 16 0" />
+    </Ink>
+  ),
+  rake: () => (
+    <Ink>
+      <path d="M12 3v13" />
+      <path d="M5 16h14M6 16v4M9 16v4M12 16v4M15 16v4M18 16v4" />
+    </Ink>
+  ),
+  weir: () => (
+    <Ink>
+      <path d="M4 8l14-3v14L4 16z" />
+      <path class="thin" d="M8 7.3v9.4M12 6.4v11.2M18 9l-4 3 4 3" />
+    </Ink>
+  ),
+  sickle: () => (
+    <Ink>
+      <path d="M7 20l3-4" />
+      <path d="M10 16c-3-6 0-12 7-12-4 2-6 6-4 11" />
+    </Ink>
+  ),
+  hoe: () => (
+    <Ink>
+      <path d="M17 3L7 17" />
+      <path d="M4 15l5 4 2-3-5-3z" />
+    </Ink>
+  ),
   // ----- errands -----
   feather: () => (
     <Ink>

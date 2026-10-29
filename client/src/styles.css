@@ -9248,3 +9248,93 @@ body.sheet-open {
   margin-top: 6px !important;
   font-size: 0.82rem;
 }
+
+/* a resident's tool and garment */
+.folk-gear {
+  margin: 10px 0 0;
+  padding: 8px 0 0;
+  border-top: 1px dashed var(--rule);
+  font-family: var(--sans);
+}
+.folk-gear-head {
+  color: var(--faded);
+  font-size: 0.82rem;
+}
+.folk-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 4px;
+}
+.folk-slot {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--leaf);
+  color: var(--ink-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.folk-slot.on {
+  border-color: var(--ochre);
+}
+.folk-slot.bare {
+  border-style: dashed;
+}
+.folk-slot-pic {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+}
+.folk-slot-pic .item-icon.painted {
+  width: 36px;
+  height: 36px;
+}
+.folk-slot-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 0.86rem;
+}
+.folk-slot-text small {
+  color: var(--faded);
+  font-size: 0.74rem;
+}
+.folk-slot-text small.gain {
+  color: var(--verdigris);
+}
+.folk-slot-text b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.folk-slot .slot-more {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 0.7rem;
+  color: var(--ochre-ink);
+}
+.folk-gear-pick {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+.folk-gear-pick > small {
+  color: var(--faded);
+  font-size: 0.82rem;
+}
+.folk-gear-pick small.gain {
+  color: var(--verdigris);
+}
+.folk-gear-pick .slot-n {
+  display: inline;
+  color: var(--faded);
+}

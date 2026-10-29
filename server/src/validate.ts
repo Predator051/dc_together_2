@@ -739,6 +739,7 @@ export function validateContent(c: Content): Report {
     const n = (c.trades ?? []).filter((t) => t.jobs.includes(a.id)).length;
     if (n !== 1) err(`job ${a.id}: in ${n} trades, want one`);
   }
+  for (const r of c.resources) if (r.folkTool && !(c.trades ?? []).some((t) => t.id === r.folkTool)) err(`resource ${r.id}: tool of an unknown trade ${r.folkTool}`);
   for (const t of c.trades ?? []) {
     if (!t.teach.length) err(`trade ${t.id}: nobody to teach it`);
     for (const j of t.jobs) if (!c.actions.some((a) => a.id === j && a.job)) err(`trade ${t.id}: ${j} is not a job`);

@@ -49,7 +49,7 @@ export function rankIn(r: ResidentState, trade: string): number {
 
 /** One part of how fast a resident works: a trait, the weather, a blessing on the house, hunger, a good meal. */
 export interface WorkPart {
-  key: 'trait' | 'skill' | 'sky' | 'bonus' | 'hunger' | 'dish';
+  key: 'trait' | 'skill' | 'tool' | 'heavy' | 'sky' | 'bonus' | 'hunger' | 'dish';
   x: number;
   name?: string;
 }
@@ -67,7 +67,13 @@ export function workMult(g: Game, id: string, a: ActionDef): { mult: number; par
   const trade = tradeOf(g, a.id);
   const rank = r && trade ? rankIn(r, trade.id) : 0;
   if (rank > 0) parts.push({ key: 'skill', x: TRADE.mult[rank]!, name: g.ix.ui(`folk_rank_${rank}`) });
-  const sky = skyAt(g, g.ix.areaOf(a.group))?.jobs ?? 1;
+  const tool = r?.gear?.tool ? g.ix.res.get(r.gear.tool) : undefined;
+  if (tool && trade && tool.folkTool === trade.id) parts.push({ key: 'tool', x: TRADE.tool, name: tool.name });
+  const wear = garmentOf(g, r);
+  if (wear?.heavy) parts.push({ key: 'heavy', x: TRADE.heavy, name: wear.name });
+  // warm clothes keep the bad weather off the work (a fair sky still helps)
+  let sky = skyAt(g, g.ix.areaOf(a.group))?.jobs ?? 1;
+  if (sky < 1 && wear?.warm) sky = 1;
   if (sky !== 1) parts.push({ key: 'sky', x: sky });
   let bonus = 1;
   for (const b of g.ix.c.workBonus ?? []) if (g.test(b.if)) bonus *= b.mult;
@@ -174,10 +180,11 @@ function workStep(g: Game, id: string, r: ResidentState, a: ActionDef, hours: nu
     r.acc[res] = total - whole;
     if (whole > 0 && g.addRes(res, whole) > 0) changed = true;
   }
-  // dangerous places hurt now and then
+  // dangerous places hurt now and then (less, and less badly, in sound clothes)
   const danger = areaDef(g, g.ix.areaOf(a.group))?.danger ?? 0;
-  if (danger >= 3 && g.rng.chance(Math.min(0.5, 0.04 * hours * (danger - 2)))) {
-    r.hurtUntil = g.now + 2 * HOUR;
+  const guard = garmentOf(g, r)?.guard ? TRADE.guard : 1;
+  if (danger >= 3 && g.rng.chance(Math.min(0.5, 0.04 * hours * (danger - 2)) * guard)) {
+    r.hurtUntil = g.now + 2 * HOUR * guard;
     g.log({ all: `${residentName(g, id)}: ${g.ix.ui('resident_hurt')}`, kind: 'warn' });
     changed = true;
   }
@@ -315,5 +322,43 @@ export function teach(g: Game, pid: PlayerId, who: string): Result {
   const what = `${name} ${g.ix.ui('teach_log')} ${trade.name.toLowerCase()}.`;
   g.log({ self: `${g.ix.ui('teach_self')} ${what}`, other: `{name} ${g.ix.ui('teach_other')} ${what}`, kind: 'find' }, pid);
   gainXp(g, pid, TRADE.teachXp);
+  return { ok: true };
+}
+
+/** What a garment does on a resident: guards against wounds (armour or a resist), warms, weighs them down. */
+export function garmentOf(g: Game, r: ResidentState | undefined): { id: string; name: string; guard: boolean; warm: boolean; heavy: boolean } | undefined {
+  const id = r?.gear?.wear;
+  const def = id ? g.ix.res.get(id) : undefined;
+  if (!def?.gear) return undefined;
+  const resist = def.gear.resist ?? [];
+  return {
+    id: def.id,
+    name: def.name,
+    guard: (def.gear.armor ?? 0) >= 1 || resist.includes('salt') || resist.includes('venom'),
+    warm: resist.includes('cold'),
+    heavy: !!def.gear.tags?.includes('heavy'),
+  };
+}
+
+/** Things in the store a resident could take into a slot: tools of trades, garments for the body. */
+export function folkGearFits(g: Game, slot: 'tool' | 'wear', id: string): boolean {
+  const def = g.ix.res.get(id);
+  return slot === 'tool' ? !!def?.folkTool : def?.gear?.slot === 'body';
+}
+
+/** A hero at home gives a resident a thing from the store (the one they had goes back), or takes it off. */
+export function folkGear(g: Game, pid: PlayerId, who: string, slot: 'tool' | 'wear', id: string | null): Result {
+  const r = g.s.residents[who];
+  if (!r) return g.fail('err_not_now');
+  if (!g.atHome(pid)) return g.fail('err_not_home');
+  if (id !== null && (!folkGearFits(g, slot, id) || (g.s.res[id] ?? 0) <= 0)) return g.fail('err_not_now');
+  settleWork(g);
+  const gear = (r.gear ??= {});
+  const old = gear[slot];
+  if (old) g.s.res[old] = (g.s.res[old] ?? 0) + 1;
+  if (id) {
+    g.s.res[id] = (g.s.res[id] ?? 0) - 1;
+    gear[slot] = id;
+  } else delete gear[slot];
   return { ok: true };
 }

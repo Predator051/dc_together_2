@@ -3,7 +3,7 @@
 
 import { useState } from 'preact/hooks';
 import { FOLK } from '../../shared/src/pictures.js';
-import type { LarderView, PlayerView, ResidentView } from '../../shared/src/protocol.js';
+import type { FolkGarment, LarderView, PlayerView, ResidentView } from '../../shared/src/protocol.js';
 import { net } from './net.js';
 import { Thing } from './items.js';
 import { markOf, stationSlots, stationUrl } from './pictures.js';
@@ -205,6 +205,77 @@ function Trade({ r, locked }: { r: ResidentView; locked: boolean }) {
   );
 }
 
+function garmentNote(w: FolkGarment): string {
+  const out = [w.guard ? T.folkGuard : '', w.warm ? T.folkWarm : '', w.heavy ? T.folkHeavy : ''].filter(Boolean);
+  return out.length ? out.join(' · ') : T.folkPlain;
+}
+
+/** A tool of a trade and a garment: what they have on, and what the store holds for them. */
+function Gear({ r, locked }: { r: ResidentView; locked: boolean }) {
+  const [open, setOpen] = useState<'tool' | 'wear' | null>(null);
+  const g = r.gear;
+  const send = (slot: 'tool' | 'wear', id: string | null) => {
+    net.send({ c: 'folkgear', who: r.id, slot, id });
+    setOpen(null);
+  };
+  const toolNote = g.tool ? (g.tool.fits ? T.folkToolFits : `${T.folkToolFor} «${g.tool.trade.toLowerCase()}» — ${T.folkToolNo}`) : '';
+  const row = (slot: 'tool' | 'wear', title: string, item: { name: string; icon?: string } | null, note: string, n: number) => (
+    <button type="button" class={`folk-slot ${open === slot ? 'on' : ''} ${item ? '' : 'bare'}`} aria-expanded={open === slot} onClick={() => setOpen(open === slot ? null : slot)}>
+      <span class="folk-slot-pic" aria-hidden="true">
+        {item?.icon ? <Thing icon={item.icon} /> : null}
+      </span>
+      <span class="folk-slot-text">
+        <small>{title}</small>
+        <b>{item ? item.name : T.folkNone}</b>
+        {item && <small class={note === T.folkToolFits || note.startsWith(T.folkGuard) || note.startsWith(T.folkWarm) ? 'gain' : ''}>{note}</small>}
+      </span>
+      {g.canChange && n > 0 && <span class="slot-more">+{n}</span>}
+    </button>
+  );
+  const options =
+    open === 'tool'
+      ? g.tools.map((x) => ({ id: x.id, name: x.name, icon: x.icon, n: x.n, note: x.fits ? T.folkToolFits : `${T.folkToolFor} «${x.trade.toLowerCase()}»`, good: x.fits }))
+      : open === 'wear'
+        ? g.wears.map((x) => ({ id: x.id, name: x.name, icon: x.icon, n: x.n, note: garmentNote(x), good: (x.guard || x.warm) && !x.heavy }))
+        : [];
+  const worn = open === 'tool' ? g.tool : open === 'wear' ? g.wear : null;
+  return (
+    <div class="folk-gear">
+      <small class="folk-gear-head">{T.folkGear}</small>
+      <div class="folk-slots">
+        {row('tool', T.folkTool, g.tool, toolNote, g.tools.length)}
+        {row('wear', T.folkWear, g.wear, g.wear ? garmentNote(g.wear) : '', g.wears.length)}
+      </div>
+      {open && (
+        <div class="folk-gear-pick">
+          {!g.canChange && <small>{T.folkAwayGear}</small>}
+          {g.canChange && !options.length && <small>{T.folkStoreEmpty}</small>}
+          {g.canChange &&
+            options.map((o) => (
+              <button type="button" class="folk-job-opt" disabled={locked} onClick={() => send(open, o.id)}>
+                <span class="folk-job-pic" aria-hidden="true">
+                  {o.icon && <Thing icon={o.icon} />}
+                </span>
+                <span class="folk-job-text">
+                  {T.folkPutOn}: {o.name} <small class="slot-n">×{o.n}</small>
+                  <small class={o.good ? 'gain' : ''}>{o.note}</small>
+                </span>
+              </button>
+            ))}
+          {g.canChange && worn && (
+            <button type="button" class="folk-job-opt rest" disabled={locked} onClick={() => send(open, null)}>
+              <span class="folk-job-pic" aria-hidden="true" />
+              <span class="folk-job-text">
+                {T.folkTakeOff}: {worn.name}
+              </span>
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** The picked resident: who they are, what they bring now, and the works to set them to. */
 function FolkCard({ r, locked, stock }: { r: ResidentView; locked: boolean; stock: number }) {
   const [why, setWhy] = useState(false);
@@ -239,6 +310,7 @@ function FolkCard({ r, locked, stock }: { r: ResidentView; locked: boolean; stoc
       ) : null}
       <Belly r={r} stock={stock} />
       <Trade r={r} locked={locked} />
+      <Gear r={r} locked={locked} />
       <ul class="traits">
         {r.traits.map((t) => (
           <li>

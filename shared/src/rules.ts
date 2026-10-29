@@ -164,6 +164,10 @@ export const TRADE = {
   teachSkill: 4,
   teachMs: 3 * 60_000,
   teachXp: 5,
+  /** A tool of the trade; a heavy garment slows; a sound one halves the chance and the time of a wound. */
+  tool: 1.2,
+  heavy: 0.9,
+  guard: 0.5,
 };
 
 /** A resident's step in a trade: 0 new, 1 used to it, 2 skilled (by work), 3 a master's hand (taught). */

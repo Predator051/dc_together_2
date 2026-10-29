@@ -39,6 +39,7 @@ export type Command =
   | { c: 'job'; who: string; id: string | null }
   | { c: 'feed'; dishes: boolean }
   | { c: 'teach'; who: string }
+  | { c: 'folkgear'; who: string; slot: 'tool' | 'wear'; id: string | null }
   /** Eat a dish (from the bag, or at home from the store). */
   | { c: 'eat'; id: string }
   /** Light a campfire where you stand (away from home). */
@@ -650,6 +651,25 @@ export interface ResidentView {
   trades: Array<{ name: string; rank: number; rankName: string }>;
   /** The last step of their trade is taught by a hero: why this one cannot now (absent: can). */
   teach?: { reason?: string };
+  /** What they have on, and what the store holds for them (changed at home only). */
+  gear: FolkGearView;
+}
+
+export interface FolkGarment {
+  id: string;
+  name: string;
+  icon?: string;
+  guard: boolean;
+  warm: boolean;
+  heavy: boolean;
+}
+
+export interface FolkGearView {
+  tool: { id: string; name: string; icon?: string; trade: string; fits: boolean } | null;
+  wear: FolkGarment | null;
+  tools: Array<{ id: string; name: string; icon?: string; n: number; trade: string; fits: boolean }>;
+  wears: Array<FolkGarment & { n: number }>;
+  canChange: boolean;
 }
 
 /** The household's food: eaten and brought in an hour, the store, how long it lasts. */

@@ -458,6 +458,40 @@ describe('residents grow in their trade', () => {
   });
 });
 
+describe('residents\' gear', () => {
+  it('a tool lifts its own trade only; a garment guards, warms or weighs; things come from the store and go back', () => {
+    const { w, h } = home();
+    w.g().apply([{ resident: 'h_01' }]);
+    w.state.flags.p2_well_ok = 1;
+    expect(w.cmd(h, { c: 'job', who: 'h_01', id: 'x_15' }).ok).toBe(true); // water: the salt trade
+    const rate = () => w.view(h).residents[0]!.rate!;
+    const base = rate();
+    // a tool of another trade does nothing here
+    w.state.res['r_73'] = 1;
+    expect(w.cmd(h, { c: 'folkgear', who: 'h_01', slot: 'tool', id: 'r_73' }).ok).toBe(true);
+    expect(w.state.res['r_73']).toBe(0);
+    expect(rate()).toBeCloseTo(base, 1);
+    expect(w.view(h).residents[0]!.gear.tool?.fits).toBe(false);
+    // its own trade's tool: +20%, the other goes back to the store
+    w.state.res['r_72'] = 1;
+    expect(w.cmd(h, { c: 'folkgear', who: 'h_01', slot: 'tool', id: 'r_72' }).ok).toBe(true);
+    expect(w.state.res['r_73']).toBe(1);
+    expect(rate()).toBeCloseTo(base * 1.2, 1);
+    // a heavy coat slows the work; it counts as owned by the household
+    w.state.res['g_15'] = 1;
+    expect(w.cmd(h, { c: 'folkgear', who: 'h_01', slot: 'wear', id: 'g_15' }).ok).toBe(true);
+    expect(rate()).toBeCloseTo(base * 1.2 * 0.9, 1);
+    expect(w.view(h).residents[0]!.gear.wear?.warm).toBe(true);
+    expect(w.view(h).residents[0]!.gear.wear?.guard).toBe(true);
+    // a hero's own slot is not a resident's: boots do not go on as a garment
+    w.state.res['g_06'] = 1;
+    expect(w.cmd(h, { c: 'folkgear', who: 'h_01', slot: 'wear', id: 'g_06' }).ok).toBe(false);
+    // away from home nothing changes hands
+    w.state.players[h].at = 'a_02';
+    expect(w.cmd(h, { c: 'folkgear', who: 'h_01', slot: 'wear', id: null }).ok).toBe(false);
+  });
+});
+
 describe('playing alone', () => {
   it('one hero alone can do the routine, but no story moves without the other', () => {
     const { w, h, m } = home(4);

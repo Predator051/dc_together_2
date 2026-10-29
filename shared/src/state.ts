@@ -315,6 +315,8 @@ export interface ResidentState {
   /** Hours worked by trade; trades a hero taught to a master's hand. */
   exp?: Record<string, number>;
   master?: string[];
+  /** What they have on: a tool of a trade, a garment (item ids, taken from the home store). */
+  gear?: { tool?: string; wear?: string };
 }
 
 /** What part one left behind (imported once from its world). */
