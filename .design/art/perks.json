@@ -248,5 +248,155 @@
    "spare5",
    "an iron key"
   ]
+ ],
+ [
+  [
+   "shieldbreak",
+   "a war hammer resting on a round wooden shield split in two"
+  ],
+  [
+   "stagger",
+   "a heavy wooden mallet next to a dented iron helmet lying on its side"
+  ],
+  [
+   "execute",
+   "a long straight broadsword planted point-down in the earth"
+  ],
+  [
+   "tempest",
+   "three short daggers fanned out side by side"
+  ],
+  [
+   "pierce",
+   "an arrow that has gone right through a thick leather breastplate"
+  ],
+  [
+   "spotter",
+   "an arrow with a red cloth ribbon tied round its shaft"
+  ],
+  [
+   "ambusher",
+   "a bow half hidden in a clump of tall dry grass"
+  ],
+  [
+   "twin",
+   "a bow seen from the side with two arrows nocked together on the string"
+  ],
+  [
+   "taunt",
+   "a raised fist in a leather glove"
+  ],
+  [
+   "steadfast",
+   "a spear braced against a thick oak stake driven into the ground"
+  ],
+  [
+   "rally",
+   "one strong hand pulling another hand up by the wrist"
+  ],
+  [
+   "unbroken",
+   "a battered iron helmet, cracked but whole"
+  ]
+ ],
+ [
+  [
+   "porter",
+   "a wooden carrying frame loaded with firewood"
+  ],
+  [
+   "forager",
+   "a handful of mushrooms and wild berries on a large leaf"
+  ],
+  [
+   "artisan",
+   "an open leather tool roll with chisels, an awl and a small saw"
+  ],
+  [
+   "pathfinder",
+   "a birch trunk with a cut blaze mark and a knotted cord tied round it"
+  ],
+  [
+   "spare6",
+   "a folded fishing net"
+  ],
+  [
+   "spare7",
+   "a tinder box"
+  ],
+  [
+   "spare8",
+   "a round rye loaf"
+  ],
+  [
+   "spare9",
+   "a clay pot"
+  ],
+  [
+   "spare10",
+   "a coil of birch bark"
+  ],
+  [
+   "spare11",
+   "a wooden bucket"
+  ],
+  [
+   "spare12",
+   "an iron pot hook"
+  ],
+  [
+   "spare13",
+   "a bundle of candles"
+  ]
+ ],
+ [
+  [
+   "lunge",
+   "a sabre thrust forward, a single footprint in dust behind it"
+  ],
+  [
+   "roll",
+   "a sabre lying across a swirl of kicked-up dust and grass"
+  ],
+  [
+   "desperate",
+   "a notched blade gripped in a bloodless clenched bare hand"
+  ],
+  [
+   "ram",
+   "a heavy round shield-boss and a spear driven forward, dust behind"
+  ],
+  [
+   "pinshot",
+   "an arrow pinning a torn piece of hide to a wooden post"
+  ],
+  [
+   "rain",
+   "a fan of five arrows flying in an arc, seen from the side"
+  ],
+  [
+   "shove",
+   "a round wooden shield pushed forward, a few pebbles flying from it"
+  ],
+  [
+   "dash",
+   "a pair of running leather boots kicking up dust"
+  ],
+  [
+   "spare14",
+   "a carved wooden cup"
+  ],
+  [
+   "spare15",
+   "a horseshoe"
+  ],
+  [
+   "spare16",
+   "an iron ring"
+  ],
+  [
+   "spare17",
+   "a pine cone"
+  ]
  ]
 ]

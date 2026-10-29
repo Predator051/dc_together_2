@@ -221,6 +221,10 @@ export interface FoeState {
   idle?: number;
   /** The round it last cast a net (a net is gathered up again for two rounds). */
   netAt?: number;
+  /** Struck by a hero who draws it on: its next turn goes at that hero only. */
+  taunt?: PlayerId;
+  /** Pinned by a shot: on its next turn it does not leave its cell. */
+  rooted?: boolean;
 }
 
 /** One beat of a fight, for it to be played out on screen: who did what to whom. */

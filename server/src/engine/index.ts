@@ -774,6 +774,7 @@ export class Game {
       t /= a.knack.x;
     }
     if ((a.kind === 'craft' || a.kind === 'build') && this.p(pid).perks.includes('handy')) t *= PERK.craftTime;
+    if ((a.kind === 'craft' || a.kind === 'build') && this.p(pid).perks.includes('artisan')) t *= PERK.artisanTime;
     return Math.round(t);
   }
 
@@ -829,6 +830,9 @@ export class Game {
         if (n) gained[r] = (gained[r] ?? 0) + put(r, n);
       }
     }
+    // nothing goes by a sharp eye: a bite to eat as well
+    const food = this.ix.c.food;
+    if (food && a.kind === 'gather' && p.perks.includes('forager') && this.rng.chance(PERK.foragerChance)) gained[food] = (gained[food] ?? 0) + put(food, 1);
     // Main log (or a one-time vignette) first, chance logs after it.
     const mainId = this.s.meta.nextLogId;
     const beatIdx = (a.beats ?? []).findIndex((b, i) => !this.flag(`beat:${a.id}:${i}`) && (!b.if || this.test(b.if, pid)));

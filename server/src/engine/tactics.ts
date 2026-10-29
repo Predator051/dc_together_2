@@ -103,6 +103,14 @@ export function foeTurn(g: Game, f: FightState, foe: FoeState): void {
     foe.holds = null;
   }
   if (foe.intent?.move === 'charge' && foe.intent.line) return charge(g, f, foe, foe.intent.line);
+  // pinned by a shot: it strikes only who stands by, and does not leave its cell
+  if (foe.rooted) {
+    foe.rooted = false;
+    const by = alive(g, f).find((pid) => adjacent(heroPos(f, pid), foe.pos));
+    if (by) strike(g, f, foe, by, 'attack');
+    else say(g, f, 'fight_rooted', null, vars);
+    return;
+  }
   const heroes = alive(g, f).filter((pid) => heroPos(f, pid));
   if (!heroes.length) return;
   const near = heroes.some((pid) => adjacent(heroPos(f, pid), foe.pos));
@@ -131,7 +139,10 @@ export function foeTurn(g: Game, f: FightState, foe: FoeState): void {
   const netReady = !(def.humane && foe.netAt !== undefined && f.round - foe.netAt < 3);
   const kinds: EnemyMoveKind[] = ['attack', 'venom', 'drag', 'leech', ...(netReady ? (['grab'] as EnemyMoveKind[]) : []), ...(rich.length ? (['steal'] as EnemyMoveKind[]) : [])];
   const kind = pickMove(g, f, foe, kinds);
-  const targets = kind === 'steal' ? rich : heroes;
+  // drawn on by a hero who struck it: that one only
+  const drawn = foe.taunt && heroes.includes(foe.taunt) ? foe.taunt : undefined;
+  foe.taunt = undefined;
+  const targets = kind === 'steal' ? rich : drawn ? [drawn] : heroes;
   const plan = bestStrike(g, f, foe, targets, kind);
   if (plan) {
     foe.idle = 0;

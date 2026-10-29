@@ -99,6 +99,7 @@ function PerkCard({ p, branch, sel, onSel, locked, level }: { p: PerkView; branc
       <button type="button" class="perk-face" aria-pressed={sel} aria-label={`${p.name}. ${p.text}${note ? `. ${note}` : ''}`} onClick={onSel}>
         <Mark k={p.id} ink={branch} cls="perk-mark" />
         <span class="perk-words">
+          {p.active && <span class="perk-kind">{T.perkActive}</span>}
           <b>{p.name}</b>
           <small>{p.text}</small>
           {note && <em class="perk-note">{note}</em>}

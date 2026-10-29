@@ -197,6 +197,7 @@ export const T = {
   perkPoints: 'Очок умінь',
   perkHint: 'Щабель за щаблем. На кожному — одне з двох: узяте лишається назавжди, друге закривається.',
   perkTake: 'Узяти',
+  perkActive: 'прийом у бою',
   perkHave: 'узято',
   perkClosed: 'закрито',
   perkFrom: 'з рівня',

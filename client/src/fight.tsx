@@ -252,7 +252,7 @@ function useFieldPaint(f: FightView): [(el: HTMLCanvasElement | null) => void, b
 
 function TechButton({ m, onPick, locked }: { m: FightMoveView; onPick: () => void; locked: boolean }) {
   return (
-    <button class="tech" disabled={locked || !m.enabled} onClick={onPick} aria-label={`${m.name ?? m.label}${m.cost ? ` (${T.fightAp} ${m.cost})` : ''}`}>
+    <button class={`tech ${m.perk ? 'perk' : ''}`} disabled={locked || !m.enabled} onClick={onPick} aria-label={`${m.name ?? m.label}${m.cost ? ` (${T.fightAp} ${m.cost})` : ''}`}>
       <span class="tech-top">
         <b>{m.name ?? m.label}</b>
         <Cost n={m.cost ?? 0} />

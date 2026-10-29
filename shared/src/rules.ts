@@ -134,10 +134,8 @@ export const PERK = {
   firstDmg: 2,
   flankAcc: 0.2,
   flankDmg: 2,
-  finishDmg: 2,
   masterAcc: 0.05,
   masterDmg: 1,
-  furyDmg: 3,
   quietAmbush: 0.67,
   farRange: 2,
   coldAcc: 0.05,
@@ -164,6 +162,24 @@ export const PERK = {
   secondBelow: 0.25,
   secondHeal: 1 / 3,
   thriftyChance: 0.2,
+  executeBelow: 0.2,
+  twinAcc: -0.2,
+  unbrokenHp: 1 / 3,
+  porterWeight: 0.75,
+  lungeAcc: 0.1,
+  rollGuard: 0.3,
+  desperateBelow: 1 / 3,
+  desperateMult: 2,
+  desperateAcc: 0.1,
+  ramMult: 1.5,
+  ramOpen: 0.5,
+  rainAcc: -0.1,
+  dashReach: 4,
+  porterFrom: 2,
+  foragerChance: 0.1,
+  artisanTime: 0.67,
+  pathfinderTravel: 0.85,
+  pathfinderAmbush: 0.5,
 };
 
 /** What the perk tree needs: its branches, the level each step opens at, the perks in it. */
@@ -188,6 +204,15 @@ export function perkState(t: PerkTree, h: { level: number; perks: string[]; perk
   if (h.level < (t.tiers[def.tier - 1] ?? Infinity)) return 'locked';
   if (def.tier > 1 && !same(def.tier - 1).some((x) => h.perks.includes(x.id))) return 'locked';
   return h.perkPoints > 0 ? 'can' : 'wait';
+}
+
+/**
+ * How much a won foe of this level teaches a hero of that one: in full up to one level beneath,
+ * then a quarter less for each level more (a tenth at least). Grinding weak beasts does not raise a hero.
+ */
+export function foeXpFactor(heroLevel: number, foeLevel: number): number {
+  const gap = heroLevel - foeLevel - 1;
+  return gap <= 0 ? 1 : Math.max(0.1, 1 - 0.25 * gap);
 }
 
 /** Perk points a hero of this level has earned in all (one a level from the second). */

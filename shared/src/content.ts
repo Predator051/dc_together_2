@@ -465,6 +465,8 @@ export interface PerkDef {
   /** Where it stands in the tree: the branch and the step (1-based); each step is a pair, one or the other. */
   branch?: string;
   tier?: number;
+  /** A move of its own in a fight (a `tech` of the same id), not a standing gain. */
+  active?: boolean;
 }
 
 /** A branch of the perk tree. */

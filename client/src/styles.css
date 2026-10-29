@@ -9041,3 +9041,28 @@ body.sheet-open {
     opacity: 0;
   }
 }
+
+/* a perk that is a move of its own in a fight */
+.perk-kind {
+  align-self: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(194, 78, 54, 0.16);
+  color: var(--cinnabar-ink);
+  font-family: var(--sans);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+@container (min-width: 560px) {
+  .perk-kind {
+    align-self: flex-start;
+  }
+}
+.tech.perk {
+  border-color: rgba(216, 105, 76, 0.45);
+}
+.tech.perk .tech-top b::before {
+  content: '✦ ';
+  color: var(--cinnabar-ink);
+}

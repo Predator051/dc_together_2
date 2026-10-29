@@ -22,8 +22,8 @@ const COIN = 'r_22';
 
 /** Perks each role reaches for first (any other that can be taken comes after). */
 export const PERK_PLAN: Record<Role, string[]> = {
-  hunter: ['eye', 'tough', 'cold', 'legs', 'arrows', 'flint', 'watch', 'flank', 'steady', 'opening', 'bark', 'hardy', 'momentum', 'will', 'double', 'master', 'volley', 'second', 'tireless', 'duel'],
-  maker: ['first', 'tough', 'opening', 'hands', 'flint', 'swift', 'bark', 'handy', 'master', 'eye', 'riposte', 'learner', 'cold', 'packer', 'arrows', 'watch', 'sweep', 'bulwark', 'thrifty', 'lore'],
+  hunter: ['eye', 'tough', 'cold', 'legs', 'pinshot', 'flint', 'watch', 'flank', 'steady', 'opening', 'shove', 'hardy', 'desperate', 'will', 'double', 'master', 'volley', 'second', 'tireless', 'duel', 'rain', 'ambusher', 'unbroken', 'pathfinder', 'porter', 'dash', 'pierce', 'twin'],
+  maker: ['first', 'tough', 'lunge', 'hands', 'flint', 'roll', 'shove', 'handy', 'master', 'eye', 'riposte', 'learner', 'cold', 'packer', 'arrows', 'watch', 'sweep', 'bulwark', 'thrifty', 'lore', 'ram', 'execute', 'taunt', 'rally', 'artisan', 'forager', 'shieldbreak', 'tempest'],
 };
 
 const STAT_PLAN: Record<Role, string[]> = {
@@ -233,6 +233,13 @@ export class Bot {
     const nasty = live.find((x) => !x.stunned && ['grab', 'drag', 'call'].includes(x.move ?? ''));
     const daze = nasty ? tech('stun', nasty.uid) : undefined;
     if (daze) return { c: 'fight', id: daze.id };
+    // moves of perks when they fit: a volley, a desperate blow, closing in with a blow, pinning from afar
+    const rain = tech('rain');
+    if (rain) return { c: 'fight', id: rain.id };
+    for (const t of ['desperate', 'ram', 'roll', 'lunge', 'pinshot']) {
+      const m = moves.find((x) => x.tech === t);
+      if (m) return { c: 'fight', id: m.id };
+    }
     const calling = live.find((x) => x.move === 'call');
     const open = live.find((x) => x.open);
     const order = [calling, open, ...[...live].sort((a, b) => a.hp - b.hp)].filter((x): x is (typeof live)[number] => !!x);

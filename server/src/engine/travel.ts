@@ -98,7 +98,7 @@ export function travelTime(g: Game, pid: PlayerId, from: string, to: string): nu
   const h = heroOf(g, pid);
   const perks = g.p(pid).perks;
   const load = perks.includes('packer') ? 0 : bagLoad(g, pid) / Math.max(1, bagCap(g, pid));
-  const legs = perks.includes('legs') ? PERK.legsTravel : 1;
+  const legs = (perks.includes('legs') ? PERK.legsTravel : 1) * (perks.includes('pathfinder') ? PERK.pathfinderTravel : 1);
   return Math.round(base * travelMult({ trail: skillOf(g, pid, 'trail'), load, heavy: h.heavy }) * legs * paceOf(g, pid) * (weatherNow(g)?.travel ?? 1));
 }
 
@@ -186,6 +186,7 @@ function ambushRoll(g: Game, pid: PlayerId, area: string, base: number): Array<{
   if (dog && g.flag(dog.flag) && p.role === 'hunter') chance *= dog.trained && g.test(dog.trained) ? 0.6 : 0.8;
   chance *= skyAt(g, area)?.ambush ?? 1;
   if (p.perks.includes('quiet')) chance *= PERK.quietAmbush;
+  if (p.perks.includes('pathfinder')) chance *= PERK.pathfinderAmbush;
   if (!g.rng.chance(Math.min(0.6, chance))) return null;
   const pool = a.foes.filter((e) => (!e.night || g.isEvening()) && (!e.if || g.test(e.if, pid)));
   if (!pool.length) return null;

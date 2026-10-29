@@ -372,6 +372,8 @@ export interface PerkView {
   name: string;
   text: string;
   state: 'have' | 'can' | 'wait' | 'closed' | 'locked';
+  /** A move of its own in a fight. */
+  active?: boolean;
 }
 
 export interface PerkBranchView {
@@ -550,6 +552,8 @@ export interface FightMoveView {
   dmg?: [number, number];
   /** Aimed at this foe. */
   target?: number;
+  /** A move a perk gives. */
+  perk?: boolean;
   /** The item it uses (icon), for the belt of a fight. */
   icon?: string;
 }

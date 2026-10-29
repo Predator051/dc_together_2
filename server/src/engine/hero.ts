@@ -94,7 +94,11 @@ export function weightOf(g: Game, id: string): number {
 
 export function bagLoad(g: Game, pid: PlayerId): number {
   let w = 0;
-  for (const [id, n] of Object.entries(g.p(pid).bag)) w += n * weightOf(g, id);
+  const porter = g.p(pid).perks.includes('porter');
+  for (const [id, n] of Object.entries(g.p(pid).bag)) {
+    const one = weightOf(g, id);
+    w += n * (porter && one >= PERK.porterFrom ? one * PERK.porterWeight : one);
+  }
   return Math.round(w * 10) / 10;
 }
 

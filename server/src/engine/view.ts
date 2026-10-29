@@ -631,7 +631,7 @@ function heroView(g: Game, pid: PlayerId): HeroView {
       taken: mine.filter((x) => p.perks.includes(x.id)).length,
       tiers: g.ix.c.hero.tiers.map((level, i) => ({
         level,
-        perks: mine.filter((x) => x.tier === i + 1).map((x) => ({ id: x.id, name: x.name, text: x.text, state: perkState(tree, p, x.id) })),
+        perks: mine.filter((x) => x.tier === i + 1).map((x) => ({ id: x.id, name: x.name, text: x.text, state: perkState(tree, p, x.id), ...(x.active ? { active: true } : {}) })),
       })),
     };
   });
