@@ -151,6 +151,7 @@ export const sideScenes2: SceneDef[] = [
       n2: {
         type: 'fight',
         foes: [{ enemy: QE.avenger }, { enemy: E.hound, n: 2 }],
+        field: { ground: 'cobble', rows: ['b.xfx.b', '..f.f..', '..C.C..', '.......', '#.....#', '..b.b..', '.......', '...h.h.'] },
         win: 'n3',
         lose: 'n2l',
       },
@@ -429,6 +430,7 @@ export const sideScenes2: SceneDef[] = [
       k1: {
         type: 'fight',
         foes: [{ enemy: QE.shewolf }, { enemy: E2.wolf, n: 2 }],
+        field: { ground: 'grass', rows: ['T.f.f.T', '..T.f..', '.*...*.', '...T...', '.T...T.', '.......', '*.....*', '..hh...'] },
         win: 'k2',
         lose: 'k1l',
       },
@@ -526,6 +528,7 @@ export const sideScenes2: SceneDef[] = [
       n4: {
         type: 'fight',
         foes: [{ enemy: E.catfish }],
+        field: { ground: 'mud', rows: ['#~~~~~#', '#~~F~~#', '#,~~~,#', '.,,_,,.', '..,_,..', 'o.._..o', '.......', '..hh...'] },
         win: 'n5',
         lose: 'n4l',
       },
@@ -805,6 +808,7 @@ export const sideScenes2: SceneDef[] = [
       l1: {
         type: 'fight',
         foes: [{ enemy: QE.minerat, n: 3 }],
+        field: { ground: 'dust', rows: ['#.f.#f#', '#.#.#.#', '#..f..#', '###.###', '#.....#', '#.#.#.#', '#.....#', '#.hh..#'] },
         win: 'l2',
         lose: 'l1l',
       },

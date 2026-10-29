@@ -1,10 +1,11 @@
+import type { Field } from './field.js';
 import type { Gender, PlayerId, Role, LogKind, Slot, StatId, SkillId } from './content.js';
 
 /**
  * Part two starts its own line of world versions at 10 (part one ended at 3): a part-one world is
  * never migrated into part two — it is read once as the legacy and a new world begins.
  */
-export const STATE_VERSION = 11;
+export const STATE_VERSION = 12;
 export const PART = 2;
 
 export interface PlayerState {
@@ -189,25 +190,58 @@ export interface FoeState {
   hpMax: number;
   fear: number;
   out: null | 'dead' | 'fled' | 'down';
-  /** What it does this round, and (seen by the hunter) the next one. */
+  /** What it means to do on its next turn (whom it goes for, a charge, a call). */
   intent: Intent | null;
+  /** Kept from the fights of rounds; unused on the field. */
   next: Intent | null;
   /** Holding someone (grab / drag / leech). */
   holds: PlayerId | null;
   /** Rounds until its call brings help (0 = no call going). */
   calling: number;
   phase: number;
-  /** Rounds since the fight began when it joined. */
+  /** The round it joined. */
   joined: number;
-  /** Rounds it has acted (for `every` moves). */
+  /** Turns it has had. */
   acted: number;
   /** Once-moves already used. */
   used: string[];
+  /** Open to blows up to this round (knocked off balance, a charge gone wide). */
+  open?: number;
+  /** Dazed: loses its next turn. */
+  stun?: boolean;
+  /** The round it was last dazed (it cannot be dazed two rounds running). */
+  stunAt?: number;
+  /** Where it stands on the field. */
+  pos?: [number, number];
+  /** Behind its shield until its next turn. */
+  guarding?: boolean;
+  /** The last hero who struck it. */
+  hitBy?: PlayerId;
+  /** Turns in a row it could strike no one (a foe that can never get at anyone leaves). */
+  idle?: number;
+  /** The round it last cast a net (a net is gathered up again for two rounds). */
+  netAt?: number;
+}
+
+/** One beat of a fight, for it to be played out on screen: who did what to whom. */
+export interface FightEvent {
+  /** Running number (the screen plays only beats it has not seen). */
+  s?: number;
+  /** Actor: a player id, `f<uid>` for a foe, `dog`. */
+  a: string;
+  /** Target, same kinds. */
+  t?: string;
+  k: 'hit' | 'miss' | 'block' | 'dodge' | 'stun' | 'open' | 'heal' | 'down' | 'flee' | 'guard' | 'aim' | 'breathe' | 'hold' | 'call' | 'tick' | 'move' | 'come';
+  n?: number;
+  /** A walk: the cells stepped on. */
+  path?: Array<[number, number]>;
 }
 
 export interface Intent {
   move: string;
   target?: PlayerId;
+  /** The run of a charge. */
+  line?: Array<[number, number]>;
 }
 
 export interface FightState {
@@ -220,8 +254,9 @@ export interface FightState {
   dog: boolean;
   foes: FoeState[];
   round: number;
-  picks: Partial<Record<PlayerId, string>>;
-  /** What happened last round, per player. */
+  /** Kept from the fights of rounds; unused on the field. */
+  picks?: Partial<Record<PlayerId, string>>;
+  /** What has happened lately, per player (the last lines). */
   lines: Record<PlayerId, string[]>;
   nextUid: number;
   /** Who got down (and is out until lifted). */
@@ -230,8 +265,28 @@ export interface FightState {
   fled: PlayerId[];
   /** Heroes already lifted once (a second fall is for good). */
   lifted?: PlayerId[];
-  /** Enemy traits revealed during this fight (for the bestiary line). */
   startedAt: number;
+  /** Heroes taking aim: the next shot lands, twice as hard. */
+  aim?: PlayerId[];
+  /** Foes already made tougher for two heroes. */
+  duo?: boolean;
+  /** The latest beats (numbered). */
+  events?: FightEvent[];
+  seq?: number;
+  /** Driven off without a fight (the loot is taken all the same). */
+  routed?: boolean;
+  /** The ground. */
+  field?: Field;
+  /** Where the heroes and the dog stand. */
+  pos?: Partial<Record<PlayerId, [number, number]>>;
+  dogPos?: [number, number] | null;
+  /** Who moves in what order (player ids, `f<uid>`, `dog`), whose turn it is, action points left. */
+  order?: string[];
+  turn?: number;
+  ap?: number;
+  /** Damage cut until each one's next turn (points left unspent), and stances held. */
+  guard?: Record<string, number>;
+  stance?: Record<string, 'keep' | 'block' | 'cover'>;
 }
 
 export interface ResidentState {

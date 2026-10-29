@@ -668,6 +668,7 @@ export const scenesA2b: SceneDef[] = [
       n3: {
         type: 'fight',
         foes: [{ enemy: E2.hook }, { enemy: E2.snatcher }],
+        field: { ground: 'dust', rows: ['..f.f..', '.x...C.', '.......', '##.#.##', '.......', '=..b..=', '.......', '..h.h..'] },
         win: 'n4',
         lose: 'n3l',
       },

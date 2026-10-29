@@ -55,6 +55,7 @@ import {
   spendPoint,
 } from './hero.js';
 import { activeFoes, dropFight, fightChoose, fightOf, help, maybeResolve, startFight } from './fight.js';
+import { fieldFrom } from './terrain.js';
 import { ambush, areaDef, areaKnown, go, linkTime, setJob, settleTravel, settleWork } from './travel.js';
 import { camp, drink, eat, feed, nightRest, paceOf, rest, settleNeeds, soak } from './needs.js';
 
@@ -275,7 +276,25 @@ export class Game {
     const w = settleWeather(this);
     const e = settleEvents(this);
     const gr = settleGarden(this);
-    return a || b || c || n || w || e || gr;
+    const sf = this.healSceneFight();
+    return a || b || c || n || w || e || gr || sf;
+  }
+
+  /** A story stands at a fight that is not going (dropped by an update): begin it again. */
+  private healSceneFight(): boolean {
+    const sc = this.s.scene;
+    if (!sc || sc.paused) return false;
+    const def = this.ix.scenes.get(sc.id);
+    const n = def?.nodes[sc.node];
+    if (!n || n.type !== 'fight' || this.s.fights.some((f) => f.scene)) return false;
+    this.beginSceneFight(n as FightNode);
+    return true;
+  }
+
+  private beginSceneFight(fn: FightNode): void {
+    const area = this.p(this.joinedIds()[0] ?? 'p1').at;
+    const drawn = fn.field ? fieldFrom(fn.field.rows, fn.field.ground) : null;
+    startFight(this, area, fn.foes, { scene: true, party: this.joinedIds(), ...(drawn ? { field: drawn.field, starts: { heroes: drawn.heroes, foes: drawn.foes } } : {}) });
   }
 
   // ----- conditions ----------------------------------------------------------
@@ -1034,11 +1053,7 @@ export class Game {
       sc.combat = null;
     }
     if (n.type === 'delve') this.enterDelve(id, n);
-    if (n.type === 'fight') {
-      const fn = n as FightNode;
-      const area = this.p(this.joinedIds()[0] ?? 'p1').at;
-      startFight(this, area, fn.foes, { scene: true, party: this.joinedIds() });
-    }
+    if (n.type === 'fight') this.beginSceneFight(n as FightNode);
     sc.stealth = n.type === 'stealth' ? { pos: 0, turn: 0, time: 0, alarm: 0, picks: {}, lines: { p1: [], p2: [] } } : null;
     if (n.type === 'operation') {
       const tracks: Record<string, number> = {};
@@ -1659,8 +1674,8 @@ export class Game {
     } else if (this.s.scene && this.bothOnline()) {
       this.s.scene.paused = false;
     }
-    // a routine fight goes on for whoever stays (the one who left guards)
-    for (const f of [...this.s.fights]) if (!f.scene && f.party.includes(pid)) maybeResolve(this, f);
+    // a routine fight goes on for whoever stays (the one who left guards); one who is back plays their turn
+    for (const f of [...this.s.fights]) if (f.party.includes(pid)) maybeResolve(this, f);
     this.commit();
   }
 

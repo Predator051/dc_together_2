@@ -112,3 +112,50 @@ black gutters … head and shoulders of one person, facing the viewer, face cent
 painted background (smoky umber), soft firelight from one side … 17th century Cossack-era clothing …
 Top-left: … Top-right: … Bottom-left: … Bottom-right: …» + хвост стиля «Живопис» (лица читаются в
 маленьком круге на телефоне). Режется `scripts/art.ts folk <png> <n> 0.86`.
+
+## Шаг 7. Поле боя (вид строго сверху) — проект «Ілюстрації»
+
+Два листа. Порядок клеток — `.design/art/feats.json`, `.design/art/tex.json`. Нарезка:
+`tsx scripts/art.ts feats <png> 1`, `tsx scripts/art.ts tex <png> 1`.
+
+### Лист feats 1 (предметы местности, прозрачный фон, 4×3)
+
+```
+Generate an image, landscape 1536x1152, TRANSPARENT background. A sheet of 12 separate terrain objects for a
+tactical battle grid, seen STRICTLY FROM DIRECTLY ABOVE (top-down, bird's-eye, no perspective, no horizon),
+arranged in a 4x3 grid, each object centred in its own cell with empty transparent space around it, all at
+the same scale (one cell = a square of ground about 2 metres across) and lit from the top left, with a soft
+contact shadow under each object only. Row 1: the round crown of an old oak seen from above with dark leafy
+clumps; a low round shrub; a clump of tall reeds with pale feathery heads; a big grey weathered boulder.
+Row 2: a fallen tree trunk lying across the cell, bark and a cut end; a straight piece of thick clay-and-stone
+wall seen from above (its top), running left to right across the cell; a woven wattle fence of willow rods
+running left to right; an ox cart seen from above, wooden bed and two big wheels. Row 3: a wooden chest with
+iron bands; a wooden barrel seen from above (round lid, hoops); a heap of white-grey salt; an old tree stump
+with rings. Style: <хвост стиля из bible.md>
+```
+
+### Лист tex 1 (грунты, 3×3, края в края)
+
+```
+Generate an image, square 1536x1536. Nine square ground textures for a tactical battle grid, seen STRICTLY
+FROM DIRECTLY ABOVE, arranged in a 3x3 grid; each texture fills its whole square edge to edge (no borders,
+no gaps, no objects, no shadows of objects), even and uniform so it can cover a large area. Row 1: short
+steppe grass with small wild flowers; pale river sand with ripples; dark wet marsh mud with puddles.
+Row 2: cracked white-grey salt crust; a dusty dirt road with ruts; old cobblestones. Row 3: deep slate-blue
+river water with gentle ripples; shallow clear water over pebbles and sand; weathered wooden planks laid side
+by side. Style: <хвост стиля из bible.md>
+```
+
+### Грунты по одному (1024, заменили лист tex 1)
+
+```
+Generate an image, square 1024x1024. A single ground texture for a top-down tactical battle grid, seen STRICTLY
+FROM DIRECTLY ABOVE, filling the whole square edge to edge, even and uniform so it can cover a large area, no
+objects, no horizon, no vignette, no frame: <что>. Style: <хвост стиля>
+```
+Дальше в той же беседе: «Now another texture of the same kind, same style, size and rules (...): <что>».
+Что: grass — short dry steppe grass with a few small wild flowers and bare earth; sand — pale river sand with
+soft wind ripples and small pebbles; mud — dark wet marsh mud with puddles, trampled sedge, broken reed stems;
+salt — cracked white-grey salt crust over grey clay; dust — dusty dirt road with faint cart ruts and hoof prints;
+cobble — old worn cobblestones, moss in the gaps; water — deep slate-blue river water, gentle ripples, warm glints;
+shallow — shallow clear water over sand and rounded pebbles; planks — weathered causeway planks top to bottom.

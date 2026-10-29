@@ -60,7 +60,7 @@ export const resources2: ResourceDef[] = [
     weight: 1.5,
     gear: { slot: 'weapon', dmg: [3, 6], acc: 0.03, tags: ['cleave'], tools: ['blade', 'axe'], speed: 0.1 },
   },
-  { id: G2.ironshield, icon: 'shield', name: 'Окутий щит', order: 72, kind: 'gear', weight: 2.5, gear: { slot: 'offhand', armor: 1, dodge: 0.05 } },
+  { id: G2.ironshield, icon: 'shield', name: 'Окутий щит', order: 72, kind: 'gear', weight: 2.5, gear: { slot: 'offhand', armor: 1, dodge: 0.05, tags: ['shield'] } },
   { id: G2.bracers, icon: 'bracers', name: 'Наручі з бляхою', order: 73, kind: 'gear', weight: 0.5, gear: { slot: 'hands', armor: 1, acc: -0.02 } },
   { id: G2.softboots, icon: 'boots', name: 'М\'які постоли', order: 74, kind: 'gear', weight: 0.5, gear: { slot: 'legs', dodge: 0.03, tools: ['quiet'] } },
   { id: G2.coat, icon: 'robe', name: 'Чумацька свита', order: 75, kind: 'gear', weight: 1.5, gear: { slot: 'body', hp: 2, resist: ['cold'], tools: ['disguise'] } },

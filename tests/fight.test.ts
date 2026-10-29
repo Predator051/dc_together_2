@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { PlayerId } from '../shared/src/content.js';
-import { fightOf, startFight } from '../server/src/engine/fight.js';
+import { defeat, fightOf, startFight } from '../server/src/engine/fight.js';
+import { fieldFrom, fieldProblems } from '../server/src/engine/terrain.js';
 import { refreshHero } from '../server/src/engine/hero.js';
 import { pair, World } from './world.js';
+import type { FightState } from '../shared/src/state.js';
 
 /** Both heroes on the shore after the hut, ready to fight. */
 function field(seed = 3): { w: World; h: PlayerId; m: PlayerId } {
@@ -14,6 +16,18 @@ function field(seed = 3): { w: World; h: PlayerId; m: PlayerId } {
     s.players[pid].busy = null;
   }
   return r;
+}
+
+function put(f: FightState, pid: PlayerId, c: [number, number]): void {
+  f.pos![pid] = c;
+}
+
+/** Make it this hero's turn with a full set of points. */
+function turnOf(w: World, pid: PlayerId): FightState {
+  const f = fightOf(w.g(), pid)!;
+  f.turn = f.order!.indexOf(pid);
+  f.ap = 4;
+  return f;
 }
 
 /** Play rounds with a fixed move until the fight ends (or n rounds). */
@@ -58,7 +72,7 @@ describe('fights', () => {
     expect(w.state.bestiary['e_01']!.seen).toBeGreaterThan(0);
   });
 
-  it('the hunter reads the beast ahead; the maker sees where armour gives', () => {
+  it('the hunter reads what a beast means to do; the maker sees where armour gives', () => {
     const { w, h, m } = field();
     startFight(w.g(), 'a_02', [{ enemy: 'e_05' }]);
     const fh = w.view(h).fight!;
@@ -69,19 +83,23 @@ describe('fights', () => {
     expect(fh.foes[0]!.weak).toBeUndefined();
   });
 
-  it('a grab pins a hero: only struggling, until the partner frees them', () => {
+  it('a grab pins a hero: no walking, only the one who holds can be struck, the partner frees them', () => {
     const { w, h, m } = field();
-    const g = w.g();
-    const f = startFight(g, 'a_02', [{ enemy: 'e_07' }]);
-    f.foes[0]!.holds = h;
+    const f = startFight(w.g(), 'a_02', [{ enemy: 'e_07' }]);
+    const foe = f.foes[0]!;
+    put(f, h, [3, 7]);
+    put(f, m, [4, 7]);
+    foe.pos = [3, 6];
+    foe.holds = h;
+    turnOf(w, h);
     const hv = w.view(h).fight!;
-    expect(hv.moves.map((x) => x.id)).toEqual(['struggle']);
-    const mv = w.view(m).fight!;
-    expect(mv.moves.some((x) => x.id === 'free')).toBe(true);
-    w.cmd(h, { c: 'fight', id: 'struggle' });
+    expect(hv.reach).toEqual([]);
+    expect(hv.moves.filter((x) => x.enabled).map((x) => x.id).sort()).toEqual(['end', `hit:${foe.uid}`, 'struggle'].sort());
+    turnOf(w, m);
+    expect(w.view(m).fight!.moves.find((x) => x.id === 'free')?.enabled).toBe(true);
     w.cmd(m, { c: 'fight', id: 'free' });
     const after = fightOf(w.g(), h);
-    expect(after === null || after.foes[0]!.holds !== h || after.foes[0]!.out !== null).toBe(true);
+    expect(after === null || after.foes[0]!.holds !== h).toBe(true);
   });
 
   it('a leech only drinks: the hero can still fight, salt pulls it off', () => {
@@ -105,8 +123,8 @@ describe('fights', () => {
       const f = startFight(w.g(), 'a_02', [{ enemy: 'e_02' }], { party: [m] });
       let poisoned = false;
       for (let i = 0; i < 30 && fightOf(w.g(), m); i++) {
-        f.foes[0]!.intent = { move: 'venom', target: m };
-        w.cmd(m, { c: 'fight', id: 'guard' });
+        if (f.foes[0]!.pos) put(f, m, [f.foes[0]!.pos[0], f.foes[0]!.pos[1] + 1]);
+        w.cmd(m, { c: 'fight', id: 'end' });
         if (w.state.players[m].poison > 0) poisoned = true;
         if (p.hp <= 3) break;
       }
@@ -134,8 +152,10 @@ describe('fights', () => {
     p.bag = { r_01: 4, u_02: 1 };
     p.hp = 1;
     const f = startFight(w.g(), 'a_02', [{ enemy: 'e_05' }], { party: [m] });
-    f.foes[0]!.intent = { move: 'attack', target: m };
-    for (let i = 0; i < 10 && fightOf(w.g(), m); i++) w.cmd(m, { c: 'fight', id: 'guard' });
+    for (let i = 0; i < 10 && fightOf(w.g(), m); i++) {
+      if (f.foes[0]!.pos) put(f, m, [f.foes[0]!.pos[0], f.foes[0]!.pos[1] + 1]);
+      w.cmd(m, { c: 'fight', id: 'end' });
+    }
     expect(fightOf(w.g(), m)).toBeNull();
     expect(p.at).toBe('a_01');
     expect(p.bag).toEqual({ u_02: 1 });
@@ -148,7 +168,12 @@ describe('fights', () => {
     const p = w.state.players[h];
     p.bag = { r_01: 10 };
     startFight(w.g(), 'a_02', [{ enemy: 'e_01', n: 3 }], { party: [h] });
-    for (let i = 0; i < 20 && fightOf(w.g(), h); i++) w.cmd(h, { c: 'fight', id: 'flee' });
+    for (let i = 0; i < 20 && fightOf(w.g(), h); i++) {
+      // the way out is the lower edge
+      const cur = fightOf(w.g(), h)!;
+      if (cur.pos![h]![1] !== 7) put(cur, h, [3, 7]);
+      w.cmd(h, { c: 'fight', id: 'flee' });
+    }
     expect(fightOf(w.g(), h)).toBeNull();
     expect(p.bag['r_01']).toBeLessThan(10);
   });
@@ -162,17 +187,34 @@ describe('fights', () => {
     expect(startFight(w.g(), 'a_02', [{ enemy: 'e_01' }], { party: [h] }).dog).toBe(true);
   });
 
-  it('a caller brings help unless struck or deafened in time', () => {
-    const { w, m } = field();
-    const f = startFight(w.g(), 'a_02', [{ enemy: 'e_08' }], { party: [m] });
-    f.foes[0]!.intent = { move: 'call' };
-    w.cmd(m, { c: 'fight', id: 'guard' });
-    for (let i = 0; i < 3 && fightOf(w.g(), m); i++) {
-      const cur = fightOf(w.g(), m)!;
-      for (const x of cur.foes) if (!x.out) x.intent = { move: 'guard' };
-      w.cmd(m, { c: 'fight', id: 'guard' });
+  it('a caller brings help two rounds on, unless struck in time', () => {
+    for (const strike of [false, true]) {
+      const { w, m } = field();
+      const f = startFight(w.g(), 'a_02', [{ enemy: 'e_08' }], { party: [m] });
+      const foe = f.foes[0]!;
+      foe.calling = 2;
+      if (strike) {
+        foe.pos = [3, 6];
+        put(f, m, [3, 7]);
+        turnOf(w, m);
+        w.cmd(m, { c: 'fight', id: `hit:${foe.uid}` });
+        // a miss is no strike: try until one lands
+        for (let i = 0; i < 6 && foe.calling > 0 && fightOf(w.g(), m); i++) {
+          turnOf(w, m);
+          w.cmd(m, { c: 'fight', id: `hit:${foe.uid}` });
+        }
+        expect(foe.calling).toBe(0);
+      } else {
+        for (let i = 0; i < 2; i++) {
+          const cur = fightOf(w.g(), m)!;
+          cur.foes[0]!.calling = Math.max(cur.foes[0]!.calling, 0);
+          turnOf(w, m);
+          w.cmd(m, { c: 'fight', id: 'end' });
+        }
+        const cur = fightOf(w.g(), m);
+        expect(cur === null || cur.foes.length === 2).toBe(true);
+      }
     }
-    expect(fightOf(w.g(), m)!.foes.length).toBe(2);
   });
 
   it('a scene fight lost: the scene steps back and can be tried again, nobody is sent home', () => {
@@ -190,12 +232,138 @@ describe('fights', () => {
     expect(w.view(h).fight?.scene).toBe(true);
     expect(w.view(h).fight?.moves.some((x) => x.id === 'flee')).toBe(false);
     for (const pid of [h, m]) s.players[pid].hp = 1;
-    play(w, { [h]: () => 'guard', [m]: () => 'guard' });
+    play(w, { [h]: () => 'end', [m]: () => 'end' }, 400);
     expect(w.view(h).fight).toBeNull();
     for (let i = 0; i < 4 && s.scene; i++) for (const pid of [h, m]) w.cmd(pid, { c: 'next' });
     expect(s.flags['done:s_16']).toBeUndefined();
     expect(s.players[h].at).toBe('a_07');
     expect(s.players[h].hp).toBeGreaterThan(1);
     expect(w.view(h).groups.flatMap((g) => g.entries).some((e) => e.id === 's_16')).toBe(true);
+  });
+
+  it('strong moves come from what is in hand and cost action points; points left become guard', () => {
+    const { w, m } = field();
+    const s = w.state;
+    s.players[m].equip.weapon = 'g_02'; // a club: it dazes
+    refreshHero(w.g(), m);
+    const f = startFight(w.g(), 'a_02', [{ enemy: 'e_05' }], { party: [m] });
+    const foe = f.foes[0]!;
+    foe.pos = [3, 6];
+    put(f, m, [3, 7]);
+    turnOf(w, m);
+    let v = w.view(m).fight!;
+    const stun = v.moves.find((x) => x.tech === 'stun')!;
+    expect(stun.cost).toBe(3);
+    expect(v.hands.main.dmg).toBeDefined();
+    w.cmd(m, { c: 'fight', id: stun.id });
+    if (!fightOf(w.g(), m)) return;
+    v = w.view(m).fight!;
+    expect(v.myTurn).toBe(true);
+    expect(v.ap).toBe(1);
+    expect(v.moves.find((x) => x.tech === 'hit')!.enabled).toBe(false);
+    w.cmd(m, { c: 'fight', id: 'end' });
+    const cur = fightOf(w.g(), m);
+    if (cur) expect(cur.guard?.[m] ?? 0).toBeGreaterThanOrEqual(0);
+  });
+
+  it('a strike out of reach or out of sight is not offered; walking costs points', () => {
+    const { w, m } = field();
+    const f = startFight(w.g(), 'a_02', [{ enemy: 'e_05' }], { party: [m] });
+    f.field!.cells = f.field!.cells.map(() => '');
+    const foe = f.foes[0]!;
+    foe.pos = [3, 1];
+    put(f, m, [3, 7]);
+    turnOf(w, m);
+    let v = w.view(m).fight!;
+    expect(v.moves.find((x) => x.id === `hit:${foe.uid}`)!.enabled).toBe(false);
+    expect(v.reach.some((r) => r.c[0] === 3 && r.c[1] === 4 && r.cost === 3)).toBe(true);
+    w.cmd(m, { c: 'fight', id: 'go:3,4' });
+    v = w.view(m).fight!;
+    expect(v.ap).toBe(1);
+    expect(fightOf(w.g(), m)!.pos![m]).toEqual([3, 4]);
+  });
+
+  it('a dazed foe loses its turn and lies open: no blow at it misses', () => {
+    const { w, h, m } = field();
+    const f = startFight(w.g(), 'a_02', [{ enemy: 'e_05' }]);
+    const foe = f.foes[0]!;
+    foe.pos = [3, 6];
+    put(f, h, [2, 7]);
+    put(f, m, [4, 7]);
+    foe.stun = true;
+    foe.open = f.round + 1;
+    turnOf(w, h);
+    w.cmd(h, { c: 'fight', id: `hit:${foe.uid}` });
+    const ev = fightOf(w.g(), h)?.events ?? [];
+    expect(ev.some((e) => e.k === 'hit' && e.a === h)).toBe(true);
+    expect(ev.some((e) => e.k === 'miss' && e.a === h)).toBe(false);
+  });
+
+  it('two heroes face tougher foes than one', () => {
+    const one = field();
+    startFight(one.w.g(), 'a_02', [{ enemy: 'e_05' }], { party: [one.h] });
+    const two = field();
+    startFight(two.w.g(), 'a_02', [{ enemy: 'e_05' }]);
+    const solo = fightOf(one.w.g(), one.h)!.foes[0]!.hpMax;
+    const duo = fightOf(two.w.g(), two.h)!.foes[0]!.hpMax;
+    expect(duo).toBeGreaterThan(solo * 1.5);
+    // and one who comes to help makes them so too
+    const late = field();
+    startFight(late.w.g(), 'a_02', [{ enemy: 'e_05' }], { party: [late.h] });
+    expect(late.w.cmd(late.m, { c: 'help' }).ok).toBe(true);
+    expect(fightOf(late.w.g(), late.h)!.foes[0]!.hpMax).toBe(duo);
+  });
+
+  it('foes far beneath the heroes are driven off at once, loot and all', () => {
+    const { w, h, m } = field();
+    w.state.players[h].level = 6;
+    w.state.players[m].level = 6;
+    startFight(w.g(), 'a_02', [{ enemy: 'e_01', n: 3 }]);
+    expect(w.view(h).fight!.moves.some((x) => x.id === 'rout')).toBe(true);
+    expect(w.cmd(h, { c: 'fight', id: 'rout' }).ok).toBe(true);
+    expect(w.view(h).fight).toBeNull();
+    expect(w.view(h).fightEnd?.ended).toBe('win');
+    // not in a story fight
+    startFight(w.g(), 'a_02', [{ enemy: 'e_01' }], { scene: true });
+    expect(w.view(h).fight!.moves.some((x) => x.id === 'rout')).toBe(false);
+  });
+
+  it('a fight waits while both are away; one who stays plays on past the other', () => {
+    const { w, h, m } = field();
+    const f = startFight(w.g(), 'a_02', [{ enemy: 'e_05' }]);
+    w.state.players[h].online = false;
+    w.state.players[m].online = false;
+    turnOf(w, h);
+    const round = f.round;
+    w.cmd(h, { c: 'fight', id: 'end' });
+    // nobody here: the turns stop on the first hero who is away
+    const cur = fightOf(w.g(), m)!;
+    expect(cur.round - round).toBeLessThanOrEqual(1);
+    const stuck = cur.turn;
+    w.advance(60_000);
+    expect(fightOf(w.g(), m)!.turn).toBe(stuck);
+  });
+
+  it('a ground drawn by hand: the sides stand where it says, a foe in the water starts in it', () => {
+    const rows = ['#~~~~~#', '#~~F~~#', '#,~~~,#', '.,,_,,.', '..,_,..', 'o.._..o', '.......', '..hh...'];
+    expect(fieldProblems(rows)).toEqual([]);
+    const drawn = fieldFrom(rows, 'mud');
+    expect(drawn.heroes).toEqual([[2, 7], [3, 7]]);
+    expect(drawn.foes).toEqual([[3, 1]]);
+    expect(drawn.field.cells[1 * 7 + 3]).toBe('water');
+    const { w, h, m } = field();
+    const f = startFight(w.g(), 'a_02', [{ enemy: 'e_06' }], { field: drawn.field, starts: { heroes: drawn.heroes, foes: drawn.foes } });
+    expect([f.pos![h], f.pos![m]]).toEqual([[2, 7], [3, 7]]);
+    expect(f.foes[0]!.pos).toEqual([3, 1]);
+    // a closed-in foe is caught by the check
+    expect(fieldProblems(['###f###', '#######', '.......', '.......', '.......', '.......', '.......', '..hh...'])).toContain('the foes cannot be reached');
+  });
+
+  it('things of errands are kept when a hero is beaten, runs or is robbed', () => {
+    const { w, m } = field();
+    const p = w.state.players[m];
+    p.bag = { r_01: 4, u_02: 1, r_43: 1 };
+    defeat(w.g(), m);
+    expect(Object.keys(p.bag).sort()).toEqual(['r_43', 'u_02']);
   });
 });

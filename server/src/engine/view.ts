@@ -28,7 +28,7 @@ import { SKILLS, SLOTS, STATS } from '../../../shared/src/content.js';
 import type { BagView, BeastView, EntrySort, FightView, HeroView, MapView, ResidentView, WeatherView } from '../../../shared/src/protocol.js';
 import { skillLevel, skillXpFor, xpForLevel } from '../../../shared/src/rules.js';
 import { bagCap, bagLoad, gearNote, heroOf, ownsCount, useNote } from './hero.js';
-import { activeFoes, enemyOf, fightMoves, fightOf, holder } from './fight.js';
+import { HERO_AP, activeFoes, activeId, enemyOf, fid, fightMoves, fightOf, holder, moraleOf, walkable } from './fight.js';
 import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, residentJobs, routeLegs, routeTo, travelTime, walkOf } from './travel.js';
 import { byFire, campBlock, chillRate, comfortOf, dryOf, eatBlock, restBlock, restLength, tired } from './needs.js';
 import { outside, weatherNow } from './weather.js';
@@ -796,21 +796,34 @@ function fightViewOf(g: Game, pid: PlayerId, f: FightState, live = true): FightV
         level: def.level,
         traits: known.map((t) => g.ix.c.traits[t as keyof typeof g.ix.c.traits]?.name ?? t),
       };
-      if (def.morale !== undefined) {
-        v.fear = Math.min(foe.fear, def.morale);
-        v.morale = def.morale;
+      const morale = moraleOf(f, def);
+      if (morale !== undefined) {
+        v.fear = Math.min(foe.fear, morale);
+        v.morale = morale;
       }
       if (!foe.out) {
-        const it = intentText(g, f, foe.intent, pid);
+        // what a beast means exactly only the hunter reads; the rest see it come at someone
+        const sly = !!foe.intent && ['venom', 'grab', 'drag', 'leech'].includes(foe.intent.move);
+        const shown = sly && !(role === 'hunter' && beast) ? { ...foe.intent!, move: 'attack' } : foe.intent;
+        const it = intentText(g, f, shown, pid);
         if (it) v.intent = it;
-        // the hunter reads a beast's next move
         if (role === 'hunter' && beast) {
-          const nx = intentText(g, f, foe.next, pid);
+          const nx = intentText(g, f, foe.intent, pid);
           if (nx) v.next = nx;
+          if (nx && foe.intent) v.nextMove = foe.intent.move;
         }
         if (role === 'maker' && (def.armor ?? 0) > 0) v.weak = g.ix.ui('fight_weak');
         if (foe.holds) v.holds = foe.holds === pid ? g.ix.ui('intent_you') : g.p(foe.holds).name;
         if (foe.calling > 0) v.calling = foe.calling;
+        if (shown) {
+          v.move = shown.move;
+          if (shown.target) v.aim = shown.target;
+          if (shown.line) v.line = shown.line;
+        }
+        if (foe.pos) v.pos = foe.pos;
+        if (foe.guarding) v.guarding = true;
+        if ((foe.open ?? 0) >= f.round) v.open = true;
+        if (foe.stun) v.stunned = true;
       }
       return v;
     });
@@ -824,13 +837,54 @@ function fightViewOf(g: Game, pid: PlayerId, f: FightState, live = true): FightV
       down: f.down.includes(x) || f.fled.includes(x),
       held: !!holder(f, x),
       poison: p.poison,
-      picked: !!f.picks[x],
+      picked: activeId(f) === x,
       me: x === pid,
+      ...(f.pos?.[x] ? { pos: f.pos[x] } : {}),
+      guard: f.guard?.[x] ?? 0,
+      ...(f.stance?.[x] ? { stance: f.stance[x] } : {}),
     };
   });
-  const moves = live ? fightMoves(g, f, pid).map((m) => ({ ...m })) : [];
-  const myPick = f.picks[pid];
-  const others = f.party.filter((x) => x !== pid && g.p(x).online && !f.down.includes(x) && !f.fled.includes(x));
+  const moves: FightView['moves'] = live
+    ? fightMoves(g, f, pid).map((m) => {
+        const tech = m.tech ?? (m.id === 'end' ? m.id : undefined);
+        const note = tech ? g.ix.c.ui[`tech_note_${tech}`] : undefined;
+        const use = m.id.startsWith('use:') ? g.ix.res.get(m.id.slice(4)) : undefined;
+        return {
+          ...m,
+          ...(m.tech ? { name: g.ix.ui(`tech_${m.tech}`) } : {}),
+          ...(note ? { note } : {}),
+          ...(use?.icon ? { icon: use.icon } : {}),
+        };
+      })
+    : [];
+  const me = g.p(pid);
+  const h = heroOf(g, pid);
+  const held = (slot: 'weapon' | 'offhand') => {
+    const id = me.equip[slot];
+    const r = id ? g.ix.res.get(id) : undefined;
+    return r ? { name: r.name, ...(r.icon ? { icon: r.icon } : {}) } : null;
+  };
+  const main = held('weapon');
+  const hands: FightView['hands'] = {
+    main: { ...(main ?? { name: g.ix.ui('hand_bare') }), dmg: h.dmg },
+    off: held('offhand'),
+  };
+  const place = areaDef(g, f.area)?.scene;
+  const act = activeId(f);
+  const myTurn = live && act === pid;
+  const nameOf = (id: string): FightView['order'][number] | null => {
+    if (id === 'dog') return g.ix.c.dog ? { id, name: g.ix.c.dog.name, kind: 'dog' } : null;
+    if (id.startsWith('f')) {
+      const foe = f.foes.find((x) => fid(x) === id && !x.out);
+      if (!foe) return null;
+      return { id, name: foes.find((x) => x.uid === foe.uid)?.name ?? enemyOf(g, foe.enemy).name, kind: 'foe', icon: enemyOf(g, foe.enemy).icon };
+    }
+    const x = id as PlayerId;
+    if (!f.party.includes(x) || f.fled.includes(x)) return null;
+    return { id, name: x === pid ? g.ix.ui('you') : g.p(x).name, kind: 'hero', ...(x === pid ? { me: true } : {}) };
+  };
+  const order = (f.order ?? []).map(nameOf).filter((x): x is FightView['order'][number] => !!x);
+  const reach = myTurn ? [...walkable(g, f, pid).entries()].map(([k, w]) => ({ c: k.split(',').map(Number) as [number, number], cost: w.cost })) : [];
   return {
     id: f.id,
     round: f.round,
@@ -839,9 +893,19 @@ function fightViewOf(g: Game, pid: PlayerId, f: FightState, live = true): FightV
     party,
     ...(f.dog && g.ix.c.dog ? { dog: g.ix.c.dog.name } : {}),
     moves,
-    ...(myPick ? { myPick } : {}),
-    waiting: !!myPick && others.some((x) => !f.picks[x]),
+    waiting: live && !myTurn,
     lines: f.lines[pid] ?? [],
+    hands,
+    ...(place ? { place } : {}),
+    events: f.events ?? [],
+    field: f.field!,
+    order,
+    ...(act ? { active: act } : {}),
+    myTurn,
+    ap: myTurn ? (f.ap ?? 0) : 0,
+    apMax: HERO_AP,
+    reach,
+    ...(f.dog && f.dogPos ? { dogPos: f.dogPos } : {}),
   };
 }
 

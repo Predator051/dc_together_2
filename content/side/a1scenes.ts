@@ -546,6 +546,7 @@ export const sideScenes1: SceneDef[] = [
       n4: {
         type: 'fight',
         foes: [{ enemy: QE.matka }],
+        field: { ground: 'salt', rows: ['s..f..s', '.......', '.s.s.s.', '.......', 'o.....o', '.......', '...s...', '..hh...'] },
         win: 'n5',
         lose: 'n4l',
       },
@@ -790,6 +791,7 @@ export const sideScenes1: SceneDef[] = [
       n4: {
         type: 'fight',
         foes: [{ enemy: QE.elder }],
+        field: { ground: 'mud', rows: ['~~~~~~~', '~~~F~~~', '~~,~,~~', ',,,,,,,', '.,_._,.', '..._...', 'o.....o', '..hh...'] },
         win: 'n5',
         lose: 'n4l',
       },

@@ -30,6 +30,15 @@
         "CLIENT_DIR": "/Users/aleksejkukisev/work/dark_cave_together_2/client/dist",
         "PORT": "8791"
       }
+    },
+    {
+      "name": "client-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:client"
+      ],
+      "port": 5173
     }
   ]
 }

@@ -165,7 +165,7 @@ export const STATS: readonly StatId[] = ['str', 'agi', 'end', 'per', 'wil'];
 export type SkillId = 'melee' | 'ranged' | 'gather' | 'craft' | 'trail';
 export const SKILLS: readonly SkillId[] = ['melee', 'ranged', 'gather', 'craft', 'trail'];
 export type ResistId = 'venom' | 'salt' | 'cold';
-export type GearTag = 'pierce' | 'reach' | 'fire' | 'ranged' | 'heavy' | 'noise' | 'blunt' | 'cleave';
+export type GearTag = 'pierce' | 'reach' | 'fire' | 'ranged' | 'heavy' | 'noise' | 'blunt' | 'cleave' | 'shield';
 export type TraitId =
   | 'pack'
   | 'fast'
@@ -628,9 +628,20 @@ export interface OperationNode extends NodeBase {
 }
 
 /** A fight inside a scene: the scene waits for its end. Losing returns to `lose` (retry later). */
+/**
+ * A ground drawn by hand for a fight (bosses, errands): 8 rows of 7 letters, see FIELD_KEYS in
+ * server/src/engine/terrain.ts; `h` marks where the heroes come in, `f` where the foes stand (in order), `F` a foe waiting in deep water.
+ */
+export interface FieldDef {
+  ground: string;
+  rows: string[];
+}
+
 export interface FightNode extends NodeBase {
   type: 'fight';
   foes: Array<{ enemy: string; n?: number }>;
+  /** Fought on this ground instead of one made for the place. */
+  field?: FieldDef;
   win: string;
   lose: string;
 }

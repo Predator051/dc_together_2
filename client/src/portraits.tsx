@@ -4,6 +4,7 @@ import type { ComponentChildren, JSX } from 'preact';
 import { HEROES, type PortraitId } from '../../shared/src/pictures.js';
 import painted from './art/foes.json';
 import heroes from './art/heroes.json';
+import allies from './art/allies.json';
 
 function Ink({ children }: { children: ComponentChildren }) {
   return (
@@ -237,6 +238,16 @@ export function Portrait({ icon, size = 'm', out = false }: { icon: string; size
   }
   const draw = (DRAW as Record<string, () => JSX.Element>)[icon] ?? DRAW.rat;
   return <span class={`portrait ${size} ${out ? 'out' : ''}`}>{draw()}</span>;
+}
+
+// ---------------------------------------------------------------------------- the heroes' own
+
+const ALLIES = allies as unknown as Record<string, number>;
+
+/** A painted portrait of one of the heroes' own (the dog), or null while it is not painted. */
+export function allyUrl(key: string): string | null {
+  const n = ALLIES[key];
+  return n ? new URL(`./art/allies/a${n}.webp`, import.meta.url).href : null;
 }
 
 // ---------------------------------------------------------------------------- the heroes

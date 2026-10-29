@@ -16,6 +16,7 @@ import type {
   TextVariant,
 } from '../../shared/src/content.js';
 import { PLAN_FIXED } from '../../shared/src/content.js';
+import { fieldProblems } from './engine/terrain.js';
 import { ITEM_ICONS, PORTRAITS, SCENES, SPOT_ICONS } from '../../shared/src/pictures.js';
 
 export interface Report {
@@ -585,6 +586,7 @@ export function validateContent(c: Content): Report {
       }
       if (n.type === 'combat' && !encs.has(n.enc)) err(`${nw}: unknown encounter ${n.enc}`);
       if (n.type === 'fight') for (const f of n.foes) if (!enemies.has(f.enemy)) err(`${nw}: unknown enemy ${f.enemy}`);
+      if (n.type === 'fight' && n.field) for (const p of fieldProblems(n.field.rows)) err(`${nw}: field: ${p}`);
     }
     checkEffects(`${w}.onEnd`, effectsOf(s.onEnd), true);
   }

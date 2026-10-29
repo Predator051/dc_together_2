@@ -357,6 +357,7 @@ export const scenes2: SceneDef[] = [
       n4f: {
         type: 'fight',
         foes: [{ enemy: E.catfish }],
+        field: { ground: 'mud', rows: ['#~~~~~#', '#~~F~~#', '#,~~~,#', '.,,_,,.', '..,_,..', 'o.._..o', '.......', '..hh...'] },
         win: 'n5',
         lose: 'n4l',
       },
@@ -439,6 +440,7 @@ export const scenes2: SceneDef[] = [
       n4: {
         type: 'fight',
         foes: [{ enemy: E.foka }, { enemy: E.hound, n: 2 }],
+        field: { ground: 'grass', rows: ['~~,.f.#', '~~,f..#', '~~,.f.o', '~~,=..o', '~~,...=', '~~,.*..', '~~,....', '~~,hh..'] },
         win: 'n5',
         lose: 'n4l',
       },
