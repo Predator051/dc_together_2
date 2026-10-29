@@ -796,6 +796,8 @@ function fightViewOf(g: Game, pid: PlayerId, f: FightState, live = true): FightV
         level: def.level,
         traits: known.map((t) => g.ix.c.traits[t as keyof typeof g.ix.c.traits]?.name ?? t),
       };
+      // a fallen foe keeps its cell, so its last blow can be seen landing there
+      if (foe.pos) v.pos = foe.pos;
       const morale = moraleOf(f, def);
       if (morale !== undefined) {
         v.fear = Math.min(foe.fear, morale);
@@ -820,7 +822,6 @@ function fightViewOf(g: Game, pid: PlayerId, f: FightState, live = true): FightV
           if (shown.target) v.aim = shown.target;
           if (shown.line) v.line = shown.line;
         }
-        if (foe.pos) v.pos = foe.pos;
         if (foe.guarding) v.guarding = true;
         if ((foe.open ?? 0) >= f.round) v.open = true;
         if (foe.stun) v.stunned = true;

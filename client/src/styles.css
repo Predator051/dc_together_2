@@ -8022,8 +8022,8 @@ body.sheet-open {
   padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
   background: rgba(10, 7, 4, 0.97);
 }
-.grid-fight.ended {
-  animation: fight-out 0.45s ease-in 1.9s forwards;
+.grid-fight.leaving {
+  animation: fight-out 0.45s ease-in forwards;
 }
 .grid-top {
   display: flex;
@@ -8519,7 +8519,7 @@ body.sheet-open {
   .seal .seal-body,
   .seal.now .seal-body::before,
   .seal-intent.loud,
-  .grid-fight.ended {
+  .grid-fight.leaving {
     animation: none !important;
     transition: none !important;
   }

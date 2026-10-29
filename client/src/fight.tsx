@@ -93,10 +93,12 @@ function positions(f: FightView): Record<string, Cell> {
  * Plays new beats one by one: walks step by step from where the walker stood in the last view, blows as
  * a lunge and a number. While it plays, seals stand where the play has them.
  */
-function usePlayback(f: FightView): { beat: Beat | null; shown: Record<string, Cell>; busy: boolean } {
+function usePlayback(f: FightView): { beat: Beat | null; shown: Record<string, Cell>; busy: boolean; lingering: Set<string> } {
   const [beat, setBeat] = useState<Beat | null>(null);
   const [shown, setShown] = useState<Record<string, Cell>>({});
   const [busy, setBusy] = useState(false);
+  // those who fall or run in the beats being played stay in sight until their last beat has been seen
+  const [lingering, setLingering] = useState<Set<string>>(new Set());
   const seen = useRef<{ fight: number; s: number } | null>(null);
   const last = useRef<Record<string, Cell>>({});
   const timers = useRef<number[]>([]);
@@ -118,7 +120,13 @@ function usePlayback(f: FightView): { beat: Beat | null; shown: Record<string, C
     // those who walk start where they stood before
     const start: Record<string, Cell> = {};
     for (const e of fresh) if (e.k === 'move' && before[e.a] && !(e.a in start)) start[e.a] = before[e.a]!;
+    const stay = new Set<string>();
+    for (const e of fresh) {
+      if (e.a.startsWith('f')) stay.add(e.a);
+      if (e.t?.startsWith('f')) stay.add(e.t);
+    }
     setShown(start);
+    setLingering(stay);
     setBusy(true);
     let t = 0;
     for (const e of fresh) {
@@ -146,12 +154,13 @@ function usePlayback(f: FightView): { beat: Beat | null; shown: Record<string, C
       window.setTimeout(() => {
         setBeat(null);
         setShown({});
+        setLingering(new Set());
         setBusy(false);
       }, t + 120),
     );
   }, [f.id, tail]);
   useEffect(() => () => timers.current.forEach((t) => clearTimeout(t)), []);
-  return { beat, shown, busy };
+  return { beat, shown, busy, lingering };
 }
 
 /** What a beat does to one seal. */
@@ -290,7 +299,7 @@ type Party = FightView['party'][number];
 type Foe = FightView['foes'][number];
 
 export function FightPanel({ f, v, locked, onGone }: { f: FightView; v: PlayerView; locked: boolean; onGone: () => void }) {
-  const { beat, shown, busy } = usePlayback(f);
+  const { beat, shown, busy, lingering } = usePlayback(f);
   const [paintRef, painted] = useFieldPaint(f);
   const live = f.foes.filter((x) => !x.out && x.pos);
   const [target, setTarget] = useState<number | null>(null);
@@ -300,12 +309,17 @@ export function FightPanel({ f, v, locked, onGone }: { f: FightView; v: PlayerVi
   const strikeable = (uid: number) => f.moves.some((m) => m.target === uid && m.enabled);
   const near = [...live].sort((a, b) => cheb(a.pos, me?.pos) - cheb(b.pos, me?.pos));
   const aimed = live.find((x) => x.uid === target)?.uid ?? near.find((x) => strikeable(x.uid))?.uid ?? near[0]?.uid ?? null;
-  // an ended fight shows its last blows, then fades and goes
+  // an ended fight plays its last blows out, shows how it ended a moment, then fades and goes
+  const [leaving, setLeaving] = useState(false);
   useEffect(() => {
-    if (!f.ended) return;
-    const t = window.setTimeout(onGone, still() ? 900 : 2400);
-    return () => clearTimeout(t);
-  }, [f.ended, f.id]);
+    if (!f.ended || busy) return;
+    const fade = window.setTimeout(() => setLeaving(true), still() ? 600 : 1300);
+    const gone = window.setTimeout(onGone, still() ? 900 : 1800);
+    return () => {
+      clearTimeout(fade);
+      clearTimeout(gone);
+    };
+  }, [f.ended, f.id, busy]);
   const send = (id: string) => net.send({ c: 'fight', id });
   const pickMove = (id: string) => {
     const m = f.moves.find((x) => x.id === id);
@@ -358,7 +372,7 @@ export function FightPanel({ f, v, locked, onGone }: { f: FightView; v: PlayerVi
   const struggle = f.moves.find((m) => m.id === 'struggle');
   const activeName = f.order.find((o) => o.id === f.active)?.name;
   return (
-    <div class={`fight-wrap grid-fight ${f.ended ? 'ended' : ''}`} role="dialog" aria-labelledby="fight-title">
+    <div class={`fight-wrap grid-fight ${f.ended ? 'ended' : ''} ${leaving ? 'leaving' : ''}`} role="dialog" aria-labelledby="fight-title">
       <section class={`fight-board ${hurt ? 'hurt' : ''}`}>
         <header class="grid-top">
           <h2 id="fight-title">{T.fightTitle}</h2>
@@ -376,7 +390,7 @@ export function FightPanel({ f, v, locked, onGone }: { f: FightView; v: PlayerVi
         </ol>
         <p class={`turn-banner ${f.myTurn ? 'mine' : ''}`}>
           {f.ended ? (
-            <b class={`fight-end ${f.ended}`}>{T.fightEnd[f.ended]}</b>
+            !busy && <b class={`fight-end ${f.ended}`}>{T.fightEnd[f.ended]}</b>
           ) : f.myTurn ? (
             <>
               <b>{T.fightYourTurn}</b> <Pips n={f.ap} max={f.apMax} />
@@ -408,7 +422,7 @@ export function FightPanel({ f, v, locked, onGone }: { f: FightView; v: PlayerVi
             )}
             {f.foes.map((x) => {
               const c = where(`f${x.uid}`);
-              if (x.out || !c) return null;
+              if (!c || (x.out && !lingering.has(`f${x.uid}`))) return null;
               return <FoeSeal key={x.uid} x={x} v={v} c={c} beat={beat} style={lungeTo(beat, `f${x.uid}`, where)} chosen={x.uid === aimed} active={f.active === `f${x.uid}`} onPick={() => setTarget(x.uid)} />;
             })}
           </div>
