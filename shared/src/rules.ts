@@ -155,6 +155,15 @@ export const PERK = {
   doubleChance: 0.15,
   handsChance: 0.25,
   packerCarry: 6,
+  sweepPart: 0.5,
+  duelDmg: 3,
+  loreAcc: 0.1,
+  loreDmg: 2,
+  loreBeaten: 3,
+  bulwarkReach: 2,
+  secondBelow: 0.25,
+  secondHeal: 1 / 3,
+  thriftyChance: 0.2,
 };
 
 /** What the perk tree needs: its branches, the level each step opens at, the perks in it. */

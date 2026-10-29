@@ -253,11 +253,14 @@ export function Growth({ v, locked }: { v: PlayerView; locked: boolean }) {
       {h.special.length > 0 && (
         <section class="growth-block">
           <h3>{T.perkSpecial}</h3>
-          <ul class="perk-list">
+          <ul class="skill-cards special-cards">
             {h.special.map((p) => (
-              <li>
-                <b>{p.name}</b>
-                <span>{p.text}</span>
+              <li class="skill-card">
+                <Mark k={p.id} ink="guard" cls="skill-mark" />
+                <span class="skill-words">
+                  <b>{p.name}</b>
+                  <small>{p.text}</small>
+                </span>
               </li>
             ))}
           </ul>

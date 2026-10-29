@@ -238,6 +238,8 @@ export const ui: Record<string, string> = {
   fight_hero_down_other: '{name} падає й не може звестися.',
   fight_flint_self: 'Ти мало не падаєш — і стоїш.',
   fight_flint_other: '{name} хитається — і встоює.',
+  fight_second_self: 'Ти переводиш подих — і сили вертаються.',
+  fight_second_other: '{name} переводить подих — і знов тримається.',
   fight_dog_stops: '{item} вчеплюється в {foeAcc} — той збивається.',
   fight_dog_bites: '{item} кусає {foeAcc}: −{n}.',
   fight_hit_open_self: 'Ти б\'єш у відкрите місце — {foe}: −{n}.',

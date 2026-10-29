@@ -52,7 +52,7 @@ export function paceOf(g: Game, pid: PlayerId): number {
   const n = g.p(pid).needs;
   if (!n) return 1;
   if (n.rested > 0) return NEED.rested.pace;
-  return tired(n) ? NEED.tired.pace : 1;
+  return tired(n) && !g.p(pid).perks.includes('tireless') ? NEED.tired.pace : 1;
 }
 
 /** Skills grow faster rested, slower tired. */

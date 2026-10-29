@@ -22,8 +22,8 @@ const COIN = 'r_22';
 
 /** Perks each role reaches for first (any other that can be taken comes after). */
 export const PERK_PLAN: Record<Role, string[]> = {
-  hunter: ['eye', 'tough', 'cold', 'legs', 'arrows', 'flint', 'watch', 'flank', 'steady', 'opening', 'bark', 'hardy', 'momentum', 'will', 'double', 'master'],
-  maker: ['first', 'tough', 'opening', 'hands', 'flint', 'swift', 'bark', 'handy', 'master', 'eye', 'riposte', 'learner', 'cold', 'packer', 'arrows', 'watch'],
+  hunter: ['eye', 'tough', 'cold', 'legs', 'arrows', 'flint', 'watch', 'flank', 'steady', 'opening', 'bark', 'hardy', 'momentum', 'will', 'double', 'master', 'volley', 'second', 'tireless', 'duel'],
+  maker: ['first', 'tough', 'opening', 'hands', 'flint', 'swift', 'bark', 'handy', 'master', 'eye', 'riposte', 'learner', 'cold', 'packer', 'arrows', 'watch', 'sweep', 'bulwark', 'thrifty', 'lore'],
 };
 
 const STAT_PLAN: Record<Role, string[]> = {

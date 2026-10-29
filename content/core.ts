@@ -28,6 +28,8 @@ export const perks: Content['perks'] = [
   { id: 'momentum', branch: 'blade', tier: 3, name: 'Розгін', text: 'Звалив ворога своїм ударом — маєш ще 1 очко (раз за хід).' },
   { id: 'master', branch: 'blade', tier: 4, name: 'Набита рука', text: 'Зблизька влучаєш на 5% частіше й б\'єш на 1 сильніше.' },
   { id: 'fury', branch: 'blade', tier: 4, name: 'Злість', text: 'Коли сил менше половини, удар зблизька сильніший на 3.' },
+  { id: 'sweep', branch: 'blade', tier: 5, name: 'Широкий замах', text: 'Удар зблизька зачіпає ще одного ворога поруч із тобою — вполовину.' },
+  { id: 'duel', branch: 'blade', tier: 5, name: 'Один на один', text: 'Коли поруч лише один ворог, удар зблизька сильніший на 3.' },
   // Око: відстань і знання звіра
   { id: 'eye', branch: 'sight', tier: 1, name: 'Пильне око', text: 'Усе про звіра видно з першої зустрічі.' },
   { id: 'quiet', branch: 'sight', tier: 1, name: 'Тихий крок', text: 'У дорозі нападають на третину рідше.' },
@@ -37,6 +39,8 @@ export const perks: Content['perks'] = [
   { id: 'quick', branch: 'sight', tier: 3, name: 'Швидкий постріл', text: 'У першому раунді постріл коштує 1 очко.' },
   { id: 'deadly', branch: 'sight', tier: 4, name: 'Смертельний приціл', text: 'Прицілений постріл сильніший у 2,5 раза (а не вдвічі).' },
   { id: 'watch', branch: 'sight', tier: 4, name: 'Насторожі', text: 'У бою ходиш одним із перших, а в першому раунді маєш ще 1 очко.' },
+  { id: 'volley', branch: 'sight', tier: 5, name: 'Не сходячи з місця', text: 'Поки цього ходу не рушив з клітки, постріл коштує на 1 очко менше.' },
+  { id: 'lore', branch: 'sight', tier: 5, name: 'Знає звіра', text: 'Кого ви вже здолали тричі, по тому влучаєш на 10% частіше й сильніше на 2.' },
   // Плече: захист і напарник
   { id: 'shield', branch: 'guard', tier: 1, name: 'Щит для двох', text: 'Коли прикриваєш напарника, удар слабшає ще на третину.' },
   { id: 'tough', branch: 'guard', tier: 1, name: 'Міцний', text: 'Сил на 5 більше.' },
@@ -46,6 +50,8 @@ export const perks: Content['perks'] = [
   { id: 'bark', branch: 'guard', tier: 3, name: 'Шкіра як кора', text: 'Броня на 1 більша.' },
   { id: 'will', branch: 'guard', tier: 4, name: 'Залізна воля', text: 'З хватки виривається завжди, отрута тримає вдвічі коротше.' },
   { id: 'riposte', branch: 'guard', tier: 4, name: 'Відсіч', text: 'Хто зблизька не влучив по тобі, лишається відкритим.' },
+  { id: 'bulwark', branch: 'guard', tier: 5, name: 'Заслін', text: 'Прикриваєш напарника й за дві клітки.' },
+  { id: 'second', branch: 'guard', tier: 5, name: 'Друге дихання', text: 'Раз за бій, коли сил лишилось менше чверті, на своєму ході вертаєш третину.' },
   // Руки: промисел, ремесло, дорога
   { id: 'hands', branch: 'craft', tier: 1, name: 'Вправні руки', text: 'Промисел часом дає на одне більше.' },
   { id: 'legs', branch: 'craft', tier: 1, name: 'Легка нога', text: 'Дорога забирає на десяту частину менше часу.' },
@@ -55,6 +61,8 @@ export const perks: Content['perks'] = [
   { id: 'learner', branch: 'craft', tier: 3, name: 'Тямущий', text: 'Навички ростуть на чверть швидше.' },
   { id: 'double', branch: 'craft', tier: 4, name: 'Щедра земля', text: 'Промисел часом дає вдвічі.' },
   { id: 'packer', branch: 'craft', tier: 4, name: 'Добре вкладене', text: 'Торба на 6 більша, а повна торба не сповільнює дорогу.' },
+  { id: 'thrifty', branch: 'craft', tier: 5, name: 'Ощадливий', text: 'Роблячи річ чи будуючи, часом вертаєш одну одиницю матеріалу.' },
+  { id: 'tireless', branch: 'craft', tier: 5, name: 'Двожильний', text: 'Утома не сповільнює роботу й дорогу.' },
   // з доручень
   { id: 'shoulder', name: 'Плече до плеча', text: 'Поки ви обоє в бою на ногах, кожен тримає удар на 1 краще.', quest: true },
 ];
@@ -70,7 +78,7 @@ export const hero: Content['hero'] = {
     { id: 'guard', name: 'Плече', text: 'Захист себе й напарника.' },
     { id: 'craft', name: 'Руки', text: 'Промисел, ремесло, дорога.' },
   ],
-  tiers: [2, 4, 7, 10],
+  tiers: [2, 4, 7, 10, 14],
 };
 
 export const roleTitles: Content['roleTitles'] = {

@@ -810,6 +810,11 @@ export class Game {
 
     if (p.travel) return this.fail('err_busy');
     this.payCostFor(pid, a.cost);
+    // a thrifty hand saves a piece of what went in
+    if ((a.kind === 'craft' || a.kind === 'build') && a.cost && p.perks.includes('thrifty') && this.rng.chance(PERK.thriftyChance)) {
+      const r = Object.entries(a.cost).sort((x, y) => y[1] - x[1])[0]![0];
+      this.payCostFor(pid, { [r]: -1 });
+    }
     const home = this.atHome(pid);
     const put = (r: string, n: number): number => (home ? this.addRes(r, n) : addBag(this, pid, r, n));
     const rolls = a.rollsPer ? Math.max(1, this.s.res[a.rollsPer] ?? 0) : 1;

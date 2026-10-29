@@ -482,6 +482,12 @@ export function nextTurn(g: Game, f: FightState): void {
       hurtHero(g, f, pid, 2);
       if (!up(g, f, pid)) continue;
     }
+    if (perk(g, pid, 'second') && p.hp < p.hpMax * PERK.secondBelow && once(f, `${pid}:second`)) {
+      const n = Math.max(1, Math.round(p.hpMax * PERK.secondHeal));
+      p.hp = Math.min(p.hpMax, p.hp + n);
+      say(g, f, 'fight_second', pid, {});
+      ev(f, { a: pid, t: pid, k: 'heal', n });
+    }
     if (!p.online) {
       // everyone is away (or it is a story fight, which is fought together): it waits on this turn
       if (f.scene || !f.party.some((x) => x !== pid && up(g, f, x) && g.p(x).online)) {
@@ -591,6 +597,7 @@ function techCost(g: Game, f: FightState, pid: PlayerId, t: Tech, foe: FoeState)
   let c = t.cost;
   if (perk(g, pid, 'opening') && !heroOf(g, pid).ranged && isOpen(f, foe)) c -= 1;
   if (t.id === 'shoot' && f.round === 1 && perk(g, pid, 'quick')) c -= 1;
+  if (t.id === 'shoot' && perk(g, pid, 'volley') && !(f.used ?? []).includes(`${pid}:walked:${f.round}`)) c -= 1;
   return Math.max(1, c);
 }
 
@@ -744,6 +751,7 @@ function walk(g: Game, f: FightState, pid: PlayerId, to: string): Result {
   if (!way) return g.fail('err_not_now');
   f.ap = Math.max(0, (f.ap ?? 0) - way.cost);
   (f.pos ??= {})[pid] = cell;
+  once(f, `${pid}:walked:${f.round}`);
   ev(f, { a: pid, k: 'move', path: way.path });
   // a leech hangs on and comes along
   for (const foe of activeFoes(f)) {
@@ -886,6 +894,8 @@ function heroHits(g: Game, f: FightState, pid: PlayerId, foe: FoeState, b: Blow 
   if (ranged && perk(g, pid, 'cold')) acc += PERK.coldAcc;
   else if (ranged && activeFoes(f).some((x) => adjacent(x.pos, at))) acc -= 0.2;
   if (!ranged && perk(g, pid, 'master')) acc += PERK.masterAcc;
+  const known = perk(g, pid, 'lore') && (g.s.bestiary[foe.enemy]?.beaten ?? 0) >= PERK.loreBeaten;
+  if (known) acc += PERK.loreAcc;
   if (feature(fieldOf(f), at).wet) acc -= 0.1;
   const flank = !ranged && d === 1 && flanked(g, f, to, pid, true);
   const wideFlank = flank && perk(g, pid, 'flank');
@@ -902,6 +912,8 @@ function heroHits(g: Game, f: FightState, pid: PlayerId, foe: FoeState, b: Blow 
   if (p.perks.includes('finish') && foe.hp * 2 < foe.hpMax) n += PERK.finishDmg;
   if (!ranged && p.perks.includes('master')) n += PERK.masterDmg;
   if (!ranged && p.perks.includes('fury') && p.hp * 2 < p.hpMax) n += PERK.furyDmg;
+  if (!ranged && p.perks.includes('duel') && activeFoes(f).filter((x) => adjacent(x.pos, at)).length === 1) n += PERK.duelDmg;
+  if (known) n += PERK.loreDmg;
   let mult = b.mult ?? 1;
   if (open) mult *= b.thrust ? TECH.thrustOpen : TECH.open;
   if (aimed) mult *= p.perks.includes('deadly') ? PERK.deadlyAim : 2;
@@ -950,7 +962,10 @@ export function meetPoint(g: Game, f: FightState, foe: FoeState, t: PlayerId): b
 /** Who takes a blow aimed at this hero: a partner standing by to cover takes it instead. */
 function coveredBy(g: Game, f: FightState, target: PlayerId): PlayerId {
   const mate = f.party.find((x) => x !== target);
-  if (mate && f.stance?.[mate] === 'cover' && up(g, f, mate) && !pinned(g, f, mate) && adjacent(heroPos(f, mate), heroPos(f, target))) return mate;
+  if (!mate || f.stance?.[mate] !== 'cover' || !up(g, f, mate) || pinned(g, f, mate)) return target;
+  const a = heroPos(f, mate);
+  const b = heroPos(f, target);
+  if (a && b && dist(a, b) <= (perk(g, mate, 'bulwark') ? PERK.bulwarkReach : 1)) return mate;
   return target;
 }
 
@@ -1015,7 +1030,18 @@ function heroActs(g: Game, f: FightState, pid: PlayerId, pick: string): void {
   const other = f.party.find((x) => x !== pid);
   if (pick.startsWith('hit:') || pick.startsWith('shoot:')) {
     const foe = pickedFoe(f, pick.split(':')[1]);
-    if (foe) heroHits(g, f, pid, foe, { ranged: pick.startsWith('shoot:') });
+    if (!foe) return;
+    const dealt = heroHits(g, f, pid, foe, { ranged: pick.startsWith('shoot:') });
+    // a wide swing catches one more who stands by
+    if (dealt > 0 && pick.startsWith('hit:') && perk(g, pid, 'sweep')) {
+      const by = activeFoes(f).find((x) => x !== foe && adjacent(x.pos, heroPos(f, pid)));
+      if (by) {
+        const n = Math.max(1, Math.floor(dealt * PERK.sweepPart));
+        say(g, f, 'fight_hit', pid, { ...foeVars(g, by, f), n });
+        ev(f, { a: pid, t: fid(by), k: 'hit', n });
+        damageFoe(g, f, by, n, pid);
+      }
+    }
     return;
   }
   if (pick.startsWith('t:')) {

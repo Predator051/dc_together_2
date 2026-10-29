@@ -337,6 +337,23 @@ describe('fights', () => {
     expect(b!.out).toBeTruthy();
   });
 
+  it('step five: a wide swing catches a second foe standing by', () => {
+    const { w, h } = field();
+    const p = w.state.players[h];
+    p.perks.push('sweep');
+    const f = startFight(w.g(), 'a_02', [{ enemy: 'e_05', n: 2 }], { party: [h] });
+    f.field!.cells = f.field!.cells.map(() => '');
+    const [a, b] = f.foes;
+    a!.pos = [3, 6];
+    b!.pos = [4, 6];
+    put(f, h, [3, 7]);
+    turnOf(w, h);
+    a!.open = f.round + 1;
+    const hpB = b!.hp;
+    w.cmd(h, { c: 'fight', id: `hit:${a!.uid}` });
+    expect(b!.hp).toBeLessThan(hpB);
+  });
+
   it('a will of iron always breaks a hold', () => {
     const { w, m } = field();
     w.state.players[m].perks.push('will');

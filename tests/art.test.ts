@@ -33,10 +33,10 @@ describe('painted things', () => {
 
 // Every mark of the hero's growth is painted (scripts/art.ts perks): perks of the tree, branches, strengths, skills.
 describe('painted growth', () => {
-  it('every perk, branch, strength and skill has its cell in an atlas that exists', () => {
+  it('every perk (errands\' too), branch, strength and skill has its cell in an atlas that exists', () => {
     const cells = perkMarks as unknown as Record<string, [number, number]>;
     const keys = [
-      ...content.perks.filter((p) => p.branch).map((p) => p.id),
+      ...content.perks.map((p) => p.id),
       ...content.hero.branches.map((b) => `branch_${b.id}`),
       ...STATS.map((x) => `stat_${x}`),
       ...SKILLS.map((x) => `skill_${x}`),
