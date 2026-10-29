@@ -435,6 +435,8 @@ function validCommand(cmd: unknown): Command | null {
       return typeof c.id === 'string' && c.id.length < 64 ? ({ c: c.c, id: c.id } as Command) : null;
     case 'help':
       return { c: 'help' };
+    case 'loot':
+      return { c: 'loot' };
     case 'camp':
       return { c: 'camp' };
     case 'rest':

@@ -66,8 +66,16 @@ describe('fights', () => {
     expect(end.ended).toBe('win');
     expect(end.moves).toEqual([]);
     expect(end.foes.every((x) => x.out)).toBe(true);
+    // the loot waits on the field until it is taken (or the fight is ended with nothing to take)
+    expect(end.loot).toBeDefined();
     w.advance(5000);
+    expect(w.view(h).fightEnd?.loot).toBeDefined();
+    const bag0 = Object.values(w.state.players[h].bag).reduce((a, b) => a + b, 0);
+    const share = end.loot!.reduce((a, x) => a + x.n, 0);
+    expect(w.cmd(h, { c: 'loot' }).ok).toBe(true);
+    expect(Object.values(w.state.players[h].bag).reduce((a, b) => a + b, 0)).toBe(bag0 + share);
     expect(w.view(h).fightEnd).toBeNull();
+    expect(w.cmd(h, { c: 'loot' }).ok).toBe(false);
     expect(w.state.players[h].xp).toBeGreaterThan(xp0);
     expect(w.state.bestiary['e_01']!.seen).toBeGreaterThan(0);
   });

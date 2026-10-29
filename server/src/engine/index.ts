@@ -54,7 +54,7 @@ import {
   skillOf,
   spendPoint,
 } from './hero.js';
-import { activeFoes, dropFight, fightChoose, fightOf, help, maybeResolve, startFight } from './fight.js';
+import { activeFoes, dropFight, fightChoose, fightOf, help, maybeResolve, startFight, takeLoot } from './fight.js';
 import { fieldFrom } from './terrain.js';
 import { ambush, areaDef, areaKnown, go, linkTime, setJob, settleTravel, settleWork } from './travel.js';
 import { camp, drink, eat, feed, nightRest, paceOf, rest, settleNeeds, soak } from './needs.js';
@@ -1593,6 +1593,9 @@ export class Game {
         break;
       case 'help':
         r = help(this, pid);
+        break;
+      case 'loot':
+        r = takeLoot(this, pid);
         break;
       case 'job':
         r = setJob(this, cmd.who, cmd.id);

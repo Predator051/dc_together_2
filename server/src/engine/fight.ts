@@ -278,8 +278,11 @@ export function startFight(
   opts: { scene?: boolean; party?: PlayerId[]; field?: Field; starts?: { heroes: Cell[]; foes: Cell[] } } = {},
 ): FightState {
   const party = (opts.party ?? g.joinedIds().filter((pid) => canJoin(g, pid, area))).slice();
-  // a new fight puts the last one out of sight
-  for (const pid of party) delete g.s.afterFight?.[pid];
+  // a new fight puts the last one out of sight (and what was left to take from it goes into the bag)
+  for (const pid of party) {
+    if (g.s.afterFight?.[pid]?.loot) takeLoot(g, pid);
+    delete g.s.afterFight?.[pid];
+  }
   const f: FightState = {
     id: g.s.nextFightId++,
     area,
@@ -1269,23 +1272,24 @@ function finishFight(g: Game, f: FightState, how: 'win' | 'lose' | 'fled'): void
     xp = Math.round(xp * (skyAt(g, f.area)?.xp ?? 1));
     const standing = party.filter((pid) => !f.down.includes(pid) && !f.fled.includes(pid));
     const takers = standing.length ? standing : party;
-    // share the loot: one by one into whoever has room
-    const got: Record<PlayerId, Record<string, number>> = { p1: {}, p2: {} };
+    // the loot is shared out now (one thing each in turn); each takes their share from the field (takeLoot)
+    const share: Record<PlayerId, Record<string, number>> = { p1: {}, p2: {} };
     let i = 0;
     for (const [id, n] of Object.entries(loot)) {
       for (let k = 0; k < n; k++) {
         const pid = takers[i++ % takers.length]!;
-        const into = g.atHome(pid) ? g.addRes(id, 1) : addBag(g, pid, id, 1);
-        if (into > 0) got[pid][id] = (got[pid][id] ?? 0) + 1;
+        share[pid][id] = (share[pid][id] ?? 0) + 1;
       }
     }
     for (const pid of party) {
       const p = g.p(pid);
       if (f.down.includes(pid)) p.hp = Math.max(1, Math.ceil(p.hpMax / 4));
-      if (!f.fled.includes(pid)) gainXp(g, pid, xp);
-      const parts = Object.entries(got[pid]).map(([id, n]) => `${g.ix.res.get(id)?.name ?? id} +${n}`);
-      const text = `${g.ix.ui('fight_won')}${parts.length ? ` (${parts.join(', ')})` : ''} ${g.ix.ui('xp_short')} +${xp}.`;
-      g.logRaw('find', { [pid]: text }, pid);
+      if (!f.fled.includes(pid)) {
+        gainXp(g, pid, xp);
+        const a = after[pid];
+        if (a) a.loot = share[pid];
+      }
+      g.logRaw('find', { [pid]: `${g.ix.ui('fight_won')} ${g.ix.ui('xp_short')} +${xp}.` }, pid);
     }
     g.s.stats.fights = (g.s.stats.fights ?? 0) + 1;
   } else if (how === 'lose') {
@@ -1302,6 +1306,29 @@ function finishFight(g: Game, f: FightState, how: 'win' | 'lose' | 'fled'): void
   }
   for (const pid of party) refreshHero(g, pid);
   if (f.scene) g.fightOver(how === 'win');
+}
+
+/**
+ * Take one's share of a won fight's loot: into the bag (into the store at home); what does not fit is
+ * left on the field. With nothing to take it only closes the fight.
+ */
+export function takeLoot(g: Game, pid: PlayerId, quiet = false): Result {
+  const a = g.s.afterFight?.[pid];
+  if (!a?.loot) return g.fail('err_not_now');
+  const got: string[] = [];
+  const left: string[] = [];
+  for (const [id, n] of Object.entries(a.loot)) {
+    const into = Math.max(0, g.atHome(pid) ? g.addRes(id, n) : addBag(g, pid, id, n));
+    const name = g.ix.res.get(id)?.name ?? id;
+    if (into > 0) got.push(`${name} +${into}`);
+    if (into < n) left.push(`${name} ${n - into}`);
+  }
+  delete a.loot;
+  // the fight is put away now
+  a.at = g.now - 60_000;
+  if (!quiet && got.length) g.logRaw('find', { [pid]: `${g.ix.ui('loot_took')} ${got.join(', ')}.` }, pid);
+  if (!quiet && left.length) g.logRaw('warn', { [pid]: `${g.ix.ui('loot_left')} ${left.join(', ')}.` }, pid);
+  return { ok: true };
 }
 
 /** Stop a fight that lost its people (left the game, scene over) without a result. */

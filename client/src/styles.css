@@ -6487,9 +6487,6 @@ body.sheet-open {
 .fight-end.fled {
   color: var(--gall);
 }
-.fight-wrap.ended {
-  animation: fight-out 0.45s ease-in 1.2s forwards;
-}
 @keyframes fight-out {
   to {
     opacity: 0;
@@ -6508,7 +6505,6 @@ body.sheet-open {
   .fparty li.struck .bar,
   .sheet.fight.hurt,
   .fight-end,
-  .fight-wrap.ended,
   .day-card b {
     animation: none;
   }
@@ -8657,4 +8653,104 @@ body.sheet-open {
   background-size: 210%;
   background-position: 10% 0%;
   border-color: rgba(141, 176, 143, 0.85);
+}
+
+/* the loot of a won fight, on the field: take it, or end the fight */
+.spoils-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: radial-gradient(circle at 50% 50%, rgba(14, 10, 6, 0.55), rgba(14, 10, 6, 0.8));
+  pointer-events: auto;
+  animation: fade-in 0.3s ease-out backwards;
+}
+.spoils {
+  width: min(100%, 300px);
+  padding: 16px 16px 14px;
+  border: 1px solid rgba(221, 184, 103, 0.45);
+  border-radius: 10px;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(221, 184, 103, 0.1), transparent 60%),
+    var(--leaf);
+  box-shadow: var(--shadow);
+  text-align: center;
+  animation: spoils-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+@keyframes spoils-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+}
+.spoils h3 {
+  margin: 0 0 10px;
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
+  color: var(--ochre-ink);
+}
+.spoils-list {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+.spoils-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 4px 4px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--leaf-2);
+  font: 0.9rem var(--sans);
+  animation: fade-up 0.3s ease-out backwards;
+  animation-delay: calc(0.12s + var(--i, 0) * 70ms);
+}
+.spoils-pic {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+}
+.spoils-pic .item-icon {
+  width: 34px;
+  height: 34px;
+}
+.spoils-pic svg {
+  width: 26px;
+  height: 26px;
+}
+.spoils-name {
+  flex: 1;
+  min-width: 0;
+}
+.spoils-n {
+  color: var(--ochre-ink);
+  font-variant-numeric: tabular-nums;
+}
+.spoils-none {
+  margin: 0 0 14px;
+  font: 0.9rem var(--sans);
+  color: var(--faded);
+}
+.spoils .btn {
+  width: 100%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spoils-wrap,
+  .spoils,
+  .spoils-list li {
+    animation: none;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
 }

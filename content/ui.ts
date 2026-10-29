@@ -162,6 +162,8 @@ export const ui: Record<string, string> = {
   fight_join_self: 'Ти кидаєшся на поміч.',
   fight_join_other: '{name} кидається на поміч.',
   fight_won: 'Відбилися.',
+  loot_took: 'Ти береш:',
+  loot_left: 'Не влізло в торбу, лишилося на місці:',
   fight_all_fled: 'Ви втекли.',
   fight_hit_self: 'Ти б\'єш {foeAcc}: −{n}.',
   fight_hit_other: '{name} б\'є {foeAcc}: −{n}.',

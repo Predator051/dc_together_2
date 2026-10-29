@@ -309,17 +309,23 @@ export function FightPanel({ f, v, locked, onGone }: { f: FightView; v: PlayerVi
   const strikeable = (uid: number) => f.moves.some((m) => m.target === uid && m.enabled);
   const near = [...live].sort((a, b) => cheb(a.pos, me?.pos) - cheb(b.pos, me?.pos));
   const aimed = live.find((x) => x.uid === target)?.uid ?? near.find((x) => strikeable(x.uid))?.uid ?? near[0]?.uid ?? null;
-  // an ended fight plays its last blows out, shows how it ended a moment, then fades and goes
+  // an ended fight plays its last blows out, shows how it ended a moment, then fades and goes;
+  // a won one waits on the field with its loot until it is taken
   const [leaving, setLeaving] = useState(false);
+  const spoils = f.ended === 'win' && f.loot ? f.loot : null;
+  const take = () => {
+    setLeaving(true);
+    window.setTimeout(() => net.send({ c: 'loot' }), still() ? 0 : 280);
+  };
   useEffect(() => {
-    if (!f.ended || busy) return;
+    if (!f.ended || busy || spoils) return;
     const fade = window.setTimeout(() => setLeaving(true), still() ? 600 : 1300);
     const gone = window.setTimeout(onGone, still() ? 900 : 1800);
     return () => {
       clearTimeout(fade);
       clearTimeout(gone);
     };
-  }, [f.ended, f.id, busy]);
+  }, [f.ended, f.id, busy, !!spoils]);
   const send = (id: string) => net.send({ c: 'fight', id });
   const pickMove = (id: string) => {
     const m = f.moves.find((x) => x.id === id);
@@ -420,6 +426,7 @@ export function FightPanel({ f, v, locked, onGone }: { f: FightView; v: PlayerVi
                 </span>
               </div>
             )}
+            {spoils && !busy && <Spoils items={spoils} onTake={take} disabled={leaving} />}
             {f.foes.map((x) => {
               const c = where(`f${x.uid}`);
               if (!c || (x.out && !lingering.has(`f${x.uid}`))) return null;
@@ -564,6 +571,35 @@ function FoeSeal({ x, v, c, beat, style, chosen, active, onPick }: { x: Foe; v: 
       </span>
       <Bar n={x.hp} max={x.hpMax} cls="hp" />
     </button>
+  );
+}
+
+/** What the fallen left on the field: take it into the bag, or (with nothing left) end the fight. */
+function Spoils({ items, onTake, disabled }: { items: NonNullable<FightView['loot']>; onTake: () => void; disabled: boolean }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  useEffect(() => ref.current?.focus(), []);
+  return (
+    <div class="spoils-wrap" role="dialog" aria-labelledby="spoils-title">
+      <div class="spoils">
+        <h3 id="spoils-title">{items.length ? T.lootTitle : T.fightEnd.win}</h3>
+        {items.length ? (
+          <ul class="spoils-list">
+            {items.map((x, i) => (
+              <li style={{ '--i': String(i) } as Vars}>
+                <span class="spoils-pic">{x.icon ? <Thing icon={x.icon} /> : null}</span>
+                <span class="spoils-name">{x.name}</span>
+                <b class="spoils-n">×{x.n}</b>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p class="spoils-none">{T.lootNone}</p>
+        )}
+        <button ref={ref} class="btn primary" disabled={disabled} onClick={onTake}>
+          {items.length ? T.lootTake : T.lootEnd}
+        </button>
+      </div>
+    </div>
   );
 }
 

@@ -773,8 +773,15 @@ const AFTERGLOW = 3000;
 
 function fightEndView(g: Game, pid: PlayerId): FightView | null {
   const a = g.s.afterFight?.[pid];
-  if (!a || fightOf(g, pid) || g.now - a.at > AFTERGLOW) return null;
-  return { ...fightViewOf(g, pid, a.fight, false), ended: a.how };
+  // loot left to take keeps the field in sight until it is taken
+  if (!a || fightOf(g, pid) || (!a.loot && g.now - a.at > AFTERGLOW)) return null;
+  const loot = a.loot
+    ? Object.entries(a.loot).map(([id, n]) => {
+        const r = g.ix.res.get(id);
+        return { id, name: r?.name ?? id, n, ...(r?.icon ? { icon: r.icon } : {}) };
+      })
+    : undefined;
+  return { ...fightViewOf(g, pid, a.fight, false), ended: a.how, ...(loot ? { loot } : {}) };
 }
 
 function fightViewOf(g: Game, pid: PlayerId, f: FightState, live = true): FightView {
