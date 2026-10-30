@@ -1,20 +1,92 @@
 [
+ [
   [
-    ["h_01", "a gaunt silent woman in her thirties freed from forced labour in salt pits, short regrown hair under a plain grey kerchief, weathered face, distant knowing eyes, lips slightly parted as if humming without sound"],
-    ["h_02", "a huge strong young village man, broad neck and shoulders like an ox, curly chestnut hair, short beard, open loud grin, linen shirt with red embroidery"],
-    ["h_03", "a silent man in his fifties, once a blacksmith, heavy brow, grey stubble, small old burn scars on one cheek, thick neck, hard tired eyes, leather apron strap over his shoulder"],
-    ["h_04", "a fisherman's widow in her forties from the river lowlands, dark kerchief knotted under the chin, weathered tanned face, calm keen eyes, a firm mouth"]
+   "h_01",
+   "a gaunt silent woman in her thirties freed from forced labour in salt pits, short regrown hair under a plain grey kerchief, weathered face, distant knowing eyes, lips slightly parted as if humming without sound"
   ],
   [
-    ["h_05", "a thin seventeen-year-old boy, gaunt cheeks, shaggy straw-coloured hair, wary protective eyes, patched linen shirt"],
-    ["h_06", "his sister, a thin quiet young woman about twenty, the same straw-coloured hair in a long braid, gentle sad eyes, red embroidered collar"],
-    ["h_07", "a cheeky orphan errand boy about twelve from a town tavern, freckles, quick clever grin, oversized felt cap pushed back, scarf"],
-    ["h_08", "a very old salt-boiler, bald head with a white fringe, long drooping white moustache, deep wrinkles, kind storyteller eyes, old sheepskin vest"]
+   "h_02",
+   "a huge strong young village man, broad neck and shoulders like an ox, curly chestnut hair, short beard, open loud grin, linen shirt with red embroidery"
   ],
   [
-    ["h_09", "a lean cooper in his forties, short dark beard with grey, wood shavings caught in it, quiet watchful eyes, a faint hopeful look, rolled sleeves"],
-    ["h_10", "a young woman from the south, dark hair in braids wound with ribbons, warm brown eyes, embroidered white blouse with black and red patterns, a nimble cheerful look"],
-    ["x_1", "an old woman in a dark wool shawl"],
-    ["x_2", "a middle-aged man with a long moustache in a sheepskin hat"]
+   "h_03",
+   "a silent man in his fifties, once a blacksmith, heavy brow, grey stubble, small old burn scars on one cheek, thick neck, hard tired eyes, leather apron strap over his shoulder"
+  ],
+  [
+   "h_04",
+   "a fisherman's widow in her forties from the river lowlands, dark kerchief knotted under the chin, weathered tanned face, calm keen eyes, a firm mouth"
   ]
+ ],
+ [
+  [
+   "h_05",
+   "a thin seventeen-year-old boy, gaunt cheeks, shaggy straw-coloured hair, wary protective eyes, patched linen shirt"
+  ],
+  [
+   "h_06",
+   "his sister, a thin quiet young woman about twenty, the same straw-coloured hair in a long braid, gentle sad eyes, red embroidered collar"
+  ],
+  [
+   "h_07",
+   "a cheeky orphan errand boy about twelve from a town tavern, freckles, quick clever grin, oversized felt cap pushed back, scarf"
+  ],
+  [
+   "h_08",
+   "a very old salt-boiler, bald head with a white fringe, long drooping white moustache, deep wrinkles, kind storyteller eyes, old sheepskin vest"
+  ]
+ ],
+ [
+  [
+   "h_09",
+   "a lean cooper in his forties, short dark beard with grey, wood shavings caught in it, quiet watchful eyes, a faint hopeful look, rolled sleeves"
+  ],
+  [
+   "h_10",
+   "a young woman from the south, dark hair in braids wound with ribbons, warm brown eyes, embroidered white blouse with black and red patterns, a nimble cheerful look"
+  ],
+  [
+   "x_1",
+   "an old woman in a dark wool shawl"
+  ],
+  [
+   "x_2",
+   "a middle-aged man with a long moustache in a sheepskin hat"
+  ]
+ ],
+ [
+  [
+   "h_11",
+   "a sturdy widow in her forties with a round tired face, a red kerchief, flour on her hands, kind stubborn eyes"
+  ],
+  [
+   "h_12",
+   "a carpenter in his thirties from the south, sun-dark face, short brown beard, a wood shaving behind his ear, steady worried eyes"
+  ],
+  [
+   "h_13",
+   "a lanky herdsman of about fifty, weathered face, grey stubble, a shepherd's felt hat, shy eyes that avoid the viewer"
+  ],
+  [
+   "h_14",
+   "a thin weaver woman in her forties, sharp cheekbones, a dark kerchief, nettle fibre thread over her shoulder, watchful eyes"
+  ]
+ ],
+ [
+  [
+   "h_15",
+   "a young soldier of eighteen with a shaved head, a plain grey shirt buttoned to the neck, a blank distant stare that is just beginning to clear"
+  ],
+  [
+   "h_16",
+   "an older silent soldier with a scar across his whole face, a grey shirt, heavy miner's hands, calm sad eyes"
+  ],
+  [
+   "x_3",
+   "an old man with a white moustache in a straw hat"
+  ],
+  [
+   "x_4",
+   "a girl of ten with a long plait and a sunburnt nose"
+  ]
+ ]
 ]

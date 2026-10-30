@@ -328,7 +328,7 @@ const NEAR_TAP = 120;
 // ---------------------------------------------------------------------------- life on the land
 
 /** Lived-in places smoke; birds go over the water of the places that have it (once they are explored). */
-const SMOKES = ['a_01', 'a_11'];
+const SMOKES = ['a_01', 'a_11', 'a_15'];
 const BIRDS = ['a_02', 'a_03', 'a_07', 'a_12', 'a_13', 'a_14'];
 
 function LandLife({ nodes }: { nodes: MapNodeView[] }) {

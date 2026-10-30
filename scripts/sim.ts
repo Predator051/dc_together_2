@@ -4,6 +4,7 @@
 import { content } from '../content/index.js';
 import { E, G, U } from '../content/a1/ids.js';
 import { E2, G2 } from '../content/a2/ids.js';
+import { E3, G3 } from '../content/a3/ids.js';
 import type { PlayerId, Slot } from '../shared/src/content.js';
 import { perkState, xpForLevel } from '../shared/src/rules.js';
 import { ContentIndex, Game, newWorld } from '../server/src/engine/index.js';
@@ -72,6 +73,14 @@ export const STAGES: Record<string, Kit> = {
   E7: {
     level: 9,
     hunter: { weapon: G2.sabre, body: G2.quilt, legs: G.boots, offhand: G2.ironshield, head: G.helm, hands: G2.bracers },
+    maker: { weapon: G2.cleaver, body: G2.quilt, legs: G.boots, offhand: G2.ironshield, head: G.helm, hands: G2.bracers },
+    bag: { [U.bandage]: 3, [U.torch]: 2, [U.rattle]: 1, [U.brew]: 1 },
+    dog: true,
+  },
+  // act three: the felt cloak from the camp, a pike from the riders
+  E8: {
+    level: 11,
+    hunter: { weapon: G3.pike, body: G3.burka, legs: G.boots, offhand: G2.ironshield, head: G.helm, hands: G2.bracers },
     maker: { weapon: G2.cleaver, body: G2.quilt, legs: G.boots, offhand: G2.ironshield, head: G.helm, hands: G2.bracers },
     bag: { [U.bandage]: 3, [U.torch]: 2, [U.rattle]: 1, [U.brew]: 1 },
     dog: true,
@@ -194,6 +203,8 @@ const TABLE: Array<{ name: string; foes: Array<{ enemy: string; n?: number }>; s
   { name: '✦ Сивий кабан', foes: [{ enemy: E.greyboar }], stages: ['E4', 'E5'], who: ['both'], elite: true },
   { name: '✦ Вовки ×3', foes: [{ enemy: E2.wolf, n: 3 }], stages: ['E5', 'E6'], who: ['both', 'hunter'], elite: true },
   { name: '✦ Хапун', foes: [{ enemy: E2.snatcher }], stages: ['E5', 'E6'], who: ['both', 'maker'], elite: true },
+  { name: 'Вершники ×2', foes: [{ enemy: E3.rider, n: 2 }], stages: ['E7', 'E8'], who: ['both', 'hunter'] },
+  { name: 'Ярема + вершник', foes: [{ enemy: E3.captain }, { enemy: E3.rider }], stages: ['E7', 'E8'], who: ['both'] },
   { name: 'Гак + хапун', foes: [{ enemy: E2.hook }, { enemy: E2.snatcher, n: 1 }], stages: ['E5', 'E6', 'E7'], who: ['both'] },
 ];
 

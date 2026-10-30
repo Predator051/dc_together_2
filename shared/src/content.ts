@@ -724,6 +724,8 @@ export interface DelveRoomDef {
 export interface DelveMapDef {
   id: string;
   name: string;
+  /** A road walked with a loaded cart, not a descent: the light is the store of the caravan (days of it). */
+  trek?: boolean;
   start: string;
   rooms: Record<string, DelveRoomDef>;
 }

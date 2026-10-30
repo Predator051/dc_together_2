@@ -5,6 +5,7 @@
  "@dyke": [5, 2],
  "@grove": [5, 1],
  "@isle": [5, 7],
+ "@quarry": [6, 1],
  "@reeds": [4, 10],
  "@road": [5, 4],
  "@saltflat": [4, 11],
@@ -54,6 +55,7 @@
  "sticks": [3, 3],
  "stoneblock": [3, 5],
  "store": [1, 2],
+ "tents": [6, 0],
  "tracks": [2, 7],
  "well": [1, 6]
 }

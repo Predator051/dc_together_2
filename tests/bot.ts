@@ -311,6 +311,7 @@ export class Bot {
     if (sc.kind === 'fight') return null;
     if (sc.kind === 'stealth' && sc.stealth) return this.stealth(v);
     if (sc.kind === 'operation' && sc.operation) return this.operation(v);
+    if (sc.kind === 'delve' && sc.delve) return this.delve(v);
     if (sc.kind === 'choice' && sc.options) {
       if (sc.myPick) return null;
       const opts = sc.options.filter((o) => o.enabled);
@@ -327,6 +328,32 @@ export class Bot {
       return { c: 'choose', id: opts[n % opts.length]!.id };
     }
     return null;
+  }
+
+  /**
+   * A descent or a road with a cart: mend what bars the way, take back store when it runs low, then go on
+   * (east on the drawn map) by the cheapest way that does not empty the store. Both bots reckon the same.
+   */
+  private delve(v: PlayerView): Command | null {
+    const d = v.scene!.delve!;
+    const barred = d.exits.some((e) => !e.enabled);
+    const act = d.acts.find((a) => a.enabled && ((a.light < 0 && d.light <= 3) || (a.light === 0 && barred)));
+    if (act) return { c: 'choose', id: act.id };
+    const here = d.rooms.find((r) => r.here);
+    const x = (id: string) => d.rooms.find((r) => r.id === id)?.x ?? 0;
+    const open = d.exits.filter((e) => e.enabled && e.light < d.light);
+    if (!open.length) {
+      if (d.canLeave) return { c: 'choose', id: 'leave' };
+      // nothing that keeps some store: the cheapest way on (it may run the store out — then home)
+      const last = d.exits.filter((e) => e.enabled && e.light <= d.light).sort((a, b) => a.light - b.light)[0];
+      return last && !last.mine ? { c: 'choose', id: last.id } : null;
+    }
+    if (this.o.careless) return { c: 'choose', id: this.rng.pick(open).id };
+    const best = [...open].sort((a, b) => x(b.to) - x(a.to) || a.light - b.light)[0]!;
+    if (here && x(best.to) <= here.x && d.canLeave) return { c: 'choose', id: 'leave' };
+    // a way picked stays picked while it is still the best (a mended bridge may make it another)
+    if (best.mine) return null;
+    return { c: 'choose', id: best.id };
   }
 
   private stealth(v: PlayerView): Command | null {
@@ -559,6 +586,30 @@ export class Bot {
       if (v.me.area !== area) return this.goTowards(v, g, area);
     }
     if (coins <= 0 && !trust) return null;
+    // trust that is given, not sold for (feeding a camp): carry what it costs there and give it
+    if (trust) {
+      const gifts = this.c.actions.filter(
+        (a) =>
+          !a.yield?.[COIN] &&
+          (a.effects ?? []).some((e) => 'inc' in e && e.inc === trust.flag && (e.max ?? Infinity) > g.flag(trust.flag)) &&
+          (!a.visible || g.test(a.visible, this.pid)) &&
+          areaKnown(g, g.ix.areaOf(a.group)),
+      );
+      for (const a of gifts) {
+        const e = here.find((x) => x.id === a.id);
+        if (e?.enabled) return { c: 'act', id: a.id };
+      }
+      for (const a of gifts) {
+        const short = Object.entries(a.cost ?? {}).find(([r, n]) => (g.p(this.pid).bag[r] ?? 0) < n);
+        if (short) {
+          const [r, n] = short;
+          if (v.atHome && (g.s.res[r] ?? 0) >= n && v.bag.load + n < v.bag.cap) return { c: 'pack', id: r, n: Math.min(g.s.res[r]!, n * 2) };
+          continue;
+        }
+        const area = g.ix.areaOf(a.group);
+        if (v.me.area !== area) return this.goTowards(v, g, area);
+      }
+    }
     const sells = this.c.actions.filter((a) => {
       if (a.kind !== 'trade' || !a.yield?.[COIN]) return false;
       if (a.visible && !g.test(a.visible, this.pid)) return false;
@@ -625,6 +676,9 @@ export class Bot {
       if (sc.quest && !this.o.side) continue;
       if (sc.visible && !g.test(sc.visible, this.pid)) continue;
       add(sc.cost);
+      // things the scene asks to have (a cart, oxen): wanted like a price
+      const flat = (c: Cond | undefined): Cond[] => (!c ? [] : 'all' in c ? c.all.flatMap(flat) : 'any' in c ? c.any.flatMap(flat) : [c]);
+      for (const c of flat(sc.enabled)) if ('owns' in c) add({ [c.owns]: c.gte ?? 1 });
       // what an operation's moves will cost
       for (const node of Object.values(sc.nodes)) {
         if (node.type !== 'operation') continue;

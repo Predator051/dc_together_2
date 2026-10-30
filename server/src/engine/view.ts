@@ -559,6 +559,7 @@ function delveView(g: Game, pid: PlayerId, n: DelveNode): DelveView {
     });
   return {
     map: map.name,
+    ...(map.trek ? { trek: true } : {}),
     room: room.name,
     text: paras(g, room.text, pid),
     own: role === 'hunter' ? paras(g, room.hunter, pid) : role === 'maker' ? paras(g, room.maker, pid) : [],

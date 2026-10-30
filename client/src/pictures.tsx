@@ -324,6 +324,13 @@ const PICS: Record<SpotIcon, () => JSX.Element> = {
       <path d="M24 14l3-6M27 8l1 3" />
     </Pic>
   ),
+  tents: () => (
+    <Pic>
+      <path d="M3 26l9-14 9 14z" />
+      <path d="M17 26l7-10 6 10" />
+      <path d="M12 12v14M2 26h28" />
+    </Pic>
+  ),
   garden: () => (
     <Pic>
       <path d="M4 22h24M4 27h24" />
@@ -685,6 +692,27 @@ function Road() {
   );
 }
 
+function Quarry() {
+  return (
+    <>
+      <Floor />
+      {/* the sandy pit, shelters along its walls, fires sunk in holes, the steppe above */}
+      <path class="rut" d="M30 60c80-30 260-30 340 0M20 300c90 30 270 30 360 0" />
+      <path class="path" d="M200 350c0-50-20-90 0-140" />
+      <g class="wagons">
+        <rect x="300" y="150" width="36" height="22" rx="10" />
+        <rect x="320" y="190" width="36" height="22" rx="10" />
+        <rect x="290" y="230" width="36" height="22" rx="10" />
+      </g>
+      <path class="smoke" d="M200 86c-6-8 6-12 0-20" />
+      <circle class="ember" cx="200" cy="92" r="6" />
+      <Tuft x={80} y={330} s={1} cls="reed dry" />
+      <Tuft x={200} y={300} s={0.9} cls="reed dry" />
+      <Tuft x={330} y={320} s={1} cls="reed dry" />
+    </>
+  );
+}
+
 function Town() {
   const houses: Array<[number, number, number, number]> = [
     [150, 40, 40, 26],
@@ -822,6 +850,7 @@ const GROUNDS: Record<SceneId, (p: { warm: boolean }) => JSX.Element> = {
   bog: Bog,
   isle: Isle,
   willow: Willow,
+  quarry: Quarry,
 };
 
 /** The drawn ground of a plan. */
@@ -864,6 +893,7 @@ const LIFE: Record<SceneId, Life[]> = {
   bog: [{ kind: 'water', x: 0, y: 20, w: 100, h: 60 }, { kind: 'mist', y: 15, h: 60 }],
   isle: [{ kind: 'water', x: 0, y: 0, w: 22, h: 100 }, { kind: 'water', x: 80, y: 0, w: 20, h: 100 }, { kind: 'birds', y: 10 }],
   willow: [{ kind: 'water', x: 74, y: 40, w: 26, h: 60 }, { kind: 'mist', y: 55, h: 35 }],
+  quarry: [{ kind: 'smoke', x: 50, y: 22 }, { kind: 'smoke', x: 82, y: 44 }, { kind: 'birds', y: 10 }],
 };
 
 function LifeLayer({ scene, warm }: { scene: string; warm: boolean }) {

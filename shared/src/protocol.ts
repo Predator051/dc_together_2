@@ -270,6 +270,8 @@ export interface DelveRoomView {
 
 export interface DelveView {
   map: string;
+  /** A road with a cart: the light is the caravan's store. */
+  trek?: boolean;
   room: string;
   /** The room as everyone sees it, and what only this player notices. */
   text: string[];

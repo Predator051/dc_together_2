@@ -1211,7 +1211,7 @@ export class Game {
     if (a.role && this.p(pid).role !== a.role) return this.ix.ui('err_wrong_role');
     if (a.enabled && !this.test(a.enabled, pid)) return a.disabledHint ? this.render(a.disabledHint, pid) : this.ix.ui('err_not_now');
     if (!this.hasCostAll(a.cost)) return this.ix.ui('err_cost');
-    if (d && (a.light ?? 0) > 0 && d.light < (a.light ?? 0)) return this.ix.ui('delve_no_light');
+    if (d && (a.light ?? 0) > 0 && d.light < (a.light ?? 0)) return this.ix.ui(this.ix.maps.get(d.map)?.trek ? 'trek_no_store' : 'delve_no_light');
     return null;
   }
 

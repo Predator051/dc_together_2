@@ -2,7 +2,7 @@
 // watchers, and hand signs (with wax in the ears nobody hears anybody).
 import type { JSX } from 'preact';
 import type { DelveView, OperationView, PlayerView, SceneView, StealthView } from '../../shared/src/protocol.js';
-import { IconCheck, IconFlame, IconSignDanger, IconSignGo, IconSignHere, IconSignQuiet, IconSignStop } from './icons.js';
+import { IconCart, IconCheck, IconFlame, IconSignDanger, IconSignGo, IconSignHere, IconSignQuiet, IconSignStop } from './icons.js';
 import { net } from './net.js';
 import { T } from './strings.js';
 
@@ -42,12 +42,12 @@ function DelveMap({ d }: { d: DelveView }) {
   );
 }
 
-function LightMeter({ light, max }: { light: number; max: number }) {
+function LightMeter({ light, max, trek }: { light: number; max: number; trek?: boolean }) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (light / max) * 100)) : 0;
   return (
-    <div class={`light ${light <= 2 ? 'low' : ''}`}>
-      <IconFlame />
-      <span class="light-label">{T.delveLight}</span>
+    <div class={`light ${trek ? 'trek' : ''} ${light <= 2 ? 'low' : ''}`}>
+      {trek ? <IconCart /> : <IconFlame />}
+      <span class="light-label">{trek ? T.trekStore : T.delveLight}</span>
       <span class="light-bar">
         <span style={{ width: `${pct}%` }} />
       </span>
@@ -64,7 +64,7 @@ export function DelveBody({ d, title }: { d: DelveView; title: string }) {
           {d.map !== title && <div class="delve-map-name">{d.map}</div>}
           <h3 class="delve-room">{d.room}</h3>
         </div>
-        <LightMeter light={d.light} max={d.lightMax} />
+        <LightMeter light={d.light} max={d.lightMax} trek={d.trek} />
       </div>
       <DelveMap d={d} />
       <div class="block current">
@@ -137,7 +137,7 @@ export function DelveFoot({ d, v, locked }: { d: DelveView; v: PlayerView; locke
       )}
       {d.canLeave && (
         <button class="btn ghost small leave" disabled={locked} onClick={() => net.send({ c: 'choose', id: 'leave' })}>
-          {T.delveLeave}
+          {d.trek ? T.trekLeave : T.delveLeave}
         </button>
       )}
     </div>

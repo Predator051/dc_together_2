@@ -2,17 +2,17 @@
 // the client must draw every one of them (its tables are typed by these lists).
 
 /** Grounds of the drawn plans of places. */
-export const SCENES = ['yard', 'shore', 'reeds', 'saltflat', 'brine', 'grove', 'dyke', 'causeway', 'road', 'town', 'bog', 'isle', 'willow'] as const;
+export const SCENES = ['yard', 'shore', 'reeds', 'saltflat', 'brine', 'grove', 'dyke', 'causeway', 'road', 'town', 'bog', 'isle', 'willow', 'quarry'] as const;
 export type SceneId = (typeof SCENES)[number];
 
 /** The heroes as the players see them: role and gender (a look for each pair the game may meet). */
 export const HEROES = ['maker-m', 'hunter-f', 'maker-f', 'hunter-m'] as const;
 
 /** Residents with a painted face, in the order of their pictures. */
-export const FOLK = ['h_01', 'h_02', 'h_03', 'h_04', 'h_05', 'h_06', 'h_07', 'h_08', 'h_09', 'h_10'] as const;
+export const FOLK = ['h_01', 'h_02', 'h_03', 'h_04', 'h_05', 'h_06', 'h_07', 'h_08', 'h_09', 'h_10', 'h_11', 'h_12', 'h_13', 'h_14', 'h_15', 'h_16'] as const;
 
 /** Key shared scenes with a painting of their own moment (no faces: places, things, figures from afar). */
-export const MOMENTS = ['s_01', 's_06', 's_07', 's_15', 's_16', 's_31', 's_37', 's_42', 's_47'] as const;
+export const MOMENTS = ['s_01', 's_06', 's_07', 's_15', 's_16', 's_31', 's_37', 's_42', 's_47', 's_104', 's_108'] as const;
 
 /** Places seen at eye level (the head of a scene, the card of a place): every ground, and suppers by the fire. */
 export const VIEWS = [...SCENES, 'hearth1', 'hearth2'] as const;
@@ -63,11 +63,12 @@ export const SPOT_ICONS = [
   'peat',
   'berry',
   'garden',
+  'tents',
 ] as const;
 export type SpotIcon = (typeof SPOT_ICONS)[number];
 
 /** Portraits of foes. */
-export const PORTRAITS = ['rat', 'viper', 'oldviper', 'dog', 'leech', 'boar', 'greyboar', 'catfish', 'hound', 'cloak', 'chief', 'wolf', 'snatcher', 'hook', 'matka', 'elder', 'shewolf'] as const;
+export const PORTRAITS = ['rat', 'viper', 'oldviper', 'dog', 'leech', 'boar', 'greyboar', 'catfish', 'hound', 'cloak', 'chief', 'wolf', 'snatcher', 'hook', 'matka', 'elder', 'shewolf', 'rider', 'captain'] as const;
 export type PortraitId = (typeof PORTRAITS)[number];
 
 /** How a crop looks on its bed, from sowing to ripe. */
@@ -88,5 +89,6 @@ export const ITEM_ICONS = [
   'key', 'lyre', 'paw', 'bag', 'book', 'ladle', 'whistle', 'honey',
   'garlic', 'beet', 'seeds', 'flax', 'pumpkin', 'borscht',
   'billhook', 'mattock', 'rake', 'weir', 'sickle', 'hoe',
+  'hay', 'axle', 'wagon', 'oxen', 'burka', 'pike',
 ] as const;
 export type ItemIcon = (typeof ITEM_ICONS)[number];

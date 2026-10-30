@@ -32,6 +32,7 @@ export const ui: Record<string, string> = {
   mate_away: '{partner} зараз в іншому місці.',
   mate_offline: '{partner} зараз не в мережі.',
   delve_no_light: 'Світла не вистачить.',
+  trek_no_store: 'Запасу обозу не вистачить.',
   stealth_seen: 'Сторож повернув голову — і побачив рух.',
   stealth_noise: 'Під ногою хруснуло.',
   stealth_moved: 'Ви робите крок.',

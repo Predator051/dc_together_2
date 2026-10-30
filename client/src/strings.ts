@@ -150,6 +150,8 @@ export const T = {
   notifyScene: 'Починається',
 
   delveLight: 'Світло',
+  trekStore: 'Запас',
+  trekLeave: 'Повернути обоз додому',
   delveWays: 'Куди далі',
   delveWants: 'хоче сюди',
   delveLeave: 'Повернутися назад',
