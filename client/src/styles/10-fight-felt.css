@@ -1,0 +1,101 @@
+/* ---------------------------------------------------------------- the fight, felt */
+/* the one a story fight is about comes forward before the first move */
+.boss-card {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 18px;
+  text-align: center;
+  background: radial-gradient(ellipse at 50% 45%, rgba(16, 11, 6, 0.6), rgba(16, 11, 6, 0.92) 75%);
+  cursor: pointer;
+  animation: boss-in 3.2s ease forwards;
+}
+.boss-card .portrait {
+  animation: boss-step 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  box-shadow:
+    0 0 0 3px rgba(216, 105, 76, 0.55),
+    0 8px 24px rgba(0, 0, 0, 0.7);
+}
+.boss-name {
+  font: 700 1.45rem var(--serif);
+  color: var(--cinnabar-ink);
+  letter-spacing: 0.02em;
+  animation: boss-step 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s backwards;
+}
+.boss-desc {
+  max-width: 30ch;
+  margin: 0;
+  font-style: italic;
+  color: var(--ink);
+  animation: boss-step 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s backwards;
+}
+@keyframes boss-in {
+  0% {
+    opacity: 0;
+  }
+  10%,
+  84% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+@keyframes boss-step {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+  }
+}
+/* a blow lands: a short burst over the one struck */
+.hit-spark {
+  position: absolute;
+  inset: -14%;
+  z-index: 2;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 236, 196, 0.9) 0, rgba(232, 140, 64, 0.5) 30%, rgba(232, 140, 64, 0) 62%);
+  pointer-events: none;
+  animation: hit-spark 0.34s ease-out forwards;
+}
+@keyframes hit-spark {
+  from {
+    opacity: 1;
+    transform: scale(0.3);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+}
+/* a heavy one shakes the ground */
+.grid-field.quake {
+  animation: quake 0.36s ease-out;
+}
+@keyframes quake {
+  20% {
+    transform: translate(-4px, 2px);
+  }
+  40% {
+    transform: translate(4px, -2px);
+  }
+  60% {
+    transform: translate(-2px, 1px);
+  }
+  80% {
+    transform: translate(2px, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boss-card,
+  .hit-spark {
+    display: none;
+  }
+  .grid-field.quake {
+    animation: none;
+  }
+}

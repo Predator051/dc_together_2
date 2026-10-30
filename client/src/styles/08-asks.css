@@ -1,0 +1,122 @@
+/* ---------------------------------------------------------------- the asks board */
+.asks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+.asks.quiet {
+  margin-bottom: 10px;
+}
+.ask-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ask {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 4px 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--leaf);
+}
+.ask.theirs {
+  border-color: var(--ochre);
+  background: var(--ochre-wash);
+}
+.ask-pic {
+  flex: none;
+  width: 26px;
+  height: 26px;
+}
+.ask-pic .thing {
+  width: 100%;
+  height: 100%;
+}
+.ask-body {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+.ask-who {
+  font-size: 0.85rem;
+  color: var(--faded);
+}
+.ask.theirs .ask-who {
+  color: var(--ochre-ink);
+}
+.ask-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ask-line b {
+  font-variant-numeric: tabular-nums;
+}
+.ask-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--rule);
+  overflow: hidden;
+}
+.ask-bar span {
+  display: block;
+  height: 100%;
+  background: var(--ochre-ink);
+  transition: width 0.4s ease;
+}
+.ask-back {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--faded);
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .ask-back:hover {
+    color: var(--ink);
+  }
+}
+.ask-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ask-q {
+  margin: 0;
+}
+.ask-cells {
+  max-height: 30vh;
+  overflow-y: auto;
+}
+.ask-amount {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.ask-amount b {
+  min-width: 2ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.ask-amount > span {
+  margin-right: 4px;
+  color: var(--faded);
+}
+.ask-hint {
+  margin: 0;
+  font-size: 0.85rem;
+}

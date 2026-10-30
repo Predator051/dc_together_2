@@ -1,0 +1,1454 @@
+/* ==========================================================================
+   The fight's board and deck (shared by its parts)
+   ========================================================================== */
+.fight-board {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1000px;
+  min-height: 100%;
+  background: var(--page);
+  box-shadow: var(--shadow);
+}
+@media (min-width: 1000px) {
+  .fight-board {
+    min-height: 0;
+    margin: auto;
+    border: 1px solid rgba(194, 78, 54, 0.4);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+}
+.fight-board.hurt {
+  animation: stage-hurt 0.5s ease-out;
+}
+@keyframes stage-hurt {
+  30% {
+    box-shadow: inset 0 0 70px 6px rgba(194, 78, 54, 0.6);
+  }
+}
+/* action points: full pips and spent ones */
+.pips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 3px;
+}
+.pips i,
+.cost i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--ochre);
+  border-radius: 50%;
+}
+.pips i.on,
+.cost i {
+  background: var(--ochre);
+}
+.cost {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: auto;
+}
+.cost i {
+  width: 6px;
+  height: 6px;
+}
+
+.intent-icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+.intent-who {
+  display: none;
+}
+.pill.gold {
+  color: var(--ochre-ink);
+}
+.pill.warn {
+  color: var(--cinnabar-ink);
+}
+.pill.weak {
+  color: var(--gall);
+}
+@keyframes struck {
+  0%,
+  100% {
+    transform: translateX(0);
+    filter: none;
+  }
+  20% {
+    transform: translateX(-7px);
+    filter: brightness(1.6) sepia(1) hue-rotate(-30deg) saturate(3);
+  }
+  45% {
+    transform: translateX(5px);
+  }
+  70% {
+    transform: translateX(-2px);
+  }
+}
+.unit.parry .unit-body,
+.unit.brace .unit-body {
+  animation: brace 0.4s ease-out;
+}
+@keyframes brace {
+  40% {
+    transform: scale(0.95) translateY(3px);
+  }
+}
+.unit.pulse .unit-body {
+  animation: pulse 0.5s ease-out;
+}
+@keyframes pulse {
+  40% {
+    filter: drop-shadow(0 0 10px rgba(221, 184, 103, 0.8));
+  }
+}
+.unit.mended .unit-body {
+  animation: mended 0.5s ease-out;
+}
+@keyframes mended {
+  40% {
+    filter: drop-shadow(0 0 12px rgba(141, 176, 143, 0.9));
+  }
+}
+.unit.reels .unit-body {
+  animation: reels 0.5s ease-in-out;
+}
+@keyframes reels {
+  25% {
+    transform: rotate(-6deg);
+  }
+  60% {
+    transform: rotate(5deg);
+  }
+}
+.unit.falls .unit-body {
+  animation: falls 0.5s ease-in forwards;
+}
+@keyframes falls {
+  to {
+    transform: translateY(12px) rotate(-10deg);
+    opacity: 0.6;
+  }
+}
+.unit.flees .unit-body {
+  animation: flees 0.5s ease-in;
+}
+@keyframes flees {
+  to {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+}
+/* what happened, two lines; a tap shows all */
+.fight-log {
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--leaf);
+  font-family: var(--sans);
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+.fight-log p {
+  margin: 2px 0;
+  color: var(--ink-2);
+}
+.fight-log.open {
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+/* the deck: hands, the belt, the moves of the body */
+.fight-deck {
+  display: grid;
+  gap: 10px;
+  padding: 10px 12px 14px;
+}
+@media (min-width: 760px) {
+  .fight-deck {
+    grid-template-columns: 1fr minmax(230px, 280px);
+    align-items: start;
+  }
+  .fight-deck > .waiting {
+    grid-column: 1 / -1;
+  }
+}
+.hands {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px;
+}
+.hand {
+  padding: 8px;
+  border: 1px solid var(--rule-2);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(194, 78, 54, 0.06), transparent 60%),
+    var(--leaf);
+}
+.hand-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.hand-pic {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--rule-2);
+  border-radius: 6px;
+  background: var(--leaf-2);
+}
+.hand-pic .item-icon {
+  width: 38px;
+  height: 38px;
+}
+.hand-pic svg {
+  width: 30px;
+  height: 30px;
+}
+.hand-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-family: var(--sans);
+}
+.hand-who small {
+  font-size: 0.72rem;
+  color: var(--faded);
+}
+.hand-who b {
+  overflow: hidden;
+  font-size: 0.92rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.hand-dmg {
+  margin-left: auto;
+  font: 700 1.05rem var(--sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--ochre-ink);
+}
+.hand-techs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 6px;
+}
+.tech {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 48px;
+  padding: 7px 9px;
+  border: 1px solid rgba(194, 78, 54, 0.4);
+  border-radius: 6px;
+  background: rgba(194, 78, 54, 0.08);
+  color: var(--ink);
+  font-family: var(--sans);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+.tech:not(:disabled):hover {
+  border-color: var(--cinnabar-ink);
+  background: rgba(194, 78, 54, 0.16);
+}
+.tech:not(:disabled):active {
+  transform: scale(0.97);
+}
+.tech:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.tech.on,
+.side-move.on,
+.belt-item.on {
+  border-color: var(--ochre-ink);
+  background: var(--ochre-wash);
+  opacity: 1;
+}
+.tech-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tech-top b {
+  font-size: 0.9rem;
+}
+.tech-sub {
+  font-size: 0.72rem;
+  line-height: 1.25;
+  color: var(--faded);
+}
+.deck-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.belt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.belt-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 3px 9px 3px 4px;
+  border: 1px solid var(--rule-2);
+  border-radius: 6px;
+  background: var(--leaf);
+  color: var(--ink);
+  font: 0.8rem var(--sans);
+  cursor: pointer;
+}
+.belt-item:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.belt-pic {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+}
+.belt-pic .item-icon {
+  width: 30px;
+  height: 30px;
+}
+.belt-pic svg {
+  width: 24px;
+  height: 24px;
+}
+.side-moves {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.side-move {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-height: 46px;
+  padding: 6px 8px;
+  border: 1px solid var(--rule-2);
+  border-radius: 6px;
+  background: var(--leaf);
+  color: var(--ink);
+  font: 600 0.86rem var(--sans);
+  text-align: center;
+  cursor: pointer;
+}
+.side-move small {
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--faded);
+}
+.side-move:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.side-move.out {
+  border-color: rgba(194, 78, 54, 0.5);
+  color: var(--cinnabar-ink);
+}
+.side-move.rout {
+  border-color: rgba(221, 184, 103, 0.55);
+  color: var(--ochre-ink);
+}
+.side-moves.help .side-move {
+  border-color: rgba(141, 176, 143, 0.45);
+  color: var(--verdigris);
+}
+.side-moves.help .side-move .cost {
+  margin: 0;
+}
+.fight-deck .waiting {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 0.86rem;
+  color: var(--faded);
+  text-align: center;
+}
+
+/* ==========================================================================
+   A fight on a field of cells, seen from above
+   ========================================================================== */
+.grid-fight {
+  position: fixed;
+  inset: 0;
+  z-index: 34;
+  display: flex;
+  justify-content: center;
+  overflow-y: auto;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  background: rgba(10, 7, 4, 0.97);
+}
+.grid-fight.leaving {
+  animation: fight-out 0.45s ease-in forwards;
+}
+.grid-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 10px 14px 4px;
+}
+.grid-top h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.turn-order {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  margin: 0;
+  padding: 4px 12px 6px;
+  overflow-x: auto;
+  list-style: none;
+  scrollbar-width: none;
+}
+.turn-chip {
+  display: flex;
+  flex: none;
+  height: 28px;
+  white-space: nowrap;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 2px;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--leaf);
+  font: 0.72rem var(--sans);
+  color: var(--ink-2);
+  opacity: 0.75;
+}
+.turn-chip.now {
+  border-color: var(--ochre-ink);
+  color: var(--ink);
+  opacity: 1;
+  box-shadow: 0 0 0 2px rgba(221, 184, 103, 0.25);
+}
+.turn-chip.k-foe {
+  border-color: rgba(194, 78, 54, 0.35);
+}
+.turn-chip.k-foe.now {
+  border-color: var(--cinnabar-ink);
+  box-shadow: 0 0 0 2px rgba(216, 105, 76, 0.25);
+}
+.turn-chip .portrait.s,
+.chip-face,
+.chip-paw {
+  width: 22px;
+  height: 22px;
+}
+.chip-face {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(141, 176, 143, 0.6);
+  border-radius: 50%;
+  background: center / cover no-repeat var(--leaf-2);
+  font: 700 0.7rem var(--serif);
+}
+.chip-paw {
+  display: grid;
+  place-items: center;
+  color: var(--ochre-ink);
+}
+.chip-paw .paw {
+  width: 16px;
+  height: 16px;
+}
+.turn-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  margin: 0;
+  padding: 2px 14px 8px;
+  font: 0.9rem var(--sans);
+  color: var(--ink-2);
+}
+.turn-banner.mine b {
+  color: var(--ochre-ink);
+}
+.turn-banner .fight-end {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+/* the field itself: square cells on parchment of the place's ground */
+.grid-field {
+  --cell: min(calc((100vw - 16px) / var(--w)), 72px, calc(52vh / var(--h)));
+  position: relative;
+  align-self: center;
+  width: calc(var(--cell) * var(--w));
+  height: calc(var(--cell) * var(--h));
+  margin: 0 auto;
+  border: 1px solid rgba(194, 78, 54, 0.45);
+  border-radius: 6px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% 20%, rgba(255, 240, 210, 0.07), transparent 60%),
+    var(--ground, #4a3c2a);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.55);
+}
+.grid-field.g-grass {
+  --ground: linear-gradient(160deg, #47502f, #3a4127 60%, #333a22);
+}
+.grid-field.g-sand {
+  --ground: linear-gradient(160deg, #75613f, #67553a 60%, #5a4a32);
+}
+.grid-field.g-mud {
+  --ground: linear-gradient(160deg, #4a3d2c, #3f3426 60%, #372d20);
+}
+.grid-field.g-salt {
+  --ground: linear-gradient(160deg, #7d7666, #6d675a 60%, #5e594e);
+}
+.grid-field.g-dust {
+  --ground: linear-gradient(160deg, #6c5a3e, #5f4f37 60%, #544632);
+}
+.grid-field.g-cobble {
+  --ground: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.08) 0 6px, transparent 6px 12px), linear-gradient(160deg, #57524a, #4c4840);
+}
+.field-cells {
+  display: grid;
+  grid-template-columns: repeat(var(--w), var(--cell));
+  grid-template-rows: repeat(var(--h), var(--cell));
+}
+/* scoped: a bag's .cell (cells.tsx) shares the name */
+.field-cells > .cell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid rgba(20, 14, 8, 0.22);
+  border-bottom: 1px solid rgba(20, 14, 8, 0.22);
+  background: transparent;
+  color: rgba(28, 20, 12, 0.85);
+  cursor: default;
+}
+.cell .feat {
+  width: 86%;
+  height: 86%;
+}
+.feat .thin {
+  stroke-width: 1.2;
+}
+.feat .thick {
+  stroke-width: 2.6;
+}
+.feat .shade {
+  fill: rgba(0, 0, 0, 0.18);
+  stroke: none;
+}
+.cell.f-water {
+  background: linear-gradient(160deg, #2d4a55, #263f49);
+  color: rgba(170, 205, 215, 0.6);
+}
+.cell.f-shallow {
+  background: rgba(70, 110, 120, 0.4);
+  color: rgba(190, 220, 225, 0.55);
+}
+.cell.f-reeds {
+  color: #c9b77a;
+}
+.cell.f-bush,
+.cell.f-tree {
+  color: #1f2a15;
+}
+.cell.f-tree .feat path:first-of-type,
+.cell.f-bush .feat path:first-of-type {
+  fill: rgba(42, 58, 28, 0.85);
+}
+.cell.f-rock .feat path:first-of-type {
+  fill: rgba(110, 104, 92, 0.9);
+}
+.cell.f-rock {
+  color: #2b2620;
+}
+.cell.f-log .feat path:first-of-type,
+.cell.f-crate .feat rect,
+.cell.f-cart .feat rect,
+.cell.f-barrel .feat circle:first-of-type {
+  fill: rgba(110, 78, 46, 0.9);
+}
+.cell.f-wall .solid {
+  fill: rgba(70, 58, 44, 0.95);
+}
+.cell.f-wall {
+  color: #1a140d;
+}
+.cell.f-salt .feat path:first-of-type {
+  fill: rgba(232, 226, 210, 0.9);
+}
+.cell.f-planks {
+  background: rgba(120, 88, 52, 0.55);
+  color: rgba(40, 26, 14, 0.7);
+}
+.cell.edge {
+  box-shadow: inset 0 -3px 0 rgba(141, 176, 143, 0.25);
+}
+/* cells you can walk to now, with what the step costs */
+.cell.reach {
+  cursor: pointer;
+  background-image: radial-gradient(circle, rgba(214, 236, 150, 0.22) 0 45%, rgba(214, 236, 150, 0.1) 70%);
+  box-shadow: inset 0 0 0 1px rgba(214, 236, 150, 0.35);
+}
+.cell.reach:hover,
+.cell.reach:focus-visible {
+  background-image: linear-gradient(rgba(214, 236, 150, 0.4), rgba(214, 236, 150, 0.4));
+  box-shadow: inset 0 0 0 2px rgba(230, 245, 180, 0.8);
+  outline: none;
+}
+.cell-cost {
+  position: absolute;
+  right: 3px;
+  bottom: 1px;
+  font: 700 0.62rem var(--sans);
+  color: rgba(240, 250, 210, 0.85);
+  text-shadow: 0 1px 2px #000;
+}
+/* the run of a charge marked out */
+.cell.lane {
+  background-image: repeating-linear-gradient(45deg, rgba(216, 105, 76, 0.38) 0 6px, transparent 6px 12px);
+}
+
+/* the fighters: seals on the cells, sliding from cell to cell */
+.units {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.seal {
+  position: absolute;
+  left: calc(var(--x) * var(--cell));
+  top: calc(var(--y) * var(--cell));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: var(--cell);
+  height: var(--cell);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  transition:
+    left 0.14s linear,
+    top 0.14s linear;
+  pointer-events: none;
+}
+.seal.foe {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.seal-body {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 78%;
+  height: 78%;
+}
+.seal .bar {
+  width: 70%;
+  height: 4px;
+  margin: 1px 0 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.seal-face {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border: 2px solid rgba(141, 176, 143, 0.85);
+  border-radius: 50%;
+  background: center / cover no-repeat var(--leaf-2);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.6);
+  font: 700 1rem var(--serif);
+  color: var(--ink);
+}
+.seal.hero.me .seal-face {
+  border-color: var(--ochre-ink);
+}
+.seal.hero.down .seal-face {
+  filter: grayscale(1) brightness(0.5);
+}
+.seal .portrait.m {
+  width: 100%;
+  height: 100%;
+  border-width: 2px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.6);
+}
+.seal.foe.elite .portrait {
+  border-color: var(--cinnabar-ink);
+  box-shadow:
+    0 0 0 2px rgba(20, 14, 8, 0.7),
+    0 0 0 4px rgba(216, 105, 76, 0.7),
+    0 3px 6px rgba(0, 0, 0, 0.6);
+}
+/* a seasoned one wears a small red lozenge over its head */
+.seal.foe.elite .seal-body::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+  background: var(--cinnabar-ink);
+  border: 1px solid rgba(20, 14, 8, 0.8);
+  pointer-events: none;
+}
+.pill.elite {
+  border-color: var(--cinnabar-ink);
+  color: var(--cinnabar-ink);
+}
+.seal.foe.chosen .portrait {
+  border-color: var(--ochre-ink);
+  box-shadow:
+    0 0 0 3px rgba(221, 184, 103, 0.45),
+    0 3px 6px rgba(0, 0, 0, 0.6);
+}
+.seal.foe.open .portrait {
+  outline: 2px dashed var(--ochre-ink);
+  outline-offset: 2px;
+}
+.seal.foe.stunned .portrait {
+  filter: saturate(0.4) brightness(0.8);
+}
+.seal.now .seal-body::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border: 2px solid rgba(221, 184, 103, 0.8);
+  border-radius: 50%;
+  animation: now-ring 1.4s ease-in-out infinite;
+}
+@keyframes now-ring {
+  50% {
+    transform: scale(1.08);
+    opacity: 0.5;
+  }
+}
+.seal.dog .seal-body {
+  width: 52%;
+  height: 52%;
+  border-radius: 50%;
+  background: rgba(30, 22, 14, 0.85);
+  border: 1.5px solid rgba(221, 184, 103, 0.7);
+  color: var(--ochre-ink);
+}
+.seal.dog .paw {
+  width: 70%;
+  height: 70%;
+}
+.seal-intent {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(194, 78, 54, 0.7);
+  border-radius: 50%;
+  background: rgba(30, 12, 8, 0.92);
+  color: #f1a08a;
+}
+.seal-intent.at-me {
+  background: rgba(120, 30, 16, 0.95);
+  color: #ffd2c4;
+}
+.seal-intent.loud {
+  border-color: var(--ochre-ink);
+  color: var(--ochre-ink);
+  animation: now-ring 0.9s ease-in-out infinite;
+}
+.seal-intent .intent-icon {
+  width: 13px;
+  height: 13px;
+}
+.seal-mark {
+  position: absolute;
+  bottom: -2px;
+  left: -4px;
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(141, 176, 143, 0.8);
+  border-radius: 3px 3px 7px 7px;
+  background: rgba(20, 30, 20, 0.9);
+}
+.seal-mark.s-block {
+  border-color: var(--ochre-ink);
+}
+.seal-mark.s-keep {
+  border-radius: 50%;
+  border-color: var(--gall);
+}
+.seal .delta-pop {
+  top: -10px;
+  font-size: 1.05rem;
+}
+/* the beats on the field */
+.seal.lunge .seal-body {
+  animation: seal-lunge 0.38s cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+@keyframes seal-lunge {
+  40% {
+    transform: translate(var(--lx, 0), var(--ly, 0)) scale(1.08);
+  }
+}
+.seal.struck .seal-body {
+  animation: struck 0.4s ease-out;
+}
+.seal.parry .seal-body,
+.seal.brace .seal-body {
+  animation: brace 0.36s ease-out;
+}
+.seal.pulse .seal-body {
+  animation: pulse 0.5s ease-out;
+}
+.seal.mended .seal-body {
+  animation: mended 0.5s ease-out;
+}
+.seal.reels .seal-body {
+  animation: reels 0.5s ease-in-out;
+}
+.seal.falls .seal-body {
+  animation: falls 0.5s ease-in forwards;
+}
+.seal.flees .seal-body {
+  animation: seal-flee 0.45s ease-in forwards;
+}
+@keyframes seal-flee {
+  to {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+/* the chosen foe, in words */
+.foe-info {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 8px 12px 0;
+  padding: 7px 10px;
+  border: 1px solid var(--rule-2);
+  border-radius: 8px;
+  background: var(--leaf);
+}
+.foe-info-body {
+  min-width: 0;
+}
+.foe-info-top {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font: 0.86rem var(--sans);
+}
+.foe-info .foe-plan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 6px;
+  margin-top: 4px;
+  font: 0.76rem var(--sans);
+}
+.foe-info .intent {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 1px 7px;
+  border: 1px solid rgba(194, 78, 54, 0.45);
+  border-radius: 10px;
+  color: var(--cinnabar-ink);
+  font-weight: 600;
+}
+.foe-info .intent.at-me {
+  border-color: var(--cinnabar-ink);
+  background: rgba(90, 24, 14, 0.6);
+  color: #f1a08a;
+}
+.foe-info .intent.next {
+  border-color: rgba(141, 176, 143, 0.4);
+  color: var(--verdigris);
+}
+.foe-info .intent.stun {
+  color: var(--ochre-ink);
+}
+.grid-fight .fight-log {
+  margin-top: 8px;
+}
+.side-move.end {
+  grid-column: 1 / -1;
+  border-color: rgba(221, 184, 103, 0.55);
+  background: var(--ochre-wash);
+  color: var(--ochre-ink);
+}
+.grid-fight .waiting {
+  margin: 4px 0;
+  font: 0.86rem var(--sans);
+  color: var(--faded);
+}
+@media (min-width: 1000px) {
+  .grid-fight .fight-board {
+    max-width: 1000px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seal,
+  .seal .seal-body,
+  .seal.now .seal-body::before,
+  .seal-intent.loud,
+  .grid-fight.leaving {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* a wide screen: the field on the left, the rest beside it */
+@media (min-width: 900px) {
+  .grid-fight .fight-board {
+    margin: auto;
+  }
+  .grid-main {
+    display: grid;
+    grid-template-columns: auto minmax(330px, 1fr);
+    gap: 14px;
+    align-items: start;
+    padding: 0 14px 14px;
+  }
+  .grid-main .grid-field {
+    --cell: min(72px, calc((100vh - 150px) / var(--h)));
+    margin: 0;
+  }
+  .grid-side .foe-info {
+    margin: 0;
+  }
+  .grid-side .fight-deck {
+    grid-template-columns: 1fr;
+    padding: 10px 0 0;
+  }
+  .grid-side .hands {
+    grid-template-columns: 1fr;
+  }
+}
+.foe-info .pill {
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--leaf-2);
+}
+/* painted ground and things: the paint is lit already, so the ink tints step back */
+.cell.painted {
+  background-color: transparent;
+}
+.feat.painted {
+  display: block;
+  width: 96%;
+  height: 96%;
+  background-repeat: no-repeat;
+  background-size: 400% 300%;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+.cell.f-stump .feat circle:first-of-type {
+  fill: rgba(96, 70, 44, 0.9);
+}
+.cell.f-stump {
+  color: #2a1d12;
+}
+/* painted grounds are lit brighter than the page: hush them so the seals and the lit cells stand out */
+.grid-field.painted {
+  background:
+    radial-gradient(120% 90% at 50% 30%, transparent 40%, rgba(12, 8, 4, 0.45)),
+    linear-gradient(rgba(22, 16, 9, 0.3), rgba(22, 16, 9, 0.3)),
+    var(--ground);
+}
+.grid-field.painted .cell {
+  border-color: rgba(14, 10, 6, 0.28);
+}
+.cell.painted {
+  filter: brightness(0.8) saturate(0.85);
+}
+.grid-field.painted .cell.reach {
+  background-image: linear-gradient(rgba(236, 246, 190, 0.2), rgba(236, 246, 190, 0.2));
+  box-shadow: inset 0 0 0 2px rgba(236, 246, 190, 0.7);
+}
+.grid-field.painted .cell-cost {
+  right: 4px;
+  bottom: 2px;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: rgba(14, 10, 6, 0.6);
+}
+/* the field painted as one picture: the cells keep only a faint line and the lit ones */
+.field-paint {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.grid-field.paint-on .field-paint {
+  opacity: 1;
+}
+.grid-field.paint-on {
+  background: #1d1710;
+}
+.grid-field.paint-on .field-cells {
+  position: relative;
+}
+.grid-field.paint-on .cell {
+  border-color: rgba(255, 244, 214, 0.06);
+  background-color: transparent;
+}
+.grid-field.paint-on .cell.reach {
+  background-image: radial-gradient(circle, rgba(236, 246, 190, 0.34) 0 26%, rgba(236, 246, 190, 0.1) 60%, transparent 72%);
+  box-shadow: inset 0 0 0 1px rgba(236, 246, 190, 0.5);
+}
+.grid-field.paint-on .cell.reach:hover,
+.grid-field.paint-on .cell.reach:focus-visible {
+  background-image: radial-gradient(circle, rgba(236, 246, 190, 0.45) 0 34%, rgba(236, 246, 190, 0.14) 66%, transparent 76%);
+  box-shadow: inset 0 0 0 2px rgba(236, 246, 190, 0.75);
+}
+.grid-field.paint-on .cell.edge {
+  box-shadow: none;
+}
+.grid-field.paint-on .cell.lane {
+  background-image: repeating-linear-gradient(45deg, rgba(216, 105, 76, 0.42) 0 5px, transparent 5px 11px);
+}
+.grid-field.paint-on .cell:not(.reach):not(.lane) {
+  background: none;
+}
+.grid-field.paint-on .cell.reach,
+.grid-field.paint-on .cell.lane {
+  background-color: transparent;
+}
+/* the hunter's dog, painted: a seal like the heroes', a little smaller */
+.seal.dog .seal-body.painted {
+  width: 72%;
+  height: 72%;
+  border: 0;
+  background: none;
+}
+.seal-face.ally,
+.chip-face.ally {
+  background-color: #2f2a22;
+  /* the dog is painted whole: the seal shows its head and chest */
+  background-size: 210%;
+  background-position: 10% 0%;
+  border-color: rgba(141, 176, 143, 0.85);
+}
+
+/* the loot of a won fight, on the field: take it, or end the fight */
+.spoils-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: radial-gradient(circle at 50% 50%, rgba(14, 10, 6, 0.55), rgba(14, 10, 6, 0.8));
+  pointer-events: auto;
+  animation: fade-in 0.3s ease-out backwards;
+}
+.spoils {
+  width: min(100%, 300px);
+  padding: 16px 16px 14px;
+  border: 1px solid rgba(221, 184, 103, 0.45);
+  border-radius: 10px;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(221, 184, 103, 0.1), transparent 60%),
+    var(--leaf);
+  box-shadow: var(--shadow);
+  text-align: center;
+  animation: spoils-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+@keyframes spoils-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+}
+.spoils h3 {
+  margin: 0 0 10px;
+  font-size: 1.15rem;
+  letter-spacing: 0.04em;
+  color: var(--ochre-ink);
+}
+.spoils-list {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+.spoils-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 4px 4px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--leaf-2);
+  font: 0.9rem var(--sans);
+  animation: fade-up 0.3s ease-out backwards;
+  animation-delay: calc(0.12s + var(--i, 0) * 70ms);
+}
+.spoils-pic {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+}
+.spoils-pic .item-icon {
+  width: 34px;
+  height: 34px;
+}
+.spoils-pic svg {
+  width: 26px;
+  height: 26px;
+}
+.spoils-name {
+  flex: 1;
+  min-width: 0;
+}
+.spoils-n {
+  color: var(--ochre-ink);
+  font-variant-numeric: tabular-nums;
+}
+.spoils-none {
+  margin: 0 0 14px;
+  font: 0.9rem var(--sans);
+  color: var(--faded);
+}
+.spoils .btn {
+  width: 100%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spoils-wrap,
+  .spoils,
+  .spoils-list li {
+    animation: none;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* a perk that is a move of its own in a fight */
+.perk-kind {
+  align-self: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(194, 78, 54, 0.16);
+  color: var(--cinnabar-ink);
+  font-family: var(--sans);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+@container (min-width: 560px) {
+  .perk-kind {
+    align-self: flex-start;
+  }
+}
+.tech.perk {
+  border-color: rgba(216, 105, 76, 0.45);
+}
+.tech.perk .tech-top b::before {
+  content: '✦ ';
+  color: var(--cinnabar-ink);
+}
+
+/* the household's food: eaten, brought, what it comes to; how long it lasts; dishes */
+.larder {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule-2);
+  border-radius: 10px;
+  background: var(--leaf);
+  font-family: var(--sans);
+}
+.larder.short {
+  border-color: rgba(216, 105, 76, 0.6);
+}
+.larder-nums {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.larder-nums > span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.larder-nums small {
+  color: var(--faded);
+  font-size: 0.78rem;
+}
+.larder-nums b {
+  font-size: 1.05rem;
+}
+.loss {
+  color: var(--cinnabar-ink);
+  font-weight: 500;
+}
+.larder-line {
+  margin: 8px 0 0;
+  color: var(--ink-2);
+  font-size: 0.88rem;
+}
+.larder-line b {
+  color: var(--ink);
+}
+.larder-line .warn-text {
+  color: var(--cinnabar-ink);
+}
+.larder-dishes {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 8px;
+  color: var(--ink-2);
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+.larder-dishes input {
+  margin-top: 3px;
+  accent-color: var(--ochre);
+}
+.larder-dishes small {
+  color: var(--faded);
+}
+.larder-hint {
+  display: block;
+  font-size: 0.78rem;
+}
+/* how full a resident is */
+.belly {
+  margin: 10px 0 0;
+  font-family: var(--sans);
+}
+.belly-bar {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(230, 217, 188, 0.08);
+  overflow: hidden;
+}
+.belly-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--verdigris);
+  transition: width 0.4s ease;
+}
+.belly.s-low .belly-bar > span {
+  background: var(--ochre);
+}
+.belly small {
+  display: block;
+  margin-top: 4px;
+  color: var(--faded);
+  font-size: 0.82rem;
+}
+.belly small b {
+  color: var(--ink-2);
+}
+.belly.s-hungry small b,
+.belly.s-weak small b {
+  color: var(--cinnabar-ink);
+}
+.folk-rate {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.folk-why {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+}
+.folk-why li {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(230, 217, 188, 0.06);
+  color: var(--ink-2);
+}
+.folk-why li.up {
+  color: var(--verdigris);
+}
+.folk-why li.down {
+  color: var(--cinnabar-ink);
+}
+.folk-food.gain {
+  color: var(--verdigris);
+}
+.folk-food.loss {
+  color: var(--cinnabar-ink);
+}
+
+/* a resident's hand in their trade */
+.folk-trade {
+  margin: 10px 0 0;
+  padding: 8px 0 0;
+  border-top: 1px dashed var(--rule);
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  color: var(--ink-2);
+}
+.folk-trade p {
+  margin: 0;
+}
+.folk-trade small {
+  color: var(--faded);
+}
+.folk-trade-now b {
+  color: var(--ink);
+}
+.folk-trade-next {
+  margin-top: 6px;
+}
+.folk-trade-next small {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.8rem;
+}
+.belly-bar.trade > span {
+  background: var(--ochre);
+}
+.folk-teach {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 8px;
+}
+.folk-teach > small:first-child {
+  flex-basis: 100%;
+}
+.folk-teach .warn-text {
+  color: var(--cinnabar-ink);
+}
+.folk-trade-others {
+  margin-top: 6px !important;
+  font-size: 0.82rem;
+}
+
+/* a resident's tool and garment */
+.folk-gear {
+  margin: 10px 0 0;
+  padding: 8px 0 0;
+  border-top: 1px dashed var(--rule);
+  font-family: var(--sans);
+}
+.folk-gear-head {
+  color: var(--faded);
+  font-size: 0.82rem;
+}
+.folk-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 4px;
+}
+.folk-slot {
+  position: relative;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--leaf);
+  color: var(--ink-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.folk-slot.on {
+  border-color: var(--ochre);
+}
+.folk-slot.bare {
+  border-style: dashed;
+}
+.folk-slot-pic {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+}
+.folk-slot-pic .item-icon.painted {
+  width: 36px;
+  height: 36px;
+}
+.folk-slot-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 0.86rem;
+}
+.folk-slot-text small {
+  color: var(--faded);
+  font-size: 0.74rem;
+}
+.folk-slot-text small.gain {
+  color: var(--verdigris);
+}
+.folk-slot-text b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.folk-slot .slot-more {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 0.7rem;
+  color: var(--ochre-ink);
+}
+.folk-gear-pick {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+.folk-gear-pick > small {
+  color: var(--faded);
+  font-size: 0.82rem;
+}
+.folk-gear-pick small.gain {
+  color: var(--verdigris);
+}
+.folk-gear-pick .slot-n {
+  display: inline;
+  color: var(--faded);
+}

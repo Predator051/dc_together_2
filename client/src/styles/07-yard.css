@@ -1,0 +1,97 @@
+/* ---------------------------------------------------------------- the yard of home, as it is built */
+/* comes in with the painting under it */
+.yard-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: tile-in 0.6s ease-out backwards;
+}
+.yard-piece {
+  position: absolute;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background-size: 400% 300%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+.yard-piece.worker {
+  animation: yard-work 3.2s ease-in-out infinite;
+}
+.yard-piece.rise {
+  animation: yard-rise 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) 0.35s backwards;
+}
+.yard-edge,
+.yard-edge i {
+  position: absolute;
+  pointer-events: none;
+}
+.yard-edge {
+  inset: 0;
+}
+.yard-edge.rise {
+  animation: tile-in 1.4s ease-out 0.35s backwards;
+}
+.yard-edge .pal-top,
+.yard-edge .pal-bottom {
+  height: 7.5%;
+  background: url('../art/yard/ph.webp') repeat-x left bottom / auto 100%;
+}
+.yard-edge .pal-top {
+  top: -1.5%;
+  left: 2%;
+  right: 2%;
+}
+.yard-edge .pal-bottom {
+  bottom: 1%;
+}
+.yard-edge .pal-bottom.l {
+  left: 2%;
+  width: 43%;
+}
+.yard-edge .pal-bottom.r {
+  left: 53%;
+  right: 2%;
+}
+.yard-edge .pal-left,
+.yard-edge .pal-right {
+  top: 2%;
+  bottom: 3%;
+  width: 4.4%;
+  background: url('../art/yard/pv.webp') repeat-y center top / 100% auto;
+}
+.yard-edge .pal-left {
+  left: 1%;
+}
+.yard-edge .pal-right {
+  right: 1.2%;
+}
+@keyframes yard-rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -40%) scale(0.86);
+  }
+}
+@keyframes yard-work {
+  0%,
+  100% {
+    transform: translate(-50%, -50%);
+  }
+  50% {
+    transform: translate(-50%, -52%);
+  }
+}
+/* a spot standing on a building drawn in the yard: a smaller mark at its corner */
+.spot.on-built {
+  margin-top: -18px;
+}
+.spot.on-built .spot-medal {
+  width: 36px;
+  height: 36px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .yard-piece.worker,
+  .yard-piece.rise,
+  .yard-edge.rise {
+    animation: none;
+  }
+}
