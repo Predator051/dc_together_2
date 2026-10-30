@@ -1,0 +1,398 @@
+/* ==========================================================================
+   Motion: things arrive and leave softly. Short, one direction, never in the way.
+   ========================================================================== */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes fade-down {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+@keyframes seal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.85);
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+}
+@keyframes sheet-out {
+  to {
+    transform: translateY(105%);
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes bar-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 24px);
+  }
+}
+@keyframes nav-pop {
+  40% {
+    transform: translateY(-3px) scale(1.12);
+  }
+}
+
+/* a page shown by a tab */
+.work,
+.mapview,
+.hero,
+.col-right,
+.col-notes {
+  animation: fade-up 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.hero-page,
+.station-body,
+.map-card,
+.topic-body,
+.mate-items {
+  animation: fade-up 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.stock:not(.folded) .cells {
+  animation: fade-down 0.22s ease-out backwards;
+}
+.bottom-nav button.on .nav-ico {
+  animation: nav-pop 0.35s ease-out;
+}
+.badge {
+  animation: pop 0.35s ease-out backwards;
+}
+
+/* spots of a plan and slots of the figure come up one after another */
+.spot,
+.slot-spot {
+  animation: seal-in 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 35ms);
+}
+.spot-count,
+.slot-more,
+.spot-pair,
+.spot-dot {
+  animation: pop 0.35s ease-out backwards;
+}
+.doll-figure .body {
+  animation: fade-up 0.5s ease-out backwards;
+}
+
+/* the sliding pill under the hero's tabs */
+.hero-tabs::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 6px);
+  border-radius: 7px;
+  background: var(--leaf-2);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.hero-tabs.at-growth::before {
+  transform: translateX(calc(100% + 4px));
+}
+
+/* a sheet leaves the way it came */
+.station-sheet.closing {
+  animation: sheet-out 0.2s ease-in both;
+}
+.station-sheet.docked.closing,
+.sheet-shade.closing {
+  animation: fade-out 0.2s ease-in both;
+}
+
+/* windows over the page */
+.sheet-wrap,
+.scene-wrap {
+  animation: shade 0.22s ease-out backwards;
+}
+.sheet {
+  animation: rise-in 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.proposal,
+.scene-mini {
+  animation: bar-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.toast {
+  animation: bar-in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.join-card {
+  animation: rise-in 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+/* the chronicle: a new line slides in */
+.log p {
+  animation: fade-up 0.3s ease-out backwards;
+}
+
+/* a fight: foes step in one after another */
+.foe {
+  animation: fade-up 0.3s ease-out backwards;
+}
+.foe:nth-child(2) {
+  animation-delay: 60ms;
+}
+.foe:nth-child(3) {
+  animation-delay: 120ms;
+}
+.foe:nth-child(n + 4) {
+  animation-delay: 180ms;
+}
+.fight-lines p {
+  animation: fade-up 0.3s ease-out backwards;
+}
+
+/* a press is felt */
+.tile,
+.btn,
+.chip,
+.opt {
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    transform 0.12s ease-out;
+}
+.tile:active:not(:disabled),
+.btn:active:not(:disabled),
+.chip:active,
+.opt:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.spot:active .spot-medal,
+.slot-spot:active .spot-medal {
+  transform: scale(0.94);
+}
+.stat-value,
+.skill-level,
+.hero-nums dd {
+  transition: color 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .work,
+  .mapview,
+  .hero,
+  .col-right,
+  .col-notes,
+  .hero-page,
+  .station-body,
+  .map-card,
+  .topic-body,
+  .mate-items,
+  .stock .cells,
+  .cell-detail,
+  .bottom-nav button.on .nav-ico,
+  .badge,
+  .spot,
+  .slot-spot,
+  .spot-count,
+  .slot-more,
+  .spot-pair,
+  .spot-dot,
+  .doll-figure .body,
+  .station-sheet,
+  .sheet-shade,
+  .sheet-wrap,
+  .scene-wrap,
+  .sheet,
+  .proposal,
+  .scene-mini,
+  .toast,
+  .join-card,
+  .log p,
+  .foe,
+  .fight-lines p,
+  .panel.event,
+  .wx-pop,
+  .light.low .light-bar > span,
+  .sign-in.fresh .sign-glyph,
+  .plan-ground .hut-glow,
+  .station-sheet.docked {
+    animation: none !important;
+  }
+  .hero-tabs::before {
+    transition: none;
+  }
+  .tile:active:not(:disabled),
+  .btn:active:not(:disabled),
+  .chip:active,
+  .opt:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* how to read the notes */
+.help-btn {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  margin-left: auto;
+  border: 1px solid var(--rule-2);
+  border-radius: 50%;
+  background: none;
+  color: var(--faded);
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  align-self: center;
+}
+.help-btn.on {
+  border-color: var(--ochre);
+  color: var(--ochre-ink);
+}
+.notes-help {
+  margin: 4px 0 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(196, 154, 69, 0.45);
+  border-radius: 10px;
+  background: var(--ochre-wash);
+  animation: fade-down 0.25s ease-out backwards;
+}
+.notes-help h3 {
+  color: var(--ochre-ink);
+}
+.notes-help p {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.help-steps {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 5px;
+}
+/* the track stays in its own column; a long explanation wraps under the name, not under the track */
+.help-steps li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 4px 10px;
+  white-space: normal;
+  font-family: var(--sans);
+  font-size: 0.88rem;
+}
+.help-steps .help-step > span {
+  font-weight: 400;
+  color: var(--faded);
+}
+.help-steps .lvl-track {
+  margin-top: 0.6em;
+}
+@media (prefers-reduced-motion: reduce) {
+  .notes-help {
+    animation: none;
+  }
+}
+.plan-ground .rut,
+.plan-ground .street {
+  fill: none;
+  stroke: rgba(230, 217, 188, 0.1);
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+.plan-ground .street {
+  stroke-width: 14;
+  stroke: rgba(230, 217, 188, 0.08);
+}
+.plan-ground .wagons rect,
+.plan-ground .house {
+  fill: rgba(42, 34, 25, 0.85);
+  stroke: rgba(196, 154, 69, 0.4);
+  stroke-width: 1.5;
+}
+.plan-ground .house {
+  stroke: rgba(230, 217, 188, 0.24);
+}
+.plan-ground .house-shade {
+  fill: rgba(0, 0, 0, 0.28);
+}
+.plan-ground .house-roof {
+  fill: none;
+  stroke: rgba(230, 217, 188, 0.3);
+  stroke-width: 1.5;
+}
+.plan-ground .hall-b {
+  fill: rgba(52, 44, 34, 0.9);
+  stroke: rgba(230, 217, 188, 0.34);
+  stroke-width: 2;
+}
+.plan-ground .square {
+  fill: rgba(230, 217, 188, 0.05);
+  stroke: rgba(230, 217, 188, 0.14);
+  stroke-dasharray: 3 4;
+}
+.plan-ground .saltpile path {
+  fill: rgba(230, 217, 188, 0.2);
+  stroke: rgba(230, 217, 188, 0.35);
+}
+.plan-ground .plank {
+  fill: none;
+  stroke: rgba(196, 154, 69, 0.5);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.plan-ground .ember {
+  fill: rgba(216, 105, 76, 0.5);
+}
+.plan-ground .rust {
+  fill: rgba(158, 84, 42, 0.22);
+  stroke: rgba(196, 120, 69, 0.3);
+  stroke-width: 1.2;
+}
+.plan-ground .sheen {
+  fill: none;
+  stroke: rgba(142, 165, 179, 0.35);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+.plan-ground .pit {
+  fill: none;
+  stroke: rgba(10, 8, 6, 0.6);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+/* the weather on a narrow screen: the sign only; the card spans the screen under the top bar */
+@media (max-width: 599px) {
+  .wx-name {
+    display: none;
+  }
+  .wx {
+    position: static;
+  }
+  .wx-pop {
+    position: absolute;
+    top: 100%;
+    left: 16px;
+    right: 16px;
+    width: auto;
+    margin-top: 6px;
+  }
+}

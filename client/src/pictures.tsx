@@ -359,12 +359,12 @@ const PAINTED_MOMENTS = new Set(moments as string[]);
 
 export function momentUrl(scene: string): string | null {
   if (!PAINTED_MOMENTS.has(scene)) return null;
-  return new URL(`./art/moments/m${(MOMENTS as readonly string[]).indexOf(scene) + 1}.webp`, import.meta.url).href;
+  return new URL(`./art/moments/${scene}.webp`, import.meta.url).href;
 }
 
 export function viewUrl(key: string | undefined): string | null {
   if (!key || !PAINTED_VIEWS.has(key)) return null;
-  return new URL(`./art/views/w${(VIEWS as readonly string[]).indexOf(key) + 1}.webp`, import.meta.url).href;
+  return new URL(`./art/views/${key}.webp`, import.meta.url).href;
 }
 
 // Close views of workplaces (scripts/art.ts stations): the stage a spot opens on.
@@ -373,7 +373,7 @@ const PAINTED_STATIONS = new Set(stations as string[]);
 /** The close view of a spot's workplace, or null while it is not painted. */
 export function stationUrl(icon: string | undefined): string | null {
   if (!icon || !PAINTED_STATIONS.has(icon)) return null;
-  return new URL(`./art/stations/s${(SPOT_ICONS as readonly string[]).indexOf(icon) + 1}.webp`, import.meta.url).href;
+  return new URL(`./art/stations/${icon}.webp`, import.meta.url).href;
 }
 
 // Where works stand on each close view, in percent, the most telling place first (picked by eye).
@@ -868,7 +868,7 @@ export function Tones({ dusk }: { dusk: number }) {
 const PAINTED = new Set(grounds as string[]);
 
 function groundUrl(scene: string): string {
-  return new URL(`./art/grounds/g${(SCENES as readonly string[]).indexOf(scene) + 1}.webp`, import.meta.url).href;
+  return new URL(`./art/grounds/${scene}.webp`, import.meta.url).href;
 }
 
 // Life on a painted ground: glints on water, smoke, drifting mist, now and then a pair of birds.

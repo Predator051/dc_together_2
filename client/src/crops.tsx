@@ -12,7 +12,7 @@ const PAINTED = paintedCrops as unknown as Partial<Record<CropLook | 'bed', numb
 /** The painted stage of a crop, or null while the crop is not painted. */
 export function cropUrl(look: CropLook, stage: number): string | null {
   if (!PAINTED[look]) return null;
-  return new URL(`./art/crops/c${CROP_LOOKS.indexOf(look) + 1}s${stage}.webp`, import.meta.url).href;
+  return new URL(`./art/crops/${look}-${stage}.webp`, import.meta.url).href;
 }
 
 /** The painted empty bed and its height to its width, or null. */

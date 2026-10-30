@@ -56,3 +56,6 @@ async function shutdown(): Promise<void> {
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
+// anything that slips past the guards is logged; the world stays up and saved
+process.on('uncaughtException', (e) => log(`Uncaught: ${e.stack ?? e}`));
+process.on('unhandledRejection', (e) => log(`Unhandled: ${(e as Error)?.stack ?? e}`));

@@ -271,19 +271,20 @@ export function allyUrl(key: string): string | null {
 // Painted heroes (scripts/art.ts hero): a look per role and gender, as the players see their heroes.
 const PAINTED_HEROES = new Set(heroes as string[]);
 
-function heroIndex(role: string | null | undefined, gender: string): number {
+/** The key of a painted hero look, or null while that look is not painted. */
+function heroKey(role: string | null | undefined, gender: string): string | null {
   const key = `${role}-${gender}`;
-  return role && PAINTED_HEROES.has(key) ? (HEROES as readonly string[]).indexOf(key) + 1 : 0;
+  return role && PAINTED_HEROES.has(key) ? key : null;
 }
 
 /** A hero's painted face (head and shoulders), or null while that look is not painted. */
 export function heroFace(role: string | null | undefined, gender: string): string | null {
-  const i = heroIndex(role, gender);
-  return i ? new URL(`./art/heroes/q${i}.webp`, import.meta.url).href : null;
+  const k = heroKey(role, gender);
+  return k ? new URL(`./art/heroes/face-${k}.webp`, import.meta.url).href : null;
 }
 
 /** A hero painted at full height, for the gear, or null. */
 export function heroFigure(role: string | null | undefined, gender: string): string | null {
-  const i = heroIndex(role, gender);
-  return i ? new URL(`./art/heroes/p${i}.webp`, import.meta.url).href : null;
+  const k = heroKey(role, gender);
+  return k ? new URL(`./art/heroes/fig-${k}.webp`, import.meta.url).href : null;
 }

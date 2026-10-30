@@ -1,0 +1,1884 @@
+/* ==========================================================================
+   Home as a plan of the yard: ink drawing, workplaces as seals to tap.
+   ========================================================================== */
+.home {
+  margin-bottom: 22px;
+}
+.plan-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin: -4px 0 4px;
+}
+.plan-tools .btn {
+  font-size: 0.8rem;
+  color: var(--pale);
+}
+.plan {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  aspect-ratio: 8 / 7;
+}
+.plan-ground {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.plan-ground .fence {
+  fill: none;
+  stroke: rgba(196, 154, 69, 0.32);
+  stroke-width: 2.4;
+  stroke-dasharray: 2 5 9 5;
+  stroke-linecap: round;
+}
+.plan-ground .fence.fallen {
+  stroke: rgba(196, 154, 69, 0.2);
+  stroke-dasharray: none;
+}
+.plan-ground .path {
+  fill: none;
+  stroke: rgba(230, 217, 188, 0.14);
+  stroke-width: 14;
+  stroke-linecap: round;
+}
+.plan-ground .hut-floor {
+  fill: rgba(42, 34, 25, 0.75);
+}
+.plan-ground .hut-glow {
+  animation: hut-glow 5s ease-in-out infinite;
+}
+@keyframes hut-glow {
+  50% {
+    opacity: 0.7;
+  }
+}
+.plan-ground .hut-wall {
+  fill: none;
+  stroke: rgba(230, 217, 188, 0.3);
+  stroke-width: 3;
+}
+.plan-ground .hut-thatch {
+  fill: none;
+  stroke: rgba(230, 217, 188, 0.16);
+  stroke-width: 1.5;
+}
+
+/* a painted ground: the picture, then the weather and the evening laid over it as tones */
+.plan-paint {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--page);
+}
+.plan-paint img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: tile-in 0.6s ease-out backwards;
+}
+.plan-paint::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 40px 10px rgba(16, 11, 6, 0.7);
+}
+.tone-sky,
+.tone-dusk,
+.plan-paint-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.tone-sky {
+  opacity: 0;
+  transition: opacity 6s ease;
+}
+.tones.sky-rain .tone-sky {
+  opacity: 1;
+  background: linear-gradient(to bottom, rgba(40, 55, 70, 0.22), rgba(30, 40, 50, 0.1));
+}
+.tones.sky-storm .tone-sky {
+  opacity: 1;
+  background: linear-gradient(to bottom, rgba(18, 22, 32, 0.3), rgba(20, 24, 30, 0.14));
+}
+.tones.sky-fog .tone-sky {
+  opacity: 1;
+  background: radial-gradient(90% 70% at 50% 60%, rgba(205, 205, 195, 0.12), rgba(205, 205, 195, 0.3));
+}
+.tones.sky-frost .tone-sky {
+  opacity: 1;
+  background: rgba(190, 210, 230, 0.16);
+}
+.tones.sky-heat .tone-sky {
+  opacity: 1;
+  background: rgba(230, 180, 100, 0.1);
+}
+/* lighter than the page's own evening: the painting is already lit low */
+.tone-dusk {
+  background:
+    radial-gradient(140% 100% at 50% 110%, transparent 35%, rgba(8, 10, 22, 0.4)),
+    rgba(10, 12, 24, 0.18);
+  transition: opacity 30s linear;
+}
+/* life on a painted ground: slow and faint; all of it stops for reduced motion */
+.life-water {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(closest-side, #000 55%, transparent);
+  mask-image: radial-gradient(closest-side, #000 55%, transparent);
+}
+.life-water::before {
+  content: '';
+  position: absolute;
+  inset: -30px -60px;
+  /* three layers, one width (so the drift loops) and three heights (so no grid shows) */
+  background-image:
+    radial-gradient(ellipse 15px 2.6px at 12px 6px, rgba(255, 244, 214, 0.85), transparent 72%),
+    radial-gradient(ellipse 10px 2px at 40px 20px, rgba(255, 244, 214, 0.65), transparent 72%),
+    radial-gradient(ellipse 7px 1.6px at 27px 11px, rgba(255, 244, 214, 0.5), transparent 72%);
+  background-size:
+    54px 26px,
+    54px 37px,
+    54px 19px;
+  mix-blend-mode: screen;
+  animation:
+    water-drift 16s linear infinite,
+    water-twinkle 3.4s ease-in-out infinite;
+}
+@keyframes water-drift {
+  to {
+    transform: translateX(54px);
+  }
+}
+@keyframes water-twinkle {
+  50% {
+    opacity: 0.35;
+  }
+}
+.life-smoke {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.life-smoke i {
+  position: absolute;
+  left: -14px;
+  top: -14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(225, 220, 210, 0.36), transparent 68%);
+  opacity: 0;
+  animation: smoke-rise 5.4s ease-out infinite;
+}
+.life-smoke i:nth-child(2) {
+  animation-delay: 1.8s;
+}
+.life-smoke i:nth-child(3) {
+  animation-delay: 3.6s;
+}
+@keyframes smoke-rise {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.5);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(12px, -64px) scale(2.3);
+  }
+}
+.life-mist {
+  position: absolute;
+  left: -30%;
+  width: 160%;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 50% at 30% 50%, rgba(220, 222, 214, 0.17), transparent 70%),
+    radial-gradient(35% 45% at 72% 55%, rgba(220, 222, 214, 0.13), transparent 70%);
+  animation: mist-drift 42s ease-in-out infinite alternate;
+}
+@keyframes mist-drift {
+  to {
+    transform: translateX(18%);
+  }
+}
+.life-birds {
+  position: absolute;
+  left: 0;
+  width: 34px;
+  height: 14px;
+  fill: none;
+  stroke: rgba(28, 22, 16, 0.8);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  pointer-events: none;
+  opacity: 0;
+  animation: birds-fly 28s linear 4s infinite;
+}
+.life-birds path {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: birds-flap 0.45s ease-in-out infinite alternate;
+}
+@keyframes birds-fly {
+  0% {
+    opacity: 1;
+    transform: translate(-50px, 0);
+  }
+  36% {
+    opacity: 1;
+    transform: translate(640px, -24px);
+  }
+  36.1%,
+  100% {
+    opacity: 0;
+    transform: translate(640px, -24px);
+  }
+}
+@keyframes birds-flap {
+  to {
+    transform: scaleY(0.55);
+  }
+}
+
+/* the fire in the hut at home, when it burns */
+.plan-paint-glow {
+  inset: auto;
+  left: 37%;
+  top: 30%;
+  width: 42%;
+  height: 42%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(236, 150, 70, 0.38), transparent 68%);
+  mix-blend-mode: screen;
+  animation: hut-glow 5s ease-in-out infinite;
+}
+
+/* painted marks: a cell of an atlas, filling most of a round medal */
+span.spot-pic.painted {
+  display: block;
+  background-repeat: no-repeat;
+  background-size: 400% 300%;
+}
+.spot-medal span.spot-pic.painted {
+  width: 86%;
+  height: 86%;
+}
+.chip span.spot-pic.painted {
+  width: 24px;
+  height: 24px;
+}
+.pin-paint {
+  display: block;
+  width: 31px;
+  height: 31px;
+  background-repeat: no-repeat;
+  background-size: 400% 300%;
+}
+.land-pin.home .pin-paint {
+  width: 36px;
+  height: 36px;
+}
+
+/* a workplace: a round seal with its picture, its name under it */
+.spot {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 88px;
+  margin-left: -44px;
+  margin-top: -24px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.spot-medal {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1.5px solid var(--rule-2);
+  background: radial-gradient(circle at 50% 35%, var(--leaf-2), var(--leaf) 75%);
+  box-shadow:
+    0 3px 10px rgba(8, 5, 2, 0.55),
+    inset 0 0 0 3px rgba(34, 28, 21, 0.9),
+    inset 0 0 0 4px var(--rule);
+  color: var(--faded);
+  transition:
+    transform 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    background 0.15s;
+}
+.spot-pic {
+  width: 28px;
+  height: 28px;
+}
+.spot-name {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 88px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: rgba(34, 28, 21, 0.78);
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  color: var(--ink-2);
+}
+.spot-name small {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ochre-ink);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.spot.live .spot-medal {
+  border-color: rgba(196, 154, 69, 0.55);
+  color: var(--ink);
+}
+.spot.idle .spot-medal {
+  opacity: 0.72;
+}
+.spot.idle .spot-name {
+  color: var(--faded);
+}
+@media (hover: hover) {
+  .spot:hover .spot-medal {
+    transform: translateY(-2px);
+    border-color: var(--ochre);
+  }
+}
+.spot:focus-visible {
+  outline: none;
+}
+.spot:focus-visible .spot-medal {
+  outline: 2px solid var(--ochre-ink);
+  outline-offset: 3px;
+}
+.spot.on .spot-medal {
+  border-color: var(--ochre);
+  background: radial-gradient(circle at 50% 35%, rgba(221, 184, 103, 0.3), var(--leaf-2) 80%);
+  color: var(--ochre-ink);
+  opacity: 1;
+}
+.spot.on .spot-name {
+  color: var(--ink);
+  background: rgba(196, 154, 69, 0.22);
+}
+/* something to do together here: a slow breath of ochre */
+.spot.pair .spot-medal {
+  animation: spot-call 2.6s ease-in-out infinite;
+}
+@keyframes spot-call {
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(196, 154, 69, 0.16),
+      0 3px 10px rgba(8, 5, 2, 0.55),
+      inset 0 0 0 3px rgba(34, 28, 21, 0.9),
+      inset 0 0 0 4px var(--rule);
+  }
+}
+.spot.running .spot-medal {
+  color: var(--ochre-ink);
+}
+.spot.running .flame,
+.spot.running .steam,
+.spot.running .spark {
+  animation: spot-flick 1.4s ease-in-out infinite;
+}
+@keyframes spot-flick {
+  50% {
+    opacity: 0.45;
+  }
+}
+.spot-count {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--ochre);
+  color: #1d160e;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 19px;
+  text-align: center;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.spot-pair {
+  position: absolute;
+  top: -5px;
+  left: -7px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--leaf-2);
+  border: 1px solid var(--ochre);
+  color: var(--ochre-ink);
+}
+.spot-pair .ico {
+  width: 13px;
+  height: 13px;
+}
+.spot-dot {
+  position: absolute;
+  bottom: 1px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--cinnabar-ink);
+  box-shadow: 0 0 0 2px var(--page);
+}
+.spot-dot.warn {
+  background: var(--cinnabar);
+}
+.spot-run {
+  position: absolute;
+  inset: -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+.spot-run circle {
+  fill: none;
+  stroke: var(--ochre);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 100px;
+  animation-name: spot-run;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
+.spot-fill {
+  position: absolute;
+  inset: -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+.spot-fill circle {
+  fill: none;
+  stroke: var(--gall);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 100px;
+  transition: stroke-dashoffset 0.5s ease;
+}
+.spot-fill.high circle {
+  stroke: var(--ochre);
+}
+.spot-fill.full circle {
+  stroke: var(--cinnabar-ink);
+}
+.spot-name small.spot-free {
+  color: var(--gall);
+  font-weight: 600;
+}
+.spot-name small.spot-free.full,
+.chip-free.full {
+  color: var(--cinnabar-ink);
+}
+.chip-free {
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--gall-wash);
+  color: var(--gall);
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+@keyframes spot-run {
+  from {
+    stroke-dashoffset: calc((1 - var(--p0, 0)) * 100px);
+  }
+  to {
+    stroke-dashoffset: 0px;
+  }
+}
+.spot-progress {
+  display: block;
+  width: 44px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--rule-2);
+  overflow: hidden;
+}
+.spot-progress span {
+  display: block;
+  height: 100%;
+  background: var(--ochre);
+}
+
+/* on a phone it slides up from the bottom; chips switch between places without closing */
+.sheet-shade {
+  position: fixed;
+  inset: 0;
+  z-index: 13;
+  background: rgba(10, 7, 4, 0.5);
+  animation: shade 0.2s ease-out both;
+}
+@keyframes shade {
+  from {
+    opacity: 0;
+  }
+}
+.station-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  /* it reaches the very bottom and runs under the navigation: no gap, whatever the nav's height */
+  bottom: 0;
+  z-index: 14;
+  display: flex;
+  flex-direction: column;
+  /* one height for every place: switching between them never makes the top jump */
+  height: 74dvh;
+  max-height: calc(100dvh - 96px);
+  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgba(221, 184, 103, 0.06), transparent 65%),
+    var(--leaf);
+  border-top: 1px solid rgba(196, 154, 69, 0.45);
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.55);
+  animation: sheet 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.station-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 6px 6px 10px;
+  border-bottom: 1px solid var(--rule);
+}
+.station-chips {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+.station-chips::-webkit-scrollbar {
+  display: none;
+}
+/* on a phone the strip runs off the edge: fade it there so the cut chip reads as "more this way" */
+@media (max-width: 959px) {
+  .station-chips {
+    padding-right: 18px;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 22px), transparent);
+  }
+}
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  padding: 6px 10px 6px 7px;
+  border: 1px solid var(--rule-2);
+  border-radius: 18px;
+  background: transparent;
+  color: var(--faded);
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  scroll-snap-align: start;
+  -webkit-tap-highlight-color: transparent;
+}
+.chip .spot-pic {
+  width: 20px;
+  height: 20px;
+}
+.chip.on {
+  border-color: var(--ochre);
+  background: var(--ochre-wash);
+  color: var(--ink);
+}
+.chip .badge {
+  top: 3px;
+  right: 3px;
+}
+.station-close {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: none;
+  color: var(--faded);
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.station-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 16px 18px;
+  animation: shade 0.2s ease-out both;
+}
+/* ---------- an opened spot on its stage: the workplace painted, its works (things, people) standing on it ---------- */
+/* the painting whole, at its own 3:2, so every medal stands on the thing it belongs to */
+.stage {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  margin: -14px -16px 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+.station-sheet.docked .stage {
+  margin: -16px -18px 0;
+}
+.stage-paint {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-position: center;
+  background-size: cover;
+}
+.stage-paint::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(34, 28, 21, 0.18), transparent 22%, transparent 84%, var(--leaf));
+}
+
+/* a work: a disc with the mark of what it gives */
+.act-medal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 84px;
+  min-width: 0;
+  padding: 2px 0 4px;
+  border: none;
+  background: none;
+  color: var(--ink);
+  font-family: var(--sans);
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  animation: medal-in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 25ms);
+}
+@keyframes medal-in {
+  from {
+    opacity: 0.3;
+    transform: scale(0.75);
+  }
+}
+/* on the painting the disc's centre is the place; the name of a stack hangs below it */
+.act-medal.placed {
+  position: absolute;
+  margin: -26px 0 0 -42px;
+}
+.act-pic {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  transition: transform 0.15s ease-out;
+}
+.act-disc {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: 1.5px solid rgba(196, 154, 69, 0.7);
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, var(--leaf-2), var(--page) 75%);
+  box-shadow:
+    0 3px 10px rgba(8, 5, 2, 0.7),
+    0 0 0 3px rgba(20, 15, 10, 0.45),
+    inset 0 0 0 2px rgba(34, 28, 21, 0.9);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.2s;
+}
+.act-disc .item-icon,
+.act-disc span.item-icon.painted {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  vertical-align: 0;
+  opacity: 1;
+}
+.act-disc svg.item-icon,
+.act-disc svg {
+  width: 24px;
+  height: 24px;
+  color: var(--ink-2);
+}
+.act-disc span.spot-pic.painted {
+  width: 84%;
+  height: 84%;
+}
+/* a stack: discs behind the disc, how many it holds */
+.act-medal.stack .act-pic::before,
+.act-medal.stack .act-pic::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1.5px solid rgba(196, 154, 69, 0.45);
+  border-radius: 50%;
+  background: var(--page);
+  box-shadow: 0 2px 6px rgba(8, 5, 2, 0.6);
+}
+.act-medal.stack .act-pic::before {
+  transform: translate(5px, -4px);
+}
+.act-medal.stack .act-pic::after {
+  transform: translate(9px, -8px);
+  opacity: 0.7;
+}
+.act-medal.stack .act-pic {
+  isolation: isolate;
+}
+.act-count {
+  position: absolute;
+  right: -10px;
+  bottom: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid var(--ochre);
+  border-radius: 10px;
+  background: var(--page);
+  font: 700 0.72rem/18px var(--sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--ochre-ink);
+}
+/* the picked one glows */
+.act-medal.on .act-disc {
+  border-color: var(--ochre-ink);
+  box-shadow:
+    0 0 0 3px rgba(221, 184, 103, 0.35),
+    0 0 18px rgba(221, 184, 103, 0.55),
+    0 3px 10px rgba(8, 5, 2, 0.7);
+}
+.act-medal.on .act-pic {
+  transform: scale(1.1);
+}
+/* the work running: the medal fills from below as the time goes */
+.act-fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(196, 154, 69, 0.5), rgba(196, 154, 69, 0.12));
+  transform-origin: bottom center;
+}
+.act-fill.anim-fill {
+  animation-name: fill-rise;
+}
+@keyframes fill-rise {
+  from {
+    transform: scaleY(var(--p0, 0));
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+.act-pic .ring {
+  left: 50%;
+  width: 150px;
+  height: 150px;
+  margin: -75px 0 0 -75px;
+}
+.act-secs {
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  padding: 0 5px;
+  border: 1px solid var(--ochre);
+  border-radius: 8px;
+  background: var(--page);
+  font: 700 0.7rem/1.4 var(--sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--ochre-ink);
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+.act-lock,
+.act-pair {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--page);
+}
+.act-lock {
+  right: -5px;
+  bottom: -3px;
+  border: 1px solid var(--rule-2);
+  color: var(--faded);
+}
+.act-pair {
+  left: -5px;
+  top: -3px;
+  border: 1px solid var(--ochre);
+  color: var(--ochre-ink);
+}
+.act-lock svg,
+.act-pair svg {
+  width: 11px;
+  height: 11px;
+}
+.act-quest {
+  position: absolute;
+  top: 0;
+  right: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--gall);
+  box-shadow: 0 0 0 2px var(--page);
+}
+.act-medal.running .act-disc,
+.act-medal.together .act-disc {
+  border-color: var(--ochre);
+}
+.act-medal.blocked .act-disc > * {
+  filter: grayscale(0.7) brightness(0.65);
+}
+.act-medal.blocked .act-disc {
+  border-color: rgba(230, 217, 188, 0.3);
+}
+.act-label {
+  max-width: 100%;
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.act-medal.placed .act-label {
+  /* a name is never hidden under the next disc */
+  position: relative;
+  z-index: 1;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(20, 15, 10, 0.72);
+  color: var(--ink);
+}
+.act-medal.blocked .act-label {
+  color: var(--ink-2);
+}
+/* while a work runs its seconds sit under the disc: the count steps aside, the name moves down */
+.act-medal.running .act-count {
+  display: none;
+}
+.act-medal.running .act-label {
+  margin-top: 8px;
+}
+@media (hover: hover) {
+  .act-medal:hover .act-pic {
+    transform: translateY(-2px);
+  }
+  .act-medal.on:hover .act-pic {
+    transform: scale(1.1) translateY(-2px);
+  }
+  .act-medal:hover .act-disc {
+    border-color: var(--ochre-ink);
+  }
+}
+.act-medal:active .act-pic {
+  transform: scale(0.94);
+}
+.act-medal:focus-visible {
+  outline: none;
+}
+.act-medal:focus-visible .act-disc {
+  outline: 2px solid var(--ochre-ink);
+  outline-offset: 3px;
+}
+@media (min-width: 960px) {
+  .act-medal.placed {
+    margin: -31px 0 0 -46px;
+    width: 92px;
+  }
+  .act-medal.placed .act-pic {
+    width: 58px;
+    height: 58px;
+  }
+  .act-medal.placed .act-disc .item-icon,
+  .act-medal.placed .act-disc span.item-icon.painted {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* a stack opened: its works spread over the dimmed painting */
+.stage-fan {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+}
+.stage-fan-shade {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(16, 12, 8, 0.72);
+  backdrop-filter: blur(2px);
+  cursor: pointer;
+  animation: tile-in 0.2s ease-out both;
+}
+.stage-fan-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  padding: 10px 12px 8px;
+  pointer-events: none;
+  animation: fan-in 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes fan-in {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+.stage-fan-name {
+  flex: none;
+  margin-bottom: 6px;
+  font: 600 0.82rem/1.3 var(--sans);
+  letter-spacing: 0.04em;
+  color: var(--ochre-ink);
+}
+.stage-fan-list {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 8px 4px;
+  min-height: 0;
+  overflow-y: auto;
+  pointer-events: auto;
+}
+.stage-fan-list .act-medal {
+  width: 80px;
+  animation-delay: calc(var(--i, 0) * 30ms);
+}
+
+/* the picked work: what it takes and gives, and the button that does it */
+.work-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 12px;
+  padding: 12px 12px 12px 12px;
+  border: 1px solid var(--rule-2);
+  border-radius: 10px;
+  background: var(--leaf-2);
+  animation: card-in 0.22s ease-out both;
+}
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.work-card.together {
+  border-color: rgba(196, 154, 69, 0.5);
+}
+.work-card-pic {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(196, 154, 69, 0.5);
+  border-radius: 50%;
+  background: var(--page);
+}
+.work-card-pic .item-icon,
+.work-card-pic span.item-icon.painted {
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  vertical-align: 0;
+}
+.work-card-pic svg {
+  width: 20px;
+  height: 20px;
+  color: var(--ink-2);
+}
+.work-card-pic span.spot-pic.painted {
+  width: 80%;
+  height: 80%;
+}
+.work-card.blocked .work-card-pic > * {
+  filter: grayscale(0.7) brightness(0.7);
+}
+.work-card-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.work-card-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: 0;
+  font: 600 1rem/1.3 var(--sans);
+  color: var(--ink);
+}
+.work-card .tile-meta {
+  font-size: 0.84rem;
+}
+.work-card .reason {
+  font-size: 0.84rem;
+}
+.work-card.blocked .reason {
+  color: var(--ink-2);
+}
+.work-do {
+  position: relative;
+  flex: none;
+  min-width: 112px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.work-do > span:last-child {
+  position: relative;
+}
+.work-do-fill {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--ochre-ink);
+}
+.btn.primary.work-do:has(.work-do-fill) {
+  background: rgba(196, 154, 69, 0.55);
+  opacity: 1;
+}
+/* a resident on the painting: the face in the disc, the mark of their work at its foot */
+.folk-face {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font: 600 1.2rem/1 var(--serif);
+  color: var(--ink-2);
+}
+.folk-face.painted {
+  background-position: center 30%;
+  background-size: cover;
+}
+.act-medal.folk .act-disc {
+  background: var(--page);
+}
+.act-medal.folk.idle .act-disc {
+  border-color: rgba(230, 217, 188, 0.3);
+}
+.folk-job {
+  position: absolute;
+  right: -8px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--ochre);
+  border-radius: 50%;
+  background: var(--page);
+}
+.folk-job .item-icon,
+.folk-job span.item-icon.painted {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  vertical-align: 0;
+}
+.folk-warn {
+  position: absolute;
+  top: 0;
+  right: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--cinnabar-ink);
+  box-shadow: 0 0 0 2px var(--page);
+}
+
+/* the picked resident: who they are, what they bring, the works to set them to */
+.folk-card {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--rule-2);
+  border-radius: 10px;
+  background: var(--leaf-2);
+  animation: card-in 0.22s ease-out both;
+}
+.folk-card-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.folk-card-head small {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-2);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.folk-card-face {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 1.5px solid rgba(196, 154, 69, 0.6);
+  border-radius: 50%;
+  background-color: var(--page);
+  font: 600 1.3rem/1 var(--serif);
+  color: var(--ink-2);
+}
+.folk-card-face.painted {
+  background-position: center 30%;
+  background-size: cover;
+}
+.folk-card-name {
+  font: 600 1.05rem/1.3 var(--sans);
+  color: var(--ink);
+}
+.folk-card-now {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 10px 0 0;
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  color: var(--ink-2);
+}
+.folk-card-now b {
+  color: var(--ink);
+}
+.folk-card .traits {
+  font-size: 0.88rem;
+}
+.folk-jobs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+.folk-job-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 6px 10px 6px 6px;
+  border: 1px solid var(--rule-2);
+  border-radius: 8px;
+  background: var(--leaf);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 0.92rem;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.folk-job-pic {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--page);
+}
+.folk-job-pic .item-icon,
+.folk-job-pic span.item-icon.painted {
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  vertical-align: 0;
+}
+.folk-job-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.folk-job-text small {
+  color: var(--faded);
+  font-size: 0.8rem;
+}
+.folk-job-opt.on {
+  border-color: var(--ochre);
+  background: var(--ochre-wash);
+  opacity: 1;
+}
+.folk-job-opt:disabled:not(.on) {
+  opacity: 0.55;
+  cursor: default;
+}
+.folk-job-opt:disabled {
+  cursor: default;
+}
+@media (hover: hover) {
+  .folk-job-opt:hover:not(:disabled) {
+    border-color: var(--ochre);
+  }
+}
+.folk-job-opt:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 2px;
+}
+
+/* the store's picked shelf: its things as cells, what can be done with the picked one */
+.shelf-card {
+  margin: 12px 0 12px;
+  animation: card-in 0.22s ease-out both;
+}
+.shelf-name {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  font: 600 1rem/1.3 var(--sans);
+  color: var(--ink);
+}
+.shelf-card .cells {
+  margin-top: 8px;
+}
+.stage-note {
+  margin-top: 12px;
+}
+@media (max-width: 380px) {
+  .work-card {
+    flex-wrap: wrap;
+  }
+  .work-card-text {
+    flex-basis: calc(100% - 52px);
+  }
+  .work-do {
+    flex: 1 1 100%;
+  }
+}
+
+.station-body .group:last-child,
+.station-body .stock:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+body.sheet-open {
+  overflow: hidden;
+}
+/* on a phone a place's panel keeps its head (the chips, the ×) at the bottom, under the thumb;
+   a sideways swipe over the body goes to the next place or the one before */
+.station-sheet.low:not(.docked) .station-bar {
+  order: 1;
+  padding: 7px 6px 8px 10px;
+  border-top: 1px solid var(--rule);
+  border-bottom: none;
+}
+.station-sheet.low:not(.docked) .station-body {
+  border-radius: 14px 14px 0 0;
+  touch-action: pan-y;
+}
+.station-body.came-right {
+  animation: came-right 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.station-body.came-left {
+  animation: came-left 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+/* it slides in without going dark first: the next place is there at once, only moving */
+@keyframes came-right {
+  from {
+    opacity: 0.6;
+    transform: translateX(42px);
+  }
+}
+@keyframes came-left {
+  from {
+    opacity: 0.6;
+    transform: translateX(-42px);
+  }
+}
+.chip.running {
+  color: var(--ochre-ink);
+}
+/* on a computer the open place stands where the plan was; the × goes back to the plan */
+.station-sheet.docked {
+  position: static;
+  height: auto;
+  max-height: none;
+  padding-bottom: 0;
+  border: 1px solid var(--rule-2);
+  border-radius: 10px;
+  box-shadow: none;
+  animation: shade 0.2s ease-out both;
+}
+.station-sheet.docked .station-bar {
+  position: sticky;
+  top: 72px;
+  z-index: 2;
+  background: var(--leaf);
+  border-radius: 10px 10px 0 0;
+}
+.station-sheet.docked .station-chips {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+.station-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  align-self: flex-start;
+  white-space: nowrap;
+}
+.station-back .spot-pic {
+  width: 18px;
+  height: 18px;
+}
+.station-sheet.docked .station-body {
+  overflow: visible;
+  padding: 16px 18px 20px;
+}
+@media (max-width: 359px) {
+  .spot {
+    width: 76px;
+    margin-left: -38px;
+  }
+  .spot-medal {
+    width: 42px;
+    height: 42px;
+  }
+  .spot-pic {
+    width: 24px;
+    height: 24px;
+  }
+  .spot-name {
+    font-size: 0.72rem;
+  }
+}
+@media (min-width: 960px) {
+  .spot-medal {
+    width: 56px;
+    height: 56px;
+  }
+  .spot {
+    margin-top: -28px;
+    width: 100px;
+    margin-left: -50px;
+  }
+  .spot-pic {
+    width: 32px;
+    height: 32px;
+  }
+  .spot-name {
+    max-width: 100px;
+    font-size: 0.82rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spot.pair .spot-medal,
+  .spot.running .flame,
+  .spot.running .steam,
+  .spot.running .spark {
+    animation: none;
+  }
+}
+
+/* ---------- portraits of foes: an ink drawing in a round seal ---------- */
+.portrait {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(194, 78, 54, 0.55);
+  background: radial-gradient(circle at 50% 35%, #3a2a1f, #241a13 75%);
+  box-shadow:
+    inset 0 0 0 3px rgba(34, 28, 21, 0.9),
+    inset 0 0 0 4px rgba(194, 78, 54, 0.18);
+  color: var(--ink);
+}
+.portrait-pic {
+  width: 78%;
+  height: 78%;
+}
+.portrait-pic .thin {
+  stroke-width: 1.2;
+}
+.portrait-pic .thick {
+  stroke-width: 2.4;
+}
+.portrait-pic .mark {
+  stroke: var(--cinnabar-ink);
+  stroke-width: 1.4;
+}
+.portrait-pic .shade {
+  stroke: var(--faded);
+}
+.portrait-pic .eye {
+  fill: var(--cinnabar-ink);
+  stroke: none;
+}
+.portrait.s {
+  width: 30px;
+  height: 30px;
+  border-width: 1px;
+  box-shadow: none;
+}
+.portrait.l {
+  width: 58px;
+  height: 58px;
+}
+.portrait.out {
+  filter: grayscale(1);
+  opacity: 0.7;
+}
+/* a painted foe: a cell of an atlas inside the same round seal, on a warmer dark */
+.portrait.painted {
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 38%, #4a3626, #1c140e 74%);
+}
+.portrait-paint {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-size: 300% 300%;
+  transform: scale(1.06);
+}
+.portrait.xl {
+  width: 72px;
+  height: 72px;
+  border-width: 2px;
+}
+
+/* ---------- a fight that answers: foes step in, blows land, numbers rise ---------- */
+.foe {
+  animation: foe-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+@keyframes foe-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.foe-pic {
+  position: relative;
+  display: inline-grid;
+  flex: none;
+}
+.foe.struck .portrait {
+  border-color: var(--cinnabar-ink);
+}
+.foe.struck .portrait::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(216, 105, 76, 0.5), rgba(194, 78, 54, 0.15) 70%);
+  animation: struck-flash 0.5s ease-out forwards;
+}
+@keyframes struck-flash {
+  to {
+    opacity: 0;
+  }
+}
+/* a foe that is out is crossed with one stroke of cinnabar */
+.foe.out .portrait::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  left: -8%;
+  right: -8%;
+  top: 50%;
+  height: 2px;
+  background: var(--cinnabar-ink);
+  transform: rotate(-35deg);
+  transform-origin: center;
+  animation: out-slash 0.35s ease-out backwards;
+}
+@keyframes out-slash {
+  from {
+    transform: rotate(-35deg) scaleX(0);
+  }
+}
+.delta-pop {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: -8px;
+  font: 700 1rem/1 var(--sans);
+  white-space: nowrap;
+  text-shadow: 0 1px 3px #000;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: delta-rise 1s ease-out forwards;
+}
+.delta-pop.blow {
+  color: var(--cinnabar-ink);
+}
+.delta-pop.mend {
+  color: var(--verdigris);
+}
+@keyframes delta-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 6px) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -22px);
+  }
+}
+.fparty-hp {
+  position: relative;
+}
+.fparty li.struck .bar {
+  animation: bar-hit 0.5s ease-out;
+}
+@keyframes bar-hit {
+  0% {
+    box-shadow: 0 0 0 2px rgba(216, 105, 76, 0.7);
+  }
+}
+/* a blow to you: the edge of the fight reddens for a moment */
+.sheet.fight.hurt {
+  animation: hurt-edge 0.6s ease-out;
+}
+@keyframes hurt-edge {
+  0% {
+    box-shadow:
+      inset 0 0 70px rgba(194, 78, 54, 0.45),
+      var(--shadow);
+  }
+}
+/* a new day: its number rises over the page for a moment, then the page is the page again */
+.day-card {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  pointer-events: none;
+  background: radial-gradient(70% 44% at 50% 48%, rgba(22, 17, 12, 0.94), rgba(22, 17, 12, 0.5) 45%, rgba(22, 17, 12, 0) 78%);
+  animation: day-card 2.6s ease both;
+}
+.day-card span {
+  font: 600 0.9rem/1 var(--sans);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--faded);
+}
+.day-card b {
+  margin-top: 6px;
+  font: 700 4.2rem/1 var(--serif);
+  color: var(--ochre-ink);
+  animation: day-card-num 2.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes day-card {
+  0% {
+    opacity: 0;
+  }
+  14%,
+  72% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes day-card-num {
+  from {
+    transform: translateY(8px) scale(0.94);
+  }
+  30%,
+  to {
+    transform: none;
+  }
+}
+
+/* the fight is over: its outcome in one word, a breath, and the fight fades away */
+.fight-end {
+  margin: 10px 0 4px;
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  font-weight: 700;
+  text-align: center;
+  animation: fade-up 0.3s ease-out backwards;
+}
+.fight-end.win {
+  color: var(--ochre-ink);
+}
+.fight-end.lose {
+  color: var(--cinnabar-ink);
+}
+.fight-end.fled {
+  color: var(--gall);
+}
+@keyframes fight-out {
+  to {
+    opacity: 0;
+  }
+}
+@media (min-width: 960px) {
+  .portrait.xl {
+    width: 84px;
+    height: 84px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .foe,
+  .foe.struck .portrait::after,
+  .foe.out .portrait::before,
+  .fparty li.struck .bar,
+  .sheet.fight.hurt,
+  .fight-end,
+  .day-card b {
+    animation: none;
+  }
+  .delta-pop {
+    animation: none;
+    transform: translate(-50%, -14px);
+  }
+}
+.foe-body {
+  flex: 1;
+  min-width: 0;
+}
+.map-foes {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 2px 0 12px;
+  padding: 0;
+}
+.map-foes li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+.beast-face {
+  position: relative;
+  flex: none;
+}
+.beast-lvl {
+  position: absolute;
+  right: -4px;
+  bottom: -2px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--leaf-2);
+  border: 1px solid var(--rule-2);
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  color: var(--ink-2);
+}
+.person.beast {
+  gap: 14px;
+}
+
+/* ---------- grounds of the plans ---------- */
+.plan-ground .floor {
+  fill: url(#plan-floor);
+}
+.plan-ground .floor.salt {
+  fill: url(#plan-floor-salt);
+}
+.plan-ground .floor.bog {
+  fill: url(#plan-floor-bog);
+}
+.plan-ground .water {
+  fill: rgba(142, 165, 179, 0.13);
+}
+.plan-ground .water.dark {
+  fill: rgba(8, 10, 12, 0.6);
+}
+.plan-ground .wave,
+.plan-ground .ripple {
+  fill: none;
+  stroke: rgba(142, 165, 179, 0.32);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+.plan-ground .wet {
+  fill: none;
+  stroke: rgba(142, 165, 179, 0.2);
+  stroke-width: 6;
+}
+.plan-ground .fog {
+  fill: none;
+  stroke: rgba(230, 217, 188, 0.08);
+  stroke-width: 8;
+  stroke-linecap: round;
+}
+.plan-ground .wood,
+.plan-ground .log {
+  fill: none;
+  stroke: rgba(196, 154, 69, 0.42);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.plan-ground .log.thin {
+  stroke-width: 2.2;
+}
+.plan-ground .stone {
+  fill: rgba(230, 217, 188, 0.08);
+  stroke: rgba(230, 217, 188, 0.3);
+  stroke-width: 1.2;
+}
+.plan-ground .shell,
+.plan-ground .crack {
+  fill: none;
+  stroke: rgba(230, 217, 188, 0.2);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.plan-ground .crack.fine {
+  stroke-width: 1;
+  stroke: rgba(230, 217, 188, 0.12);
+}
+.plan-ground .puddle,
+.plan-ground .mud {
+  fill: rgba(10, 8, 6, 0.4);
+  stroke: rgba(142, 165, 179, 0.18);
+}
+.plan-ground .reed path {
+  fill: none;
+  stroke: rgba(141, 176, 143, 0.32);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+.plan-ground .reed.dry path {
+  stroke: rgba(196, 154, 69, 0.3);
+}
+.plan-ground .tree circle {
+  fill: rgba(34, 26, 19, 0.9);
+  stroke: rgba(230, 217, 188, 0.28);
+  stroke-width: 1.5;
+}
+.plan-ground .tree .ring {
+  fill: none;
+  stroke: rgba(230, 217, 188, 0.14);
+}
+.plan-ground .tree path {
+  fill: none;
+  stroke: rgba(230, 217, 188, 0.2);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.plan-ground .ridge {
+  fill: none;
+  stroke: rgba(141, 176, 143, 0.12);
+  stroke-width: 22;
+  stroke-linecap: round;
+}
+.plan-ground .moss {
+  fill: none;
+  stroke: rgba(141, 176, 143, 0.4);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.plan-ground .dam {
+  fill: rgba(230, 217, 188, 0.09);
+  stroke: rgba(230, 217, 188, 0.3);
+  stroke-width: 1.5;
+}
+.plan-ground .dam-lines {
+  fill: none;
+  stroke: rgba(230, 217, 188, 0.14);
+  stroke-width: 1;
+}
+.plan-ground .gate-slot {
+  fill: rgba(8, 10, 12, 0.7);
+  stroke: rgba(196, 154, 69, 0.4);
+}
+.plan-ground .stakes {
+  fill: none;
+  stroke: rgba(196, 154, 69, 0.45);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.plan-ground .smoke {
+  fill: none;
+  stroke: rgba(230, 217, 188, 0.14);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.place-head {
+  margin-bottom: 4px;
+}
+.place-head .desc {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  color: var(--faded);
+  line-height: 1.5;
+}
+.empty-note {
+  margin: 0 0 14px;
+  color: var(--pale);
+  font-style: italic;
+}
