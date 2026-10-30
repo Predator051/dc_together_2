@@ -292,6 +292,7 @@ export class Game {
   }
 
   bothOnline(): boolean {
+    if (this.s.solo) return this.joinedIds().every((pid) => this.p(pid).online);
     return PLAYER_IDS.every((pid) => this.p(pid).joined && this.p(pid).online);
   }
 
@@ -987,14 +988,25 @@ export class Game {
   }
 
   proposalBlock(def: SceneDef | PoolActionDef, pid: PlayerId): string | null {
+    if (this.s.solo) return this.soloBlock(def, pid);
     const o = this.p(this.other(pid));
     if (!o.joined || !o.online) return this.ix.ui('err_need_both');
+    if (o.remembering) return this.render(this.ix.ui('partner_remembering'), pid);
     const area = this.proposalArea(def, pid);
     if (o.travel) return `${this.render(this.ix.ui('partner_on_way'), pid)}`;
     if (o.at !== area) return `${this.render(this.ix.ui('partner_now'), pid)} ${this.ix.areaWhere(o.at)}.`;
     if (this.p(pid).fight !== null || o.fight !== null) return this.ix.ui('err_in_fight');
     if (this.s.scene) return this.s.scene.paused ? this.ix.ui('err_scene_paused') : this.ix.ui('err_in_scene');
     if (this.s.proposal) return this.ix.ui('err_proposal_pending');
+    if (def.enabled && !this.test(def.enabled, pid)) return def.disabledHint ? this.render(def.disabledHint, pid) : this.ix.ui('err_not_now');
+    if (!this.hasCostAll(def.cost)) return this.ix.ui('err_cost');
+    return null;
+  }
+
+  /** In a world for one: only one's own state stands in the way. */
+  private soloBlock(def: SceneDef | PoolActionDef, pid: PlayerId): string | null {
+    if (this.p(pid).fight !== null) return this.ix.ui('err_in_fight');
+    if (this.s.scene) return this.ix.ui('err_in_scene');
     if (def.enabled && !this.test(def.enabled, pid)) return def.disabledHint ? this.render(def.disabledHint, pid) : this.ix.ui('err_not_now');
     if (!this.hasCostAll(def.cost)) return this.ix.ui('err_cost');
     return null;
@@ -1029,12 +1041,14 @@ export class Game {
     const scene = entry.kind === 'scene' ? entry.def : this.pickFromPool(entry.def.pool);
     if (!scene) return this.fail('err_not_now');
     this.s.proposal = { scene: scene.id, via: def.id, by: pid, at: this.now };
+    // alone, nobody to agree: it begins at once
+    if (this.s.solo) return this.accept(pid);
     return OK;
   }
 
   accept(pid: PlayerId): Result {
     const pr = this.s.proposal;
-    if (!pr || pr.by === pid) return this.fail('err_not_now');
+    if (!pr || (pr.by === pid && !this.s.solo)) return this.fail('err_not_now');
     if (!this.bothOnline()) return this.fail('err_need_both');
     const via = this.ix.entry(pr.via);
     const area = via && via.kind !== 'act' ? this.proposalArea(via.def, pr.by) : this.ix.homeArea;

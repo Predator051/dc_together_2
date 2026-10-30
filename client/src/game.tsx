@@ -257,7 +257,7 @@ function Partner({ v, now, offset }: { v: PlayerView; now: number; offset: numbe
       </div>
     );
   const working = p.online && p.busy && p.busy.until > now ? p.busy : null;
-  const status = !p.online ? T.partnerOffline : working ? working.text : T.partnerIdle;
+  const status = !p.online ? T.partnerOffline : p.remembering ? T.partnerRemembering : working ? working.text : T.partnerIdle;
   return (
     <div class={`mate ${p.online ? 'on' : 'off'}`}>
       <span class={`avatar ${face ? 'painted' : ''}`} style={face ? { backgroundImage: `url(${face})` } : undefined}>
@@ -475,7 +475,22 @@ export function Game({ s }: { s: NetState }) {
         </p>
       )}
       <EventCards v={v} locked={locked} />
-      <AsksStrip v={v} locked={locked} desktop={desktop} />
+      {v.memories && v.atHome && !v.past && (
+        <button
+          type="button"
+          class="remember-btn"
+          disabled={locked || !v.memories.can}
+          title={v.memories.reason}
+          onClick={() => net.send({ c: 'remember', on: true })}
+        >
+          <IconFlame />
+          <span class="remember-text">
+            <b>{T.remember}</b>
+            <small>{v.memories.can ? T.rememberHint : v.memories.reason}</small>
+          </span>
+        </button>
+      )}
+      {!v.past && <AsksStrip v={v} locked={locked} desktop={desktop} />}
       {v.needs && <NeedsBar v={v} offset={s.offset} open={needsShown} onOpen={() => setNeedsOpen(!needsOpen)} />}
       {needsShown && <NeedsSheet v={v} offset={s.offset} desktop={desktop} locked={locked} onClose={() => setNeedsOpen(false)} />}
       {v.stove.text && (
@@ -526,7 +541,7 @@ export function Game({ s }: { s: NetState }) {
   );
 
   return (
-    <div class={`game ${s.connected || !s.lost ? '' : 'offline'}`}>
+    <div class={`game ${s.connected || !s.lost ? '' : 'offline'} ${v.past ? 'in-past' : ''}`}>
       <Ambient
         a={{
           ...v.ambient,
@@ -556,8 +571,16 @@ export function Game({ s }: { s: NetState }) {
           <SoundToggle />
           <span class={`net ${s.connected ? 'ok' : 'bad'}`} title={s.connected ? T.onlineDot : T.offlineDot} />
         </div>
-        <Partner v={v} now={now} offset={s.offset} />
+        {!v.past && <Partner v={v} now={now} offset={s.offset} />}
         {!s.connected && s.lost && <div class="warn-bar">{T.reconnecting}</div>}
+        {v.past && (
+          <div class="past-bar">
+            <span class="past-title">{v.past.title}</span>
+            <button type="button" class="past-back" disabled={!!v.fight} onClick={() => net.send({ c: 'remember', on: false })}>
+              {T.rememberBack}
+            </button>
+          </div>
+        )}
         {v.busyUntil > now && (
           <div class="me-progress" aria-hidden="true">
             <Fill key={v.busyUntil} from={v.busyFrom} until={v.busyUntil} offset={s.offset} cls="" />

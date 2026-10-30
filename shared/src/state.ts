@@ -24,6 +24,8 @@ export interface PlayerState {
   busy: { action: string; until: number } | null;
   /** Runtime only; reset to false on load. */
   online: boolean;
+  /** In the hero's own past (`.design/personal.md` §3): sitting by the fire at home, needs held. */
+  remembering?: boolean;
   lastSeen: number;
   /** What the world looked like when this player left (v3). */
   away: Snapshot | null;
@@ -416,6 +418,10 @@ export interface WorldState {
   afterFight?: Partial<Record<PlayerId, { at: number; how: 'win' | 'lose' | 'fled'; fight: FightState; loot?: Record<string, number> }>>;
   /** What one hero has asked the other to bring home (the asks board); counted as the other brings it. */
   asks?: AskState[];
+  /** A world for one hero (the past): scenes start at once, nobody waits for a partner. */
+  solo?: boolean;
+  /** The heroes' pasts, one world each (only in the main world). */
+  past?: Partial<Record<PlayerId, WorldState>>;
   /** The hard road is on (both agreed). */
   hard?: boolean;
   /** One proposed the hard road; the other has not answered yet. */

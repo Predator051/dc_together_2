@@ -1319,6 +1319,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
       role: o.role,
       roleTitle: o.joined ? g.roleTitle(other) : '',
       online: o.joined && o.online,
+      ...(o.remembering ? { remembering: true } : {}),
       area: o.at,
       where: g.ix.areaWhere(o.at),
       busy: partnerBusy,

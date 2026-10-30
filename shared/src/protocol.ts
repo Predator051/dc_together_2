@@ -57,6 +57,8 @@ export type Command =
   | { c: 'harvest'; bed: number }
   /** The asks board: ask the other to bring n of a thing home; take an ask of mine back. */
   | { c: 'ask'; res: string; n: number }
+  /** Go into one's own past (memories) from the fire at home, or come back. */
+  | { c: 'remember'; on: boolean }
   /** Propose / agree to the hard road, or turn it off. */
   | { c: 'hard'; on: boolean }
   | { c: 'unask'; id: number };
@@ -193,6 +195,8 @@ export interface PartnerView {
   role: Role | null;
   roleTitle: string;
   online: boolean;
+  /** In their own past (memories). */
+  remembering?: boolean;
   area: string;
   where: string;
   busy: { text: string; from: number; until: number } | null;
@@ -881,6 +885,10 @@ export interface WeatherView {
 
 export interface PlayerView {
   now: number;
+  /** In the main world: whether one can go into one's past now (absent: there is no past for this hero). */
+  memories?: { can: boolean; reason?: string };
+  /** In one's past: its name (the screen is the same, the world is another). */
+  past?: { title: string };
   me: MeView;
   partner: PartnerView;
   day: number;

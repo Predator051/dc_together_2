@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { content } from '../../content/index.js';
+import { pasts } from '../../content/past/index.js';
 import { startServer } from './main.js';
 import { pruneBackups, Storage } from './storage.js';
 
@@ -42,7 +43,9 @@ if (existsSync(legacyPath)) {
   }
 }
 
-const running = await startServer({ content, dbPath, port, clientDir, inviteCode, log, legacy });
+// PAST_DEMO=1 (a local check of the way into memories): the main story stands in for both pasts
+const demo = process.env.PAST_DEMO ? { hunter: { ...content, pastTitle: 'Спогади (перевірка)' }, maker: { ...content, pastTitle: 'Спогади (перевірка)' } } : undefined;
+const running = await startServer({ content, dbPath, port, clientDir, inviteCode, log, legacy, pasts: demo ?? pasts });
 log(`Server listening on port ${running.port}`);
 log(`Invite code: ${running.game.formattedCode}`);
 

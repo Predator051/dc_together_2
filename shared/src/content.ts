@@ -1126,6 +1126,8 @@ export interface Content {
   };
   /** Side errands. */
   quests?: QuestDef[];
+  /** A past of one hero (`.design/personal.md` §3): its name on the screen while remembering. */
+  pastTitle?: string;
   /** What one can do alone before a together scene. */
   preps?: PrepDef[];
   /** Trades residents grow in (see `.design/residents2.md`). */
