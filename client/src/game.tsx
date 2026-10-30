@@ -1152,7 +1152,7 @@ export function Game({ s }: { s: NetState }) {
   );
 
   return (
-    <div class={`game ${s.connected ? '' : 'offline'}`}>
+    <div class={`game ${s.connected || !s.lost ? '' : 'offline'}`}>
       <Ambient
         a={{
           ...v.ambient,
@@ -1183,7 +1183,7 @@ export function Game({ s }: { s: NetState }) {
           <span class={`net ${s.connected ? 'ok' : 'bad'}`} title={s.connected ? T.onlineDot : T.offlineDot} />
         </div>
         <Partner v={v} now={now} offset={s.offset} />
-        {!s.connected && <div class="warn-bar">{T.reconnecting}</div>}
+        {!s.connected && s.lost && <div class="warn-bar">{T.reconnecting}</div>}
         {v.busyUntil > now && (
           <div class="me-progress" aria-hidden="true">
             <Fill key={v.busyUntil} from={v.busyFrom} until={v.busyUntil} offset={s.offset} cls="" />

@@ -86,21 +86,33 @@ export async function startServer(o: StartOptions): Promise<Running> {
     ws.on('error', () => ws.terminate());
   });
 
+  // a socket that misses two pings in a row is gone (one may be lost on a slow phone link)
+  const missed = new WeakMap<WebSocket, number>();
   const heartbeat = setInterval(() => {
     for (const ws of wss.clients) {
-      if (!alive.get(ws)) {
+      const n = alive.get(ws) ? 0 : (missed.get(ws) ?? 0) + 1;
+      if (n >= 2) {
         ws.terminate();
         continue;
       }
+      missed.set(ws, n);
       alive.set(ws, false);
       ws.ping();
     }
-  }, 30_000);
+  }, 20_000);
 
+  // a fault in the world's clock must not bring the server down (everyone would be cut off): it is logged
+  const guarded = (what: string, fn: () => void) => () => {
+    try {
+      fn();
+    } catch (e) {
+      o.log?.(`Error in ${what}: ${(e as Error).stack ?? e}`);
+    }
+  };
   const timers: NodeJS.Timeout[] = [heartbeat];
   if (o.autoTick !== false) {
-    timers.push(setInterval(() => game.tick(), 1000));
-    timers.push(setInterval(() => game.flush(), 2000));
+    timers.push(setInterval(guarded('tick', () => game.tick()), 1000));
+    timers.push(setInterval(guarded('flush', () => game.flush()), 2000));
   }
 
   await new Promise<void>((res) => http.listen(o.port, o.host ?? '0.0.0.0', () => res()));

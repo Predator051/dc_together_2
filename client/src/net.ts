@@ -35,6 +35,8 @@ export interface NetState {
   deltas: Array<{ id: number; by: 'me' | 'partner' | 'both'; items: DeltaItem[] }>;
   /** The view may be outdated (tab was hidden, connection dropped): buttons stay disabled. */
   stale: boolean;
+  /** The link has been down longer than a blink: the banner shows. */
+  lost: boolean;
   /** A command is on its way to the server: buttons stay disabled until it answers. */
   pending: boolean;
 }
@@ -53,6 +55,7 @@ export class Net {
     deltas: [],
     stale: true,
     pending: false,
+    lost: false,
   };
   /** Clock samples (server time − local receive time). Each one is ≤ the true offset. */
   private samples: Array<{ offset: number; at: number }> = [];
@@ -66,6 +69,9 @@ export class Net {
   private pingTimer: number | undefined;
   private reconnectTimer: number | undefined;
   private memToken: string | null = null;
+  /** When anything last came from the server (a dead link answers nothing). */
+  private heardAt = 0;
+  private lostTimer: number | undefined;
 
   constructor() {
     if (!this.token) this.state.phase = 'auth';
@@ -73,6 +79,11 @@ export class Net {
       if (document.visibilityState !== 'visible') return;
       if (!this.state.connected) {
         this.connect();
+        return;
+      }
+      // a phone back from the pocket may hold a socket that died long ago: start over at once
+      if (Date.now() - this.heardAt > 45_000) {
+        this.ws?.close();
         return;
       }
       // Never trust what was on screen while hidden: ask for the current state first.
@@ -102,13 +113,23 @@ export class Net {
     ws.onopen = () => {
       this.backoff = 500;
       this.samples = [];
-      this.set({ connected: true });
+      this.heardAt = Date.now();
+      window.clearTimeout(this.lostTimer);
+      this.set({ connected: true, lost: false });
       const tok = this.token ?? this.memToken;
       if (tok) this.raw({ t: 'hello', token: tok });
       window.clearInterval(this.pingTimer);
-      this.pingTimer = window.setInterval(() => this.raw({ t: 'ping' }), 25000);
+      this.pingTimer = window.setInterval(() => {
+        // nothing heard for long (not even the answer to the last ping): the link is dead, reconnect
+        if (Date.now() - this.heardAt > 45_000) {
+          ws.close();
+          return;
+        }
+        this.raw({ t: 'ping' });
+      }, 15000);
     };
     ws.onmessage = (ev) => {
+      this.heardAt = Date.now();
       let msg: ServerMsg;
       try {
         msg = JSON.parse(String(ev.data)) as ServerMsg;
@@ -118,8 +139,13 @@ export class Net {
       this.onMessage(msg);
     };
     ws.onclose = () => {
+      // an old socket closing late must not touch the new one
+      if (this.ws !== ws) return;
       window.clearInterval(this.pingTimer);
       this.set({ connected: false, stale: true, pending: false });
+      // the banner waits a moment: a link that comes straight back is not worth a word
+      window.clearTimeout(this.lostTimer);
+      this.lostTimer = window.setTimeout(() => this.set({ lost: true }), 2500);
       this.ws = null;
       this.reconnectTimer = window.setTimeout(() => this.connect(), this.backoff);
       this.backoff = Math.min(this.backoff * 2, 5000);
