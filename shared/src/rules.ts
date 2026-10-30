@@ -293,6 +293,9 @@ export const FOE = {
   rampTo: 4,
   /** A charge that lands. */
   charge: 2.5,
+  /** A wide swing, on each one still standing in its sweep; rounds before it can swing so again. */
+  sweep: 1.6,
+  sweepRest: 3,
   /** Foes this many levels under the weakest hero can be driven off without a fight. */
   rout: 3,
 };

@@ -54,6 +54,7 @@ const INTENT_ICON: Record<string, () => JSX.Element> = {
   attack: () => <path d="M5 19L17 7M14 5l5 0 0 5M7 14l3 3" />,
   venom: () => <path d="M12 4c3 5 5 7 5 10a5 5 0 0 1-10 0c0-3 2-5 5-10z" />,
   charge: () => <path d="M3 12h10M9 7l5 5-5 5M13 12h6M16 8l4 4-4 4" />,
+  sweep: () => <path d="M4 15a8 8 0 0 1 16 0M20 15l-3-1M20 15l1-3M4 15l3-1M4 15l-1-3M12 15v-4" />,
   grab: () => <path d="M7 13V7a1.5 1.5 0 0 1 3 0v4M10 11V5.5a1.5 1.5 0 0 1 3 0V11M13 11V6.5a1.5 1.5 0 0 1 3 0V13c0 4-2 6-5 6s-5-2-6-5l-1-3" />,
   drag: () => <path d="M3 8c3 2 6 2 9 0s6-2 9 0M3 14c3 2 6 2 9 0s6-2 9 0M12 4v16" />,
   leech: () => <path d="M6 16c0-5 3-9 7-9 3 0 5 2 5 5s-3 6-7 6c-3 0-5-1-5-2zM16 10l3-2" />,
@@ -563,7 +564,7 @@ function FoeSeal({ x, v, c, beat, style, chosen, active, onPick }: { x: Foe; v: 
       <span class="seal-body">
         <Portrait icon={x.icon} size="m" />
         {x.move && !x.stunned && x.move !== 'none' && (
-          <span class={`seal-intent ${x.aim === v.me.pid ? 'at-me' : ''} ${x.move === 'charge' || x.move === 'call' ? 'loud' : ''}`}>
+          <span class={`seal-intent ${x.aim === v.me.pid ? 'at-me' : ''} ${x.move === 'charge' || x.move === 'call' || x.move === 'sweep' ? 'loud' : ''}`}>
             <IntentMark move={x.move} />
           </span>
         )}

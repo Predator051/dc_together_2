@@ -219,7 +219,7 @@ export class Bot {
     if (has('rout')) return { c: 'fight', id: 'rout' };
     const tech = (t: string, uid?: number) => moves.find((m) => m.tech === t && (uid === undefined || m.target === uid));
     // a charge marked at me: off the line, or take it on a stance
-    const lane = live.find((x) => x.move === 'charge' && x.line?.some((c) => c[0] === at[0] && c[1] === at[1]));
+    const lane = live.find((x) => (x.move === 'charge' || x.move === 'sweep') && x.line?.some((c) => c[0] === at[0] && c[1] === at[1]));
     if (lane) {
       const off = f.reach
         .filter((r) => !lane.line!.some((c) => c[0] === r.c[0] && c[1] === r.c[1]))

@@ -225,6 +225,8 @@ export interface FoeState {
   taunt?: PlayerId;
   /** Pinned by a shot: on its next turn it does not leave its cell. */
   rooted?: boolean;
+  /** The round it last swung all round (a wide swing is gathered again for a while). */
+  sweptAt?: number;
 }
 
 /** One beat of a fight, for it to be played out on screen: who did what to whom. */
@@ -244,7 +246,7 @@ export interface FightEvent {
 export interface Intent {
   move: string;
   target?: PlayerId;
-  /** The run of a charge. */
+  /** The run of a charge; the cells a wide swing will sweep. */
   line?: Array<[number, number]>;
 }
 

@@ -972,8 +972,8 @@ function daze(g: Game, f: FightState, foe: FoeState): boolean {
   foe.stun = true;
   foe.stunAt = f.round;
   foe.holds = null;
-  // a dazed beast forgets the charge it was gathering
-  if (foe.intent?.move === 'charge') foe.intent = { move: 'none' };
+  // a dazed foe forgets the charge or the swing it was gathering
+  if (foe.intent?.move === 'charge' || foe.intent?.move === 'sweep') foe.intent = { move: 'none' };
   say(g, f, 'fight_stun', null, foeVars(g, foe, f));
   ev(f, { a: fid(foe), k: 'stun' });
   openUp(g, f, foe);
@@ -1230,7 +1230,7 @@ function heroActs(g: Game, f: FightState, pid: PlayerId, pick: string): void {
         heroHits(g, f, pid, foe);
         (f.guard ??= {})[pid] = Math.max(f.guard[pid] ?? 0, PERK.rollGuard);
       } else if (heroHits(g, f, pid, foe, { mult: PERK.ramMult }) > 0 && !foe.out) {
-        if (foe.intent?.move === 'charge') foe.intent = { move: 'none' };
+        if (foe.intent?.move === 'charge' || foe.intent?.move === 'sweep') foe.intent = { move: 'none' };
         if (g.rng.chance(PERK.ramOpen)) openUp(g, f, foe);
       }
       return;
@@ -1249,7 +1249,7 @@ function heroActs(g: Game, f: FightState, pid: PlayerId, pick: string): void {
       const fld = fieldOf(f);
       const inside = back[0] >= 0 && back[1] >= 0 && back[0] < fld.w && back[1] < fld.h;
       const free = inside && !taken(g, f, fid(foe)).has(key(back)) && (swimmer(enemyOf(g, foe.enemy)) || standable(fld, back));
-      if (foe.intent?.move === 'charge') foe.intent = { move: 'none' };
+      if (foe.intent?.move === 'charge' || foe.intent?.move === 'sweep') foe.intent = { move: 'none' };
       if (free) {
         ev(f, { a: fid(foe), k: 'move', path: [back] });
         foe.pos = back;

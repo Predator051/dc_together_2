@@ -398,7 +398,7 @@ export interface FoeEntry {
   if?: Cond;
 }
 
-export type EnemyMoveKind = 'attack' | 'charge' | 'grab' | 'steal' | 'call' | 'venom' | 'leech' | 'guard' | 'drag';
+export type EnemyMoveKind = 'attack' | 'charge' | 'grab' | 'steal' | 'call' | 'venom' | 'leech' | 'guard' | 'drag' | 'sweep';
 
 export interface EnemyMove {
   move: EnemyMoveKind;

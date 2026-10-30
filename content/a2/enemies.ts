@@ -61,19 +61,20 @@ export const enemies2: EnemyDef[] = [
     ai: [
       { move: 'attack', w: 4 },
       { move: 'grab', w: 1 },
+      { move: 'sweep' },
     ],
     calls: E2.snatcher,
     phases: [
       {
         below: 0.6,
         text: 'Гак відступає за частокіл і свистить у два пальці. — Сіті! Живими!',
-        ai: [{ move: 'grab', w: 2 }, { move: 'attack', w: 3 }],
+        ai: [{ move: 'grab', w: 2 }, { move: 'attack', w: 3 }, { move: 'sweep' }],
         add: [{ enemy: E2.snatcher, n: 1 }],
       },
       {
         below: 0.3,
         text: 'Гак скидає сіть і береться за гак обіруч. Тепер він б\'є, щоб збити, а не щоб узяти.',
-        ai: [{ move: 'call', once: true, every: 1 }, { move: 'attack', w: 3 }],
+        ai: [{ move: 'call', once: true, every: 1 }, { move: 'attack', w: 3 }, { move: 'sweep' }],
         armor: 3,
       },
     ],

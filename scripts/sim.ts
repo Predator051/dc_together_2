@@ -8,6 +8,8 @@ import type { PlayerId, Slot } from '../shared/src/content.js';
 import { perkState, xpForLevel } from '../shared/src/rules.js';
 import { ContentIndex, Game, newWorld } from '../server/src/engine/index.js';
 import { startFight } from '../server/src/engine/fight.js';
+import { fieldFrom } from '../server/src/engine/terrain.js';
+import type { FightNode } from '../shared/src/content.js';
 import { refreshHero } from '../server/src/engine/hero.js';
 import { buildView } from '../server/src/engine/view.js';
 import { Bot, PERK_PLAN } from '../tests/bot.js';
@@ -121,7 +123,16 @@ export interface SimResult {
   hpLeft: number;
 }
 
+/** The drawn field of the story fight with exactly these foes, if it has one (bosses fight on their own ground). */
+function storyField(foes: Array<{ enemy: string; n?: number }>): FightNode['field'] {
+  const same = (a: typeof foes, b: typeof foes) => a.length === b.length && a.every((x, i) => x.enemy === b[i]!.enemy && (x.n ?? 1) === (b[i]!.n ?? 1));
+  for (const sc of content.scenes)
+    for (const n of Object.values(sc.nodes)) if (n.type === 'fight' && n.field && same(n.foes, foes)) return n.field;
+  return undefined;
+}
+
 export function simulate(foes: Array<{ enemy: string; n?: number }>, stage: string, who: 'both' | 'hunter' | 'maker', runs = 400): SimResult {
+  const drawn = storyField(foes);
   let wins = 0;
   let rounds = 0;
   let hpLeft = 0;
@@ -130,7 +141,8 @@ export function simulate(foes: Array<{ enemy: string; n?: number }>, stage: stri
     let g = makeWorld(kit, 1000 + i * 7, who);
     const party = (['p1', 'p2'] as PlayerId[]).filter((pid) => g.s.players[pid].online);
     lastResult = null;
-    const f = startFight(g, 'a_02', foes, { party, scene: true });
+    const fld = drawn ? fieldFrom(drawn.rows, drawn.ground) : null;
+    const f = startFight(g, 'a_02', foes, { party, scene: true, ...(fld ? { field: fld.field, starts: { heroes: fld.heroes, foes: fld.foes } } : {}) });
     const bots = { p1: new Bot('p1', content, { seed: i }), p2: new Bot('p2', content, { seed: i + 1 }) };
     let won = false;
     let k = 0;

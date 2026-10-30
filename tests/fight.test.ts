@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { PlayerId } from '../shared/src/content.js';
-import { defeat, fightOf, startFight } from '../server/src/engine/fight.js';
+import { defeat, fightOf, isOpen, startFight } from '../server/src/engine/fight.js';
+import { foeTurn } from '../server/src/engine/tactics.js';
+import { E2 } from '../content/a2/ids.js';
 import { fieldFrom, fieldProblems } from '../server/src/engine/terrain.js';
 import { refreshHero } from '../server/src/engine/hero.js';
 import { pair, World } from './world.js';
@@ -385,6 +387,34 @@ describe('fights', () => {
     turnOf(w, h);
     w.cmd(h, { c: 'fight', id: 'end' });
     expect(foe.pos).toEqual([3, 1]);
+  });
+
+  it('a strong foe pressed close marks a wide swing: who steps out is spared and finds it open, who stays is struck', () => {
+    for (const stay of [false, true]) {
+      const { w, h, m } = field();
+      const g = w.g();
+      const d = fieldFrom(['...f...', '.......', '.......', '.......', '.......', '.......', '.......', '..h.h..'], 'grass');
+      const f = startFight(g, 'a_02', [{ enemy: E2.hook }], { party: [h, m], field: d.field, starts: { heroes: d.heroes, foes: d.foes } });
+      const foe = f.foes[0]!;
+      for (let i = 0; i < 30 && foe.intent?.move !== 'sweep'; i++) {
+        foe.pos = [3, 3];
+        put(f, h, [3, 4]);
+        put(f, m, [2, 4]);
+        foe.sweptAt = undefined;
+        foe.intent = null;
+        foeTurn(g, f, foe);
+      }
+      expect(foe.intent?.move).toBe('sweep');
+      expect(foe.intent?.line).toContainEqual([3, 4]);
+      if (!stay) {
+        put(f, h, [3, 6]);
+        put(f, m, [2, 6]);
+      }
+      foeTurn(g, f, foe);
+      expect(foe.intent).toBeNull();
+      expect(f.lines[h].some((l) => l.includes('широко'))).toBe(stay);
+      expect(isOpen(f, foe)).toBe(!stay);
+    }
   });
 
   it('a will of iron always breaks a hold', () => {
