@@ -100,6 +100,34 @@
   font-size: 0.78rem;
   color: var(--verdigris);
 }
+/* the hard road */
+.hard {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+}
+.hard-head {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+  color: var(--faded);
+}
+.hard-head b {
+  margin-right: 6px;
+  color: var(--ink);
+}
+.hard.on .hard-head b,
+.hard.on .hard-head {
+  color: var(--cinnabar-ink);
+}
+.hard.asked .hard-head {
+  color: var(--ochre-ink);
+}
+.hard-text {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--faded);
+}
 /* past the act's ceiling: ranks of temper */
 .temper {
   margin-top: 12px;

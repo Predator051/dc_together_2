@@ -151,6 +151,7 @@ export function simulate(foes: Array<{ enemy: string; n?: number }>, stage: stri
     const party = (['p1', 'p2'] as PlayerId[]).filter((pid) => g.s.players[pid].online);
     lastResult = null;
     const fld = drawn ? fieldFrom(drawn.rows, drawn.ground) : null;
+    if (process.env.HARD) g.s.hard = true;
     const f = startFight(g, 'a_02', foes, { party, scene: true, ...(fld ? { field: fld.field, starts: { heroes: fld.heroes, foes: fld.foes } } : {}) });
     if (elite) makeElite(g, f, f.foes[0]!);
     const bots = { p1: new Bot('p1', content, { seed: i }), p2: new Bot('p2', content, { seed: i + 1 }) };

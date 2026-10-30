@@ -57,6 +57,8 @@ export type Command =
   | { c: 'harvest'; bed: number }
   /** The asks board: ask the other to bring n of a thing home; take an ask of mine back. */
   | { c: 'ask'; res: string; n: number }
+  /** Propose / agree to the hard road, or turn it off. */
+  | { c: 'hard'; on: boolean }
   | { c: 'unask'; id: number };
 
 export type ClientMsg =
@@ -503,6 +505,11 @@ export interface PrepView {
   items: Array<{ id: string; text: string; role?: Role; mine: boolean; done: boolean; gives?: string }>;
 }
 
+export interface HardView {
+  on: boolean;
+  asked: 'me' | 'mate' | null;
+}
+
 export interface MapNodeView {
   id: string;
   name: string;
@@ -913,6 +920,8 @@ export interface PlayerView {
   larder: LarderView | null;
   /** The asks board: what each asked the other to bring. */
   asks: AskView[];
+  /** The hard road: on, and who proposed it if it waits for an answer (null before the partner joins). */
+  hard: HardView | null;
   bestiary: BeastView[];
   /** Panels opened so far (the interface grows with the game). */
   tabs: string[];

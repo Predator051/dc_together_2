@@ -66,6 +66,10 @@ export function temperCost(cap: number, rank: number): number {
   return Math.round((xpForLevel(cap + 1) - xpForLevel(cap)) * Math.pow(TEMPER.grow, rank - 1));
 }
 
+/** The hard road (both agree): foes stronger, seasoned ones twice as often, spoils and experience richer. */
+/** Bosses (foes with phases) get only a little more, or the story would stall. */
+export const HARD = { hp: 1.15, dmg: 1.1, bossHp: 1.1, bossDmg: 1.05, elite: 2, xp: 1.3, loot: 1.5 };
+
 /** The one who is behind learns twice as fast for a while after being away (per hour away, at most). */
 export const CATCH = { perHour: 30, most: 300 };
 

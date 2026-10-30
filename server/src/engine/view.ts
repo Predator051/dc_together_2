@@ -23,6 +23,7 @@ import type {
 import type { FightState } from '../../../shared/src/state.js';
 import type { Game } from './index.js';
 import { questProgress } from './index.js';
+import { hardView } from './hard.js';
 import { resolveParas } from './text.js';
 import { SKILLS, SLOTS, STATS, type SkillId } from '../../../shared/src/content.js';
 import type { BagView, BeastView, EntrySort, PrepView, FightView, HeroView, LarderView, MapView, ResidentView, WeatherView, YardPieceView } from '../../../shared/src/protocol.js';
@@ -1354,6 +1355,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     residents: residentsView(g, pid),
     larder: larderView(g),
     asks: asksView(g, pid),
+    hard: hardView(g, pid),
     bestiary: bestiaryView(g, pid),
     tabs: tabsOf(g, pid),
     atHome: g.atHome(pid),

@@ -60,6 +60,7 @@ import {
 } from './hero.js';
 import { activeFoes, dropFight, fightChoose, fightOf, help, maybeResolve, startFight, takeLoot } from './fight.js';
 import { ask, credit, unask } from './asks.js';
+import { setHard } from './hard.js';
 import { fieldFrom } from './terrain.js';
 import { ambush, areaDef, areaKnown, go, linkTime, settleTravel } from './travel.js';
 import { folkGear, setFeed, setJob, settleWork, teach } from './household.js';
@@ -1694,6 +1695,9 @@ export class Game {
         break;
       case 'ask':
         r = ask(this, pid, cmd.res, cmd.n);
+        break;
+      case 'hard':
+        r = setHard(this, pid, cmd.on);
         break;
       case 'unask':
         r = unask(this, pid, cmd.id);

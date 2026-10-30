@@ -3,7 +3,7 @@
 // Strong moves come from what the hero holds; a dazed or open foe is the other one's chance. The foes'
 // minds are in tactics.ts.
 import type { EnemyDef, EnemyMove, PlayerId, TraitId } from '../../../shared/src/content.js';
-import { FOE, PERK, TECH, foeRamp, foeXpFactor, hitChance } from '../../../shared/src/rules.js';
+import { FOE, HARD, PERK, TECH, foeRamp, foeXpFactor, hitChance } from '../../../shared/src/rules.js';
 import { coverFrom, dist, feature, key, neighbours, reach, run, sees, type Cell, type Field } from '../../../shared/src/field.js';
 import type { FightEvent, FightState, FoeState } from '../../../shared/src/state.js';
 import { addBag, gainSkill, gainXp, heroOf, refreshHero } from './hero.js';
@@ -228,7 +228,7 @@ function toughen(g: Game, f: FightState): void {
 
 export function newFoe(g: Game, f: FightState, enemy: string): FoeState {
   const def = enemyOf(g, enemy);
-  const hp = foeHp(def, !!f.duo && (!!def.phases || !bossFight(g, f)));
+  const hp = Math.round(foeHp(def, !!f.duo && (!!def.phases || !bossFight(g, f))) * (f.hard ? (def.phases ? HARD.bossHp : HARD.hp) : 1));
   return {
     uid: f.nextUid++,
     enemy,
@@ -313,6 +313,7 @@ export function startFight(
     fled: [],
     startedAt: g.now,
     duo: party.length > 1,
+    ...(g.s.hard ? { hard: true } : {}),
     field: opts.field ?? makeField(g.rng, g.ix.c.areas.find((a) => a.id === area)?.scene),
     pos: {},
     order: [],
@@ -365,7 +366,7 @@ function seasonedOne(g: Game, f: FightState): FoeState | undefined {
   const low = Math.min(...f.party.map((pid) => g.p(pid).level));
   if (low < FOE.elite.from) return undefined;
   const fit = activeFoes(f).filter((x) => enemyOf(g, x.enemy).level > low - FOE.rout);
-  if (!fit.length || !g.rng.chance(FOE.elite.p)) return undefined;
+  if (!fit.length || !g.rng.chance(FOE.elite.p * (f.hard ? HARD.elite : 1))) return undefined;
   return fit.sort((a, b) => enemyOf(g, b.enemy).level - enemyOf(g, a.enemy).level)[0];
 }
 
@@ -1157,7 +1158,7 @@ export function foeStrikes(g: Game, f: FightState, foe: FoeState, target: Player
     return 0;
   }
   const duo = !!f.duo && (!!def.phases || !bossFight(g, f));
-  let n = g.rng.int(def.dmg[0], def.dmg[1]) * dmgMult(def, duo) * (foe.elite ? FOE.elite.dmg : 1);
+  let n = g.rng.int(def.dmg[0], def.dmg[1]) * dmgMult(def, duo) * (foe.elite ? FOE.elite.dmg : 1) * (f.hard ? (def.phases ? HARD.bossDmg : HARD.dmg) : 1);
   if (def.traits.includes('night') && g.isEvening()) {
     n = n * 1.3;
     reveal(g, f, foe.enemy, 'night');
@@ -1578,7 +1579,9 @@ function finishFight(g: Game, f: FightState, how: 'win' | 'lose' | 'fled'): void
         if (f.routed) for (const [id, [a, z]] of Object.entries(def.loot ?? {})) loot[id] = (loot[id] ?? 0) + g.rng.int(a, z);
       }
     }
-    for (const pid of party) xpOf[pid] = Math.round(xpOf[pid] * (skyAt(g, f.area)?.xp ?? 1));
+    for (const pid of party) xpOf[pid] = Math.round(xpOf[pid] * (skyAt(g, f.area)?.xp ?? 1) * (f.hard ? HARD.xp : 1));
+    // the hard road pays: more of everything that was taken
+    if (f.hard) for (const id of Object.keys(loot)) loot[id] = Math.round(loot[id]! * HARD.loot);
     const standing = party.filter((pid) => !f.down.includes(pid) && !f.fled.includes(pid));
     const takers = standing.length ? standing : party;
     // the loot is shared out now (one thing each in turn); each takes their share from the field (takeLoot)

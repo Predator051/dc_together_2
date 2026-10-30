@@ -452,6 +452,10 @@ function validCommand(cmd: unknown): Command | null {
       if (typeof x.res !== 'string' || x.res.length > 64 || typeof x.n !== 'number' || !Number.isInteger(x.n) || x.n < 1 || x.n > 99) return null;
       return { c: 'ask', res: x.res, n: x.n };
     }
+    case 'hard': {
+      const x = cmd as { on?: unknown };
+      return typeof x.on === 'boolean' ? { c: 'hard', on: x.on } : null;
+    }
     case 'unask': {
       const x = cmd as { id?: unknown };
       if (typeof x.id !== 'number' || !Number.isInteger(x.id) || x.id < 0) return null;

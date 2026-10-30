@@ -285,6 +285,8 @@ export interface FightState {
   aim?: PlayerId[];
   /** Foes already made tougher for two heroes. */
   duo?: boolean;
+  /** Fought on the hard road. */
+  hard?: boolean;
   /** The latest beats (numbered). */
   events?: FightEvent[];
   seq?: number;
@@ -414,5 +416,9 @@ export interface WorldState {
   afterFight?: Partial<Record<PlayerId, { at: number; how: 'win' | 'lose' | 'fled'; fight: FightState; loot?: Record<string, number> }>>;
   /** What one hero has asked the other to bring home (the asks board); counted as the other brings it. */
   asks?: AskState[];
+  /** The hard road is on (both agreed). */
+  hard?: boolean;
+  /** One proposed the hard road; the other has not answered yet. */
+  hardAsk?: { by: PlayerId; at: number } | null;
   nextAskId?: number;
 }

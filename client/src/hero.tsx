@@ -236,6 +236,7 @@ function HeroCard({ v, onGrowth }: { v: PlayerView; onGrowth: () => void }) {
         </p>
       )}
       {h.temper && <TemperBox t={h.temper} />}
+      {v.hard && <HardBox h={v.hard} />}
       {(h.points > 0 || h.perkPoints > 0) && (
         <button type="button" class="hero-call" onClick={onGrowth}>
           <span class="hero-call-dot" />
@@ -244,6 +245,34 @@ function HeroCard({ v, onGrowth }: { v: PlayerView; onGrowth: () => void }) {
         </button>
       )}
     </section>
+  );
+}
+
+/** The hard road: proposed by one, agreed by the other; either turns it off. */
+function HardBox({ h }: { h: NonNullable<PlayerView['hard']> }) {
+  const note = h.on ? T.hardOn : h.asked === 'me' ? T.hardAskedMe : h.asked === 'mate' ? T.hardAskedMate : T.hardOff;
+  return (
+    <div class={`hard ${h.on ? 'on' : ''} ${h.asked === 'mate' ? 'asked' : ''}`}>
+      <p class="hard-head">
+        <b>{T.hard}</b> {note}
+      </p>
+      <p class="hard-text">{T.hardText}</p>
+      <div class="hard-btns">
+        {h.on ? (
+          <button type="button" class="btn small" onClick={() => net.send({ c: 'hard', on: false })}>
+            {T.hardTurnOff}
+          </button>
+        ) : h.asked === 'me' ? (
+          <button type="button" class="btn small" onClick={() => net.send({ c: 'hard', on: false })}>
+            {T.hardTakeBack}
+          </button>
+        ) : (
+          <button type="button" class="btn small" onClick={() => net.send({ c: 'hard', on: true })}>
+            {h.asked === 'mate' ? T.hardAgree : T.hardPropose}
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
