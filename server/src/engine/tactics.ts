@@ -103,6 +103,7 @@ export function foeTurn(g: Game, f: FightState, foe: FoeState): void {
     foe.holds = null;
   }
   if (foe.intent?.move === 'charge' && foe.intent.line) return charge(g, f, foe, foe.intent.line);
+  if (foe.intent?.move === 'sweep' && foe.intent.line) return sweep(g, f, foe, foe.intent.line);
   // pinned by a shot: it strikes only who stands by, and does not leave its cell
   if (foe.rooted) {
     foe.rooted = false;
@@ -114,6 +115,17 @@ export function foeTurn(g: Game, f: FightState, foe: FoeState): void {
   const heroes = alive(g, f).filter((pid) => heroPos(f, pid));
   if (!heroes.length) return;
   const near = heroes.some((pid) => adjacent(heroPos(f, pid), foe.pos));
+  // pressed close: it gathers a wide swing at all who stand round it (more readily when both do)
+  if (has(g, foe, 'sweep') && near && (foe.sweptAt === undefined || f.round - foe.sweptAt >= FOE.sweepRest)) {
+    const round = heroes.filter((pid) => adjacent(heroPos(f, pid), foe.pos)).length;
+    if (g.rng.chance(round > 1 ? 0.85 : 0.4)) {
+      foe.sweptAt = f.round;
+      foe.intent = { move: 'sweep', line: sweepCells(f, foe) };
+      say(g, f, 'fight_sweep_mark', null, vars);
+      ev(f, { a: fid(foe), k: 'aim' });
+      return;
+    }
+  }
   // a caller shouts from afar while nobody is on it
   if (def.calls && has(g, foe, 'call') && !near && foe.calling <= 0 && g.rng.chance(0.6)) {
     foe.calling = 2;
@@ -348,12 +360,37 @@ function charge(g: Game, f: FightState, foe: FoeState, line: Cell[]): void {
   foeStrikes(g, f, foe, hit, FOE.charge, 'charge');
 }
 
+// ----- a wide swing --------------------------------------------------------------------
+
+/** Every cell round it that one can stand on. */
+function sweepCells(f: FightState, foe: FoeState): Cell[] {
+  const fld = fieldOf(f);
+  return neighboursOf(foe.pos!).filter((c) => c[0] >= 0 && c[1] >= 0 && c[0] < fld.w && c[1] < fld.h && stepCost(fld, c) !== null);
+}
+
+/** The swing comes down on everyone still in its sweep; if it finds no one, it stands open. */
+function sweep(g: Game, f: FightState, foe: FoeState, cells: Cell[]): void {
+  const vars = foeVars(g, foe, f);
+  foe.intent = null;
+  const caught = alive(g, f).filter((pid) => {
+    const at = heroPos(f, pid);
+    return at && cells.some((c) => c[0] === at[0] && c[1] === at[1]);
+  });
+  if (!caught.length) {
+    say(g, f, 'fight_sweep_missed', null, vars);
+    openUp(g, f, foe);
+    return;
+  }
+  say(g, f, 'fight_sweep', null, vars);
+  for (const pid of caught) foeStrikes(g, f, foe, pid, FOE.sweep, 'attack');
+}
+
 // ----- what it means to do next --------------------------------------------------------
 
 /** What a foe shows it will do on its next turn: whom it is after and how (a marked charge stays). */
 export function planIntent(g: Game, f: FightState, foe: FoeState): void {
   if (foe.out || !foe.pos) return;
-  if (foe.intent?.move === 'charge' && foe.intent.line) return;
+  if ((foe.intent?.move === 'charge' || foe.intent?.move === 'sweep') && foe.intent.line) return;
   if (foe.holds) {
     foe.intent = { move: 'hold', target: foe.holds };
     return;

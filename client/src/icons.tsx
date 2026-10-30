@@ -58,6 +58,15 @@ export const IconFlame = (p: P) => (
   </Svg>
 );
 
+/** A cart: the store of a caravan on the road. */
+export const IconCart = (p: P) => (
+  <Svg {...p}>
+    <path d="M3 8h13l-1.5 7H5zM16 10h3l2 3v2h-6" />
+    <circle cx="7" cy="18" r="2" />
+    <circle cx="17" cy="18" r="2" />
+  </Svg>
+);
+
 export const IconSnow = (p: P) => (
   <Svg {...p}>
     <path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9" />

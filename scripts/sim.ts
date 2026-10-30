@@ -4,10 +4,13 @@
 import { content } from '../content/index.js';
 import { E, G, U } from '../content/a1/ids.js';
 import { E2, G2 } from '../content/a2/ids.js';
+import { E3, G3 } from '../content/a3/ids.js';
 import type { PlayerId, Slot } from '../shared/src/content.js';
 import { perkState, xpForLevel } from '../shared/src/rules.js';
 import { ContentIndex, Game, newWorld } from '../server/src/engine/index.js';
-import { startFight } from '../server/src/engine/fight.js';
+import { makeElite, startFight } from '../server/src/engine/fight.js';
+import { fieldFrom } from '../server/src/engine/terrain.js';
+import type { FightNode } from '../shared/src/content.js';
 import { refreshHero } from '../server/src/engine/hero.js';
 import { buildView } from '../server/src/engine/view.js';
 import { Bot, PERK_PLAN } from '../tests/bot.js';
@@ -74,6 +77,14 @@ export const STAGES: Record<string, Kit> = {
     bag: { [U.bandage]: 3, [U.torch]: 2, [U.rattle]: 1, [U.brew]: 1 },
     dog: true,
   },
+  // act three: the felt cloak from the camp, a pike from the riders
+  E8: {
+    level: 11,
+    hunter: { weapon: G3.pike, body: G3.burka, legs: G.boots, offhand: G2.ironshield, head: G.helm, hands: G2.bracers },
+    maker: { weapon: G2.cleaver, body: G2.quilt, legs: G.boots, offhand: G2.ironshield, head: G.helm, hands: G2.bracers },
+    bag: { [U.bandage]: 3, [U.torch]: 2, [U.rattle]: 1, [U.brew]: 1 },
+    dog: true,
+  },
 };
 
 const LEVEL_UPS: Record<'hunter' | 'maker', string[]> = {
@@ -121,7 +132,16 @@ export interface SimResult {
   hpLeft: number;
 }
 
-export function simulate(foes: Array<{ enemy: string; n?: number }>, stage: string, who: 'both' | 'hunter' | 'maker', runs = 400): SimResult {
+/** The drawn field of the story fight with exactly these foes, if it has one (bosses fight on their own ground). */
+function storyField(foes: Array<{ enemy: string; n?: number }>): FightNode['field'] {
+  const same = (a: typeof foes, b: typeof foes) => a.length === b.length && a.every((x, i) => x.enemy === b[i]!.enemy && (x.n ?? 1) === (b[i]!.n ?? 1));
+  for (const sc of content.scenes)
+    for (const n of Object.values(sc.nodes)) if (n.type === 'fight' && n.field && same(n.foes, foes)) return n.field;
+  return undefined;
+}
+
+export function simulate(foes: Array<{ enemy: string; n?: number }>, stage: string, who: 'both' | 'hunter' | 'maker', runs = 400, elite = false): SimResult {
+  const drawn = storyField(foes);
   let wins = 0;
   let rounds = 0;
   let hpLeft = 0;
@@ -130,7 +150,9 @@ export function simulate(foes: Array<{ enemy: string; n?: number }>, stage: stri
     let g = makeWorld(kit, 1000 + i * 7, who);
     const party = (['p1', 'p2'] as PlayerId[]).filter((pid) => g.s.players[pid].online);
     lastResult = null;
-    const f = startFight(g, 'a_02', foes, { party, scene: true });
+    const fld = drawn ? fieldFrom(drawn.rows, drawn.ground) : null;
+    const f = startFight(g, 'a_02', foes, { party, scene: true, ...(fld ? { field: fld.field, starts: { heroes: fld.heroes, foes: fld.foes } } : {}) });
+    if (elite) makeElite(g, f, f.foes[0]!);
     const bots = { p1: new Bot('p1', content, { seed: i }), p2: new Bot('p2', content, { seed: i + 1 }) };
     let won = false;
     let k = 0;
@@ -157,7 +179,7 @@ export function simulate(foes: Array<{ enemy: string; n?: number }>, stage: stri
   return { win: wins / runs, rounds: rounds / runs, hpLeft: wins ? hpLeft / wins : 0 };
 }
 
-const TABLE: Array<{ name: string; foes: Array<{ enemy: string; n?: number }>; stages: string[]; who: Array<'both' | 'hunter' | 'maker'> }> = [
+const TABLE: Array<{ name: string; foes: Array<{ enemy: string; n?: number }>; stages: string[]; who: Array<'both' | 'hunter' | 'maker'>; elite?: boolean }> = [
   { name: 'Пацюки ×3', foes: [{ enemy: E.rat, n: 3 }], stages: ['E0', 'E1'], who: ['hunter', 'maker'] },
   { name: 'Гадюка', foes: [{ enemy: E.viper }], stages: ['E0', 'E1', 'E2'], who: ['hunter', 'maker'] },
   { name: 'Стара гадюка', foes: [{ enemy: E.oldviper }], stages: ['E2', 'E3'], who: ['hunter', 'maker', 'both'] },
@@ -175,6 +197,14 @@ const TABLE: Array<{ name: string; foes: Array<{ enemy: string; n?: number }>; s
   { name: 'Хапун', foes: [{ enemy: E2.snatcher }], stages: ['E5', 'E6'], who: ['both', 'hunter', 'maker'] },
   { name: 'Хапуни ×2', foes: [{ enemy: E2.snatcher, n: 2 }], stages: ['E5', 'E6'], who: ['both', 'maker'] },
   { name: 'Білий + 2 пси', foes: [{ enemy: E.white }, { enemy: E.hound, n: 2 }], stages: ['E5', 'E6'], who: ['both'] },
+  // a seasoned one at the head (✦): routine fights that now and then are not
+  { name: '✦ Пси ×3', foes: [{ enemy: E.dog, n: 3 }], stages: ['E2', 'E3'], who: ['hunter', 'maker', 'both'], elite: true },
+  { name: '✦ Кабан', foes: [{ enemy: E.boar }], stages: ['E3', 'E4'], who: ['hunter', 'maker', 'both'], elite: true },
+  { name: '✦ Сивий кабан', foes: [{ enemy: E.greyboar }], stages: ['E4', 'E5'], who: ['both'], elite: true },
+  { name: '✦ Вовки ×3', foes: [{ enemy: E2.wolf, n: 3 }], stages: ['E5', 'E6'], who: ['both', 'hunter'], elite: true },
+  { name: '✦ Хапун', foes: [{ enemy: E2.snatcher }], stages: ['E5', 'E6'], who: ['both', 'maker'], elite: true },
+  { name: 'Вершники ×2', foes: [{ enemy: E3.rider, n: 2 }], stages: ['E7', 'E8'], who: ['both', 'hunter'] },
+  { name: 'Ярема + вершник', foes: [{ enemy: E3.captain }, { enemy: E3.rider }], stages: ['E7', 'E8'], who: ['both'] },
   { name: 'Гак + хапун', foes: [{ enemy: E2.hook }, { enemy: E2.snatcher, n: 1 }], stages: ['E5', 'E6', 'E7'], who: ['both'] },
 ];
 
@@ -186,7 +216,7 @@ if (process.argv[1]?.endsWith('sim.ts')) {
     const cells: string[] = [];
     for (const st of row.stages)
       for (const who of row.who) {
-        const r = simulate(row.foes, st, who, runs);
+        const r = simulate(row.foes, st, who, runs, row.elite);
         cells.push(`${st}/${who[0]}: ${Math.round(r.win * 100)}% ${r.rounds.toFixed(1)}р ${Math.round(r.hpLeft * 100)}%hp`);
       }
     console.log(`${row.name.padEnd(16)} ${cells.join(' · ')}`);

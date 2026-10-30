@@ -398,7 +398,7 @@ export interface FoeEntry {
   if?: Cond;
 }
 
-export type EnemyMoveKind = 'attack' | 'charge' | 'grab' | 'steal' | 'call' | 'venom' | 'leech' | 'guard' | 'drag';
+export type EnemyMoveKind = 'attack' | 'charge' | 'grab' | 'steal' | 'call' | 'venom' | 'leech' | 'guard' | 'drag' | 'sweep';
 
 export interface EnemyMove {
   move: EnemyMoveKind;
@@ -724,6 +724,8 @@ export interface DelveRoomDef {
 export interface DelveMapDef {
   id: string;
   name: string;
+  /** A road walked with a loaded cart, not a descent: the light is the store of the caravan (days of it). */
+  trek?: boolean;
   start: string;
   rooms: Record<string, DelveRoomDef>;
 }
@@ -839,6 +841,23 @@ export interface NeedsDef {
   /** Burnt for a campfire away from home (from the bag), and what lights it (owned). */
   campWood: string;
   campLight?: string;
+}
+
+/**
+ * A thing built in the yard of home, drawn on its painted plan (`client/src/art/yard.json` key): where it
+ * stands (centre, % of the plan), how wide (% of the plan's width), when it shows. `spot` — the plan spot
+ * it is the building of (that spot's mark moves to its corner); `trade` — shown while someone of the
+ * household works that trade (people at work); `edge` — the palisade drawn round the yard.
+ */
+export interface YardPieceDef {
+  key: string;
+  x: number;
+  y: number;
+  w: number;
+  when?: Cond;
+  trade?: string;
+  spot?: string;
+  edge?: boolean;
 }
 
 /** A crop of the home garden: planted from its seed, grows in real time (also while nobody plays). */
@@ -1043,6 +1062,8 @@ export interface Content {
   weather?: WeatherSetDef;
   events?: EventSetDef;
   garden?: GardenDef;
+  /** What is built in the yard of home, drawn on its plan. */
+  yard?: YardPieceDef[];
   ambient?: AmbientDef;
   maps?: DelveMapDef[];
   /** Applied every time a new day starts (after a supper). */

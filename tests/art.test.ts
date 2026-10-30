@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { FOLK, HEROES, ITEM_ICONS, PORTRAITS, SCENES, SPOT_ICONS, VIEWS } from '../shared/src/pictures.js';
+import { FOLK, HEROES, ITEM_ICONS, MOMENTS, PORTRAITS, SCENES, SPOT_ICONS, VIEWS } from '../shared/src/pictures.js';
 import { content } from '../content/index.js';
 import folk from '../client/src/art/folk.json';
 import painted from '../client/src/art/things.json';
@@ -12,6 +12,8 @@ import stations from '../client/src/art/stations.json';
 import stationSlots from '../client/src/art/station-slots.json';
 import grounds from '../client/src/art/grounds.json';
 import perkMarks from '../client/src/art/perks.json';
+import yardArt from '../client/src/art/yard.json';
+import moments from '../client/src/art/moments.json';
 import { SKILLS, STATS } from '../shared/src/content.js';
 
 // Every mark of a thing is painted; a new mark needs its cell in an atlas (scripts/art.ts things).
@@ -165,6 +167,33 @@ describe('marks of works', () => {
         const ok = a.icon.startsWith('spot:') ? (SPOT_ICONS as readonly string[]).includes(a.icon.slice(5)) : (ITEM_ICONS as readonly string[]).includes(a.icon);
         expect(ok, a.id).toBe(true);
       }
+    }
+  });
+});
+
+// Everything that can stand in the yard of home is painted (scripts/art.ts yard); the palisade has its strips.
+describe('painted yard', () => {
+  it('every piece has its cell in an atlas that exists', () => {
+    const cells = yardArt as unknown as Record<string, [number, number]>;
+    for (const y of content.yard ?? []) {
+      if (y.edge) {
+        for (const f of ['ph', 'pv']) expect(existsSync(new URL(`../client/src/art/yard/${f}.webp`, import.meta.url)), f).toBe(true);
+        continue;
+      }
+      expect(cells[y.key], y.key).toBeDefined();
+      expect(existsSync(new URL(`../client/src/art/yard/y${cells[y.key]![0]}.webp`, import.meta.url)), y.key).toBe(true);
+    }
+  });
+});
+
+// Moments of key scenes (scripts/art.ts moment): each belongs to a scene that exists, each painted one has its file.
+describe('painted moments', () => {
+  it('every moment is a scene of the story, every painted one is on disk', () => {
+    for (const id of MOMENTS) expect(content.scenes.some((s) => s.id === id), id).toBe(true);
+    for (const id of moments as string[]) {
+      const i = (MOMENTS as readonly string[]).indexOf(id) + 1;
+      expect(i, id).toBeGreaterThan(0);
+      expect(existsSync(new URL(`../client/src/art/moments/m${i}.webp`, import.meta.url)), id).toBe(true);
     }
   });
 });

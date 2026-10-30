@@ -1,6 +1,7 @@
 import type { AreaDef, LocationDef } from '../../shared/src/content.js';
 import { A, E } from '../a1/ids.js';
 import { A2, E2, L2, S2 } from './ids.js';
+import { A3, E3 } from '../a3/ids.js';
 
 const SEC = 1000;
 const act2 = { flag: 'p2_act2' };
@@ -20,12 +21,14 @@ export const areas2: AreaDef[] = [
       { enemy: E2.wolf, n: [2, 3], w: 2, if: { noFlag: 'q13_driven' } },
       { enemy: E2.snatcher, w: 2 },
       { enemy: E2.wolf, n: [2, 4], w: 3, night: true, if: { noFlag: 'q13_driven' } },
+      { enemy: E3.rider, n: [1, 2], w: 2, if: { flag: 'p2_act3' } },
     ],
     desc: 'Битий шлях на схід, колії по коліно. Тут ходять чумацькі обози — і ті, хто на них полює.',
     links: [
       { to: A.well, time: 12 * SEC },
       { to: A.flat, time: 14 * SEC },
       { to: A2.town, time: 12 * SEC },
+      { to: A3.camp, time: 10 * SEC, if: { flag: 'p2_act3' } },
     ],
   },
   {
@@ -38,7 +41,10 @@ export const areas2: AreaDef[] = [
     scout: S2.gate,
     visible: act2,
     foes: [{ enemy: E2.snatcher, n: [1, 2], w: 1, if: { all: [{ flag: 'p2_bounty' }, { not: { tool: 'disguise' } }] } }],
-    links: [{ to: A.shore, time: 16 * SEC, if: { flag: 'built:x_186' } }],
+    links: [
+      { to: A.shore, time: 16 * SEC, if: { flag: 'built:x_186' } },
+      { to: A3.camp, time: 8 * SEC, if: { flag: 'p2_act3' } },
+    ],
     desc: [
       { if: { flag: 'p2_bounty' }, text: 'Місто цеху. На воротах — біла грамота з вашими прикметами.' },
       { text: 'Місто цеху над гирлом. Гори солі під навісами, управа зі знаком, торг, пристань.' },

@@ -1,4 +1,5 @@
 // The map: walking between places, ambushes, the household working while the heroes are away.
+import { credit } from './asks.js';
 import type { AreaDef, PlayerId } from '../../../shared/src/content.js';
 import { PERK, travelMult } from '../../../shared/src/rules.js';
 import { bagCap, bagLoad, gainSkill, heroOf, skillOf, unloadBag } from './hero.js';
@@ -160,6 +161,7 @@ function arrive(g: Game, pid: PlayerId): void {
     const moved = unloadBag(g, pid);
     const parts = Object.entries(moved).map(([id, n]) => `${g.ix.res.get(id)?.name ?? id} +${n}`);
     if (parts.length) g.logRaw('system', { [pid]: `${g.ix.ui('unloaded')} ${parts.join(', ')}.` }, pid);
+    credit(g, pid, moved);
   }
   g.log({ self: `${g.ix.ui('arrived_self')} ${a ? a.where : tr.to}.`, other: `{name} ${g.ix.ui('arrived_other')} ${a ? a.where : tr.to}.` }, pid);
   if (!ambush(g, pid, tr.to, a?.ambush ?? 0)) roadEvent(g, pid);

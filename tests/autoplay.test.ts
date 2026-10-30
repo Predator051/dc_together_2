@@ -130,3 +130,23 @@ describe('act two has no dead ends when the stores are emptied', () => {
     }
   });
 });
+
+const ACT3 = (w: World) => !!w.state.flags['p2_act3_done'] && !w.state.scene;
+const STORY3 = ['s_100', 's_101', 's_102', 's_103', 's_104', 's_105', 's_106', 's_107', 's_108', 's_109'];
+
+describe('two bots play act three to its end', () => {
+  it('seed 1: the camp, the cart, the road south, the silent hundred', { timeout: 1_200_000 }, () => {
+    const a1 = autoplay({}, {}, { seed: 1, until: ACT1 });
+    const a2 = autoplay({}, {}, { from: a1.world, until: ACT2, maxSteps: 150000, stallLimit: 15000 });
+    expect(a2.done).toBe(true);
+    const start = a2.world.now;
+    const r = autoplay({}, {}, { from: a2.world, until: ACT3, maxSteps: 200000, stallLimit: 20000 });
+    if (!r.done) console.log(r.reason, show(r.world));
+    expect(r.done).toBe(true);
+    for (const s of STORY3) expect(r.world.state.flags[`done:${s}`], s).toBe(1);
+    const minutes = (r.world.now - start) / 60000;
+    expect(minutes).toBeGreaterThan(30);
+    expect(r.world.state.meta.actDone).toBe(3);
+    expect(r.world.state.residents['h_15']).toBeDefined();
+  });
+});

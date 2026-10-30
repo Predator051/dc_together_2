@@ -1,5 +1,6 @@
 {
  "boar": [1, 5],
+ "captain": [3, 1],
  "catfish": [1, 7],
  "chief": [2, 1],
  "cloak": [2, 0],
@@ -12,6 +13,7 @@
  "matka": [2, 5],
  "oldviper": [1, 2],
  "rat": [1, 0],
+ "rider": [3, 0],
  "shewolf": [2, 7],
  "snatcher": [2, 3],
  "viper": [1, 1],

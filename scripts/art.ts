@@ -46,15 +46,18 @@
 // A sheet of perks is 4×3 marks of the hero's growth, cut like things (client/src/art/perks/k<n>.webp,
 // order .design/art/perks.json; keys: perk ids, branch_<id>, stat_<id>, skill_<id>).
 // A sheet of tex is 3×3 square grounds painted edge to edge (see `textures`).
+// A sheet of yard is 4×3 things built in the yard of home and its people at work, seen from above like the
+// yard painting, cut like things (256 px cells, client/src/art/yard/y<n>.webp, order .design/art/yard.json).
 //
 //   tsx scripts/art.ts crops <painted.png> <look>   — five stages of a crop (see `crops`)
 //   tsx scripts/art.ts bed <painted.png>            — an empty raised bed (see `bed`)
+//   tsx scripts/art.ts moment <painted.png> <scene> — a key scene's own moment, cut like a view
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { CROP_LOOKS, FOLK, HEROES, SCENES, SPOT_ICONS, VIEWS } from '../shared/src/pictures.js';
+import { CROP_LOOKS, FOLK, HEROES, MOMENTS, SCENES, SPOT_ICONS, VIEWS } from '../shared/src/pictures.js';
 
 const ROOT = resolve(import.meta.dirname, '..');
 
@@ -100,7 +103,7 @@ interface AtlasKind {
   prefix: string;
 }
 
-const KINDS: Record<'things' | 'foes' | 'marks' | 'feats' | 'perks', AtlasKind> = {
+const KINDS: Record<'things' | 'foes' | 'marks' | 'feats' | 'perks' | 'yard', AtlasKind> = {
   things: { cols: 4, rows: 3, cell: 128, prefix: 't' },
   // things on the ground of a fight, seen from above
   feats: { cols: 4, rows: 3, cell: 160, prefix: 'e' },
@@ -109,6 +112,8 @@ const KINDS: Record<'things' | 'foes' | 'marks' | 'feats' | 'perks', AtlasKind> 
   marks: { cols: 4, rows: 3, cell: 128, prefix: 'm' },
   // marks of the hero's growth: perks, their branches, strengths, skills
   perks: { cols: 4, rows: 3, cell: 128, prefix: 'k' },
+  // what is built in the yard of home, and its people at work, seen from above like the yard itself
+  yard: { cols: 4, rows: 3, cell: 256, prefix: 'y' },
 };
 
 /** A painting without real transparency: the flat ground around the things is wiped from the edges in. */
@@ -280,6 +285,24 @@ function atlas(kind: keyof typeof KINDS, src: string, n: number): void {
 
 // ---------------------------------------------------------------------------- grounds and views
 
+
+/** A key scene's own moment: cut like a view, client/src/art/moments/m<i>.webp, i — its number in MOMENTS. */
+function moment(src: string, key: string): void {
+  const i = (MOMENTS as readonly string[]).indexOf(key) + 1;
+  if (!i) throw new Error(`no moment ${key}`);
+  const [w, h] = sizeOf(src);
+  const ch = Math.round(w / 2.4);
+  const outDir = join(ROOT, 'client/src/art/moments');
+  mkdirSync(outDir, { recursive: true });
+  const top = Math.max(0, Math.round((h - ch) * 0.42));
+  magick(src, '-crop', `${w}x${ch}+0+${top}`, '+repage', '-resize', '1200x500', '-strip', '-quality', '78', '-define', 'webp:method=6', join(outDir, `m${i}.webp`));
+  const listPath = join(ROOT, 'client/src/art/moments.json');
+  const list = new Set<string>(existsSync(listPath) ? JSON.parse(readFileSync(listPath, 'utf8')) : []);
+  list.add(key);
+  writeFileSync(listPath, JSON.stringify([...list].sort()) + '\n');
+  keep(src, `moment${i}`);
+  console.log(`moment ${key} → m${i}.webp`);
+}
 
 function view(src: string, key: string): void {
   const i = (VIEWS as readonly string[]).indexOf(key) + 1;
@@ -597,11 +620,12 @@ function bed(src: string): void {
 
 const [cmd, ...args] = process.argv.slice(2);
 if (cmd === 'map' && args[0] && args[1]) map(resolve(args[0]), args[1], Number(args[2] ?? 6), Number(args[3] ?? 4));
-else if ((cmd === 'things' || cmd === 'foes' || cmd === 'marks' || cmd === 'feats' || cmd === 'perks') && args[0] && args[1]) atlas(cmd, resolve(args[0]), Number(args[1]));
+else if ((cmd === 'things' || cmd === 'foes' || cmd === 'marks' || cmd === 'feats' || cmd === 'perks' || cmd === 'yard') && args[0] && args[1]) atlas(cmd, resolve(args[0]), Number(args[1]));
 else if (cmd === 'tex' && args[0] && args[1] && /^\d+$/.test(args[1])) textures(resolve(args[0]), Number(args[1]));
 else if (cmd === 'tex' && args[0] && args[1]) texture(resolve(args[0]), args[1]);
 else if (cmd === 'ground' && args[0] && args[1]) ground(resolve(args[0]), args[1]);
 else if (cmd === 'view' && args[0] && args[1]) view(resolve(args[0]), args[1]);
+else if (cmd === 'moment' && args[0] && args[1]) moment(resolve(args[0]), args[1]);
 else if (cmd === 'hero' && args[0] && args[1]) hero(resolve(args[0]), args[1]);
 else if (cmd === 'stations' && args[0] && args[1]) stations(resolve(args[0]), Number(args[1]));
 else if (cmd === 'folk' && args[0] && args[1]) folk(resolve(args[0]), Number(args[1]), Number(args[2] ?? 0.8));

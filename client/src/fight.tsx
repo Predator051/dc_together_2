@@ -54,6 +54,7 @@ const INTENT_ICON: Record<string, () => JSX.Element> = {
   attack: () => <path d="M5 19L17 7M14 5l5 0 0 5M7 14l3 3" />,
   venom: () => <path d="M12 4c3 5 5 7 5 10a5 5 0 0 1-10 0c0-3 2-5 5-10z" />,
   charge: () => <path d="M3 12h10M9 7l5 5-5 5M13 12h6M16 8l4 4-4 4" />,
+  sweep: () => <path d="M4 15a8 8 0 0 1 16 0M20 15l-3-1M20 15l1-3M4 15l3-1M4 15l-1-3M12 15v-4" />,
   grab: () => <path d="M7 13V7a1.5 1.5 0 0 1 3 0v4M10 11V5.5a1.5 1.5 0 0 1 3 0V11M13 11V6.5a1.5 1.5 0 0 1 3 0V13c0 4-2 6-5 6s-5-2-6-5l-1-3" />,
   drag: () => <path d="M3 8c3 2 6 2 9 0s6-2 9 0M3 14c3 2 6 2 9 0s6-2 9 0M12 4v16" />,
   leech: () => <path d="M6 16c0-5 3-9 7-9 3 0 5 2 5 5s-3 6-7 6c-3 0-5-1-5-2zM16 10l3-2" />,
@@ -194,6 +195,51 @@ function lungeTo(beat: Beat | null, id: string, where: (id: string) => Cell | un
   return { '--lx': `${Math.sign(b[0] - a[0]) * 30}%`, '--ly': `${Math.sign(b[1] - a[1]) * 30}%` } as Vars;
 }
 
+/** A blow that takes a quarter of one's health or more shakes the field. */
+function heavyBlow(beat: Beat | null, f: FightView): boolean {
+  if (!beat || beat.step || beat.e.k !== 'hit' || !beat.e.t) return false;
+  const t = beat.e.t;
+  const max = t.startsWith('f') ? f.foes.find((x) => `f${x.uid}` === t)?.hpMax : f.party.find((p) => p.pid === t)?.hpMax;
+  return !!max && (beat.e.n ?? 0) >= max * 0.25;
+}
+
+/** The one a story fight is about comes forward a moment before the first move (once per fight on this device). */
+const BOSS_SEEN = 'bezgomin.bossSeen';
+
+function BossCard({ f }: { f: FightView }) {
+  const boss = f.foes.find((x) => x.boss && !x.out);
+  const [shown, setShown] = useState(() => {
+    if (!boss || f.ended || still()) return false;
+    try {
+      return Number(localStorage.getItem(BOSS_SEEN) ?? 0) < f.id;
+    } catch {
+      return true;
+    }
+  });
+  // seen once it has played out (or was tapped away), not when it was merely put up
+  const done = () => {
+    setShown(false);
+    try {
+      localStorage.setItem(BOSS_SEEN, String(f.id));
+    } catch {
+      // nothing remembered: the card shows again the next time the fight is opened
+    }
+  };
+  useEffect(() => {
+    if (!shown) return;
+    const t = window.setTimeout(done, 3200);
+    return () => clearTimeout(t);
+  }, [shown]);
+  if (!shown || !boss) return null;
+  return (
+    <div class="boss-card" role="presentation" onClick={done}>
+      <Portrait icon={boss.icon} size="xl" />
+      <b class="boss-name">{boss.name}</b>
+      <p class="boss-desc">{boss.boss!.desc}</p>
+    </div>
+  );
+}
+
 function BeatPop({ beat, id }: { beat: Beat | null; id: string }) {
   if (!beat || beat.step) return null;
   const { e } = beat;
@@ -209,9 +255,12 @@ function BeatPop({ beat, id }: { beat: Beat | null; id: string }) {
   else if (e.k === 'open' && e.a === id) [text, cls] = [T.fightOpen, 'word gold'];
   if (!text) return null;
   return (
-    <span key={`${e.s}:${id}`} class={`delta-pop ${cls}`} aria-hidden="true">
-      {text}
-    </span>
+    <>
+      {cls === 'blow' && <span key={`k${e.s}:${id}`} class="hit-spark" aria-hidden="true" />}
+      <span key={`${e.s}:${id}`} class={`delta-pop ${cls}`} aria-hidden="true">
+        {text}
+      </span>
+    </>
   );
 }
 
@@ -409,10 +458,11 @@ export function FightPanel({ f, v, locked, onGone }: { f: FightView; v: PlayerVi
         </p>
         <div class="grid-main">
         <div
-          class={`grid-field g-${fld.ground} ${texUrl(fld.ground) ? 'painted' : ''} ${painted ? 'paint-on' : ''}`}
+          class={`grid-field g-${fld.ground} ${texUrl(fld.ground) ? 'painted' : ''} ${painted ? 'paint-on' : ''} ${heavyBlow(beat, f) ? 'quake' : ''}`}
           style={{ '--w': String(fld.w), '--h': String(fld.h), ...(texUrl(fld.ground) ? { '--ground': `url(${texUrl(fld.ground)}) center / cover` } : {}) } as Vars}
         >
           <canvas class="field-paint" ref={paintRef} aria-hidden="true" />
+          <BossCard key={f.id} f={f} />
           <div class="field-cells">{cells}</div>
           <div class="units">
             {f.party.map((p) => (
@@ -554,7 +604,7 @@ function FoeSeal({ x, v, c, beat, style, chosen, active, onPick }: { x: Foe; v: 
   const id = `f${x.uid}`;
   return (
     <button
-      class={`seal foe ${chosen ? 'chosen' : ''} ${x.open ? 'open' : ''} ${x.stunned ? 'stunned' : ''} ${active ? 'now' : ''} ${beatClass(beat, id)}`}
+      class={`seal foe ${chosen ? 'chosen' : ''} ${x.elite ? 'elite' : ''} ${x.open ? 'open' : ''} ${x.stunned ? 'stunned' : ''} ${active ? 'now' : ''} ${beatClass(beat, id)}`}
       style={{ ...place(c), ...(style ?? {}) }}
       onClick={onPick}
       aria-pressed={chosen}
@@ -563,7 +613,7 @@ function FoeSeal({ x, v, c, beat, style, chosen, active, onPick }: { x: Foe; v: 
       <span class="seal-body">
         <Portrait icon={x.icon} size="m" />
         {x.move && !x.stunned && x.move !== 'none' && (
-          <span class={`seal-intent ${x.aim === v.me.pid ? 'at-me' : ''} ${x.move === 'charge' || x.move === 'call' ? 'loud' : ''}`}>
+          <span class={`seal-intent ${x.aim === v.me.pid ? 'at-me' : ''} ${x.move === 'charge' || x.move === 'call' || x.move === 'sweep' ? 'loud' : ''}`}>
             <IntentMark move={x.move} />
           </span>
         )}
@@ -640,8 +690,8 @@ function FoeInfo({ x, v }: { x: Foe | undefined; v: PlayerView }) {
           )}
           {x.calling !== undefined && <span class="pill warn">{T.fightCalling}</span>}
           {x.weak && <span class="pill weak">{x.weak}</span>}
-          {x.traits.map((t) => (
-            <span class="pill">{t}</span>
+          {x.traits.map((t, i) => (
+            <span class={`pill ${x.elite && i === 0 ? 'elite' : ''}`}>{t}</span>
           ))}
         </div>
       </div>

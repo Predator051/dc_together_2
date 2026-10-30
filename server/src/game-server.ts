@@ -446,6 +446,16 @@ function validCommand(cmd: unknown): Command | null {
       if (typeof x.bed !== 'number' || !Number.isInteger(x.bed) || x.bed < 0 || x.bed > 20 || typeof x.crop !== 'string' || x.crop.length > 64) return null;
       return { c: 'plant', bed: x.bed, crop: x.crop };
     }
+    case 'ask': {
+      const x = cmd as { res?: unknown; n?: unknown };
+      if (typeof x.res !== 'string' || x.res.length > 64 || typeof x.n !== 'number' || !Number.isInteger(x.n) || x.n < 1 || x.n > 99) return null;
+      return { c: 'ask', res: x.res, n: x.n };
+    }
+    case 'unask': {
+      const x = cmd as { id?: unknown };
+      if (typeof x.id !== 'number' || !Number.isInteger(x.id) || x.id < 0) return null;
+      return { c: 'unask', id: x.id };
+    }
     case 'harvest': {
       const x = cmd as { bed?: unknown };
       if (typeof x.bed !== 'number' || !Number.isInteger(x.bed) || x.bed < -1 || x.bed > 20) return null;

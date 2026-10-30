@@ -569,6 +569,45 @@ const DRAW: Record<ItemIcon, () => JSX.Element> = {
       <path d="M10 16c-3-6 0-12 7-12-4 2-6 6-4 11" />
     </Ink>
   ),
+  hay: () => (
+    <Ink>
+      <path d="M5 19c2-8 12-8 14 0z" />
+      <path d="M8 15l2-5M12 14V8M16 15l-2-5" />
+    </Ink>
+  ),
+  axle: () => (
+    <Ink>
+      <path d="M3 12h18" />
+      <circle cx="4" cy="12" r="2" />
+      <circle cx="20" cy="12" r="2" />
+    </Ink>
+  ),
+  wagon: () => (
+    <Ink>
+      <path d="M3 9h14l-1 6H4zM17 11h4" />
+      <circle cx="7" cy="18" r="2.5" />
+      <circle cx="14" cy="18" r="2.5" />
+    </Ink>
+  ),
+  oxen: () => (
+    <Ink>
+      <path d="M6 8c-2 0-3-2-3-3M18 8c2 0 3-2 3-3" />
+      <path d="M6 8h12v5c0 4-3 7-6 7s-6-3-6-7z" />
+      <path d="M10 16h4" />
+    </Ink>
+  ),
+  burka: () => (
+    <Ink>
+      <path d="M8 4h8l5 16H3z" />
+      <path d="M12 4v16" />
+    </Ink>
+  ),
+  pike: () => (
+    <Ink>
+      <path d="M4 20L18 6" />
+      <path d="M16 4l5-1-1 5z" />
+    </Ink>
+  ),
   hoe: () => (
     <Ink>
       <path d="M17 3L7 17" />

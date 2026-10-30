@@ -367,6 +367,18 @@ export function validateContent(c: Content): Report {
     else if (!(ITEM_ICONS as readonly string[]).includes(r.icon)) err(`resource ${r.id}: unknown icon ${r.icon}`);
   }
 
+  // the yard of home: what is built there names a real build, its spot a real spot of home, people a real trade
+  const homeIcons = new Set(c.locations.filter((l) => c.areas.find((a) => a.id === l.area)?.home).map((l) => l.plan?.icon));
+  for (const y of c.yard ?? []) {
+    if (y.when) checkCond(`yard ${y.key}`, y.when);
+    if (y.spot && !homeIcons.has(y.spot as never)) err(`yard ${y.key}: no spot ${y.spot} at home`);
+    if (y.trade && !c.trades?.some((t) => t.id === y.trade)) err(`yard ${y.key}: unknown trade ${y.trade}`);
+    for (const m of JSON.stringify(y.when ?? {}).matchAll(/built:(x_\d+)/g)) {
+      const a = c.actions.find((x) => x.id === m[1]);
+      if (!a || a.kind !== 'build') err(`yard ${y.key}: ${m[1]} is not a build`);
+    }
+  }
+
   // Actions
   if (c.garden) {
     const gd = c.garden;

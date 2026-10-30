@@ -60,7 +60,7 @@ export function pinned(g: Game, f: FightState, pid: PlayerId): FoeState | undefi
 
 export function armorOf(def: EnemyDef, foe: FoeState): number {
   const ph = foe.phase > 0 ? def.phases?.[foe.phase - 1] : undefined;
-  return ph?.armor ?? def.armor ?? 0;
+  return (ph?.armor ?? def.armor ?? 0) + (foe.elite ? FOE.elite.armor : 0);
 }
 
 export function aiOf(def: EnemyDef, foe: FoeState): EnemyMove[] {
@@ -347,14 +347,41 @@ export function startFight(
     p.poison = 0;
   }
   for (const e of new Set(f.foes.map((x) => x.enemy))) meet(g, e, party.find((pid) => g.p(pid).perks.includes('eye')));
+  const seasoned = opts.scene ? undefined : seasonedOne(g, f);
+  if (seasoned) makeElite(g, f, seasoned);
   g.s.fights.push(f);
   f.order = initiative(g, f);
   for (const foe of activeFoes(f)) planIntent(g, f, foe);
   const names = summarize(g, f);
-  for (const pid of party) f.lines[pid] = [g.ix.ui('fight_start').replace('{foes}', names)];
+  for (const pid of party) f.lines[pid] = [g.ix.ui('fight_start').replace('{foes}', names), ...(seasoned ? [eliteLine(g, seasoned)] : [])];
   for (const pid of party) g.logRaw('warn', { [pid]: g.ix.ui('fight_start').replace('{foes}', names) }, pid);
   nextTurn(g, f);
   return f;
+}
+
+/** Now and then one of a routine fight is a seasoned one: the strongest of them, never one far beneath the heroes. */
+function seasonedOne(g: Game, f: FightState): FoeState | undefined {
+  if (bossFight(g, f)) return undefined;
+  const low = Math.min(...f.party.map((pid) => g.p(pid).level));
+  if (low < FOE.elite.from) return undefined;
+  const fit = activeFoes(f).filter((x) => enemyOf(g, x.enemy).level > low - FOE.rout);
+  if (!fit.length || !g.rng.chance(FOE.elite.p)) return undefined;
+  return fit.sort((a, b) => enemyOf(g, b.enemy).level - enemyOf(g, a.enemy).level)[0];
+}
+
+export function makeElite(g: Game, f: FightState, foe: FoeState): void {
+  foe.elite = true;
+  foe.hp = Math.round(foe.hp * FOE.elite.hp);
+  foe.hpMax = Math.round(foe.hpMax * FOE.elite.hp);
+}
+
+/** What a seasoned one is called: beasts are old, people are hardened. */
+export function eliteMark(g: Game, foe: FoeState): string {
+  return g.ix.ui(enemyOf(g, foe.enemy).humane ? 'foe_elite_person' : 'foe_elite_beast');
+}
+
+function eliteLine(g: Game, foe: FoeState): string {
+  return g.ix.ui(enemyOf(g, foe.enemy).humane ? 'fight_elite_person' : 'fight_elite_beast').replace('{foe}', enemyOf(g, foe.enemy).name);
 }
 
 /** Who moves first: the quick, the sharp-eyed, then the rest. */
@@ -613,7 +640,7 @@ function canRout(g: Game, f: FightState): boolean {
   const live = alive(g, f);
   if (!live.length) return false;
   const low = Math.min(...live.map((pid) => g.p(pid).level));
-  return activeFoes(f).every((x) => enemyOf(g, x.enemy).level <= low - FOE.rout);
+  return activeFoes(f).every((x) => !x.elite && enemyOf(g, x.enemy).level <= low - FOE.rout);
 }
 
 /** Can a blow of this reach go from one cell to the other (next to it, or seen in a straight shot)? */
@@ -972,8 +999,8 @@ function daze(g: Game, f: FightState, foe: FoeState): boolean {
   foe.stun = true;
   foe.stunAt = f.round;
   foe.holds = null;
-  // a dazed beast forgets the charge it was gathering
-  if (foe.intent?.move === 'charge') foe.intent = { move: 'none' };
+  // a dazed foe forgets the charge or the swing it was gathering
+  if (foe.intent?.move === 'charge' || foe.intent?.move === 'sweep') foe.intent = { move: 'none' };
   say(g, f, 'fight_stun', null, foeVars(g, foe, f));
   ev(f, { a: fid(foe), k: 'stun' });
   openUp(g, f, foe);
@@ -1130,7 +1157,7 @@ export function foeStrikes(g: Game, f: FightState, foe: FoeState, target: Player
     return 0;
   }
   const duo = !!f.duo && (!!def.phases || !bossFight(g, f));
-  let n = g.rng.int(def.dmg[0], def.dmg[1]) * dmgMult(def, duo);
+  let n = g.rng.int(def.dmg[0], def.dmg[1]) * dmgMult(def, duo) * (foe.elite ? FOE.elite.dmg : 1);
   if (def.traits.includes('night') && g.isEvening()) {
     n = n * 1.3;
     reveal(g, f, foe.enemy, 'night');
@@ -1230,7 +1257,7 @@ function heroActs(g: Game, f: FightState, pid: PlayerId, pick: string): void {
         heroHits(g, f, pid, foe);
         (f.guard ??= {})[pid] = Math.max(f.guard[pid] ?? 0, PERK.rollGuard);
       } else if (heroHits(g, f, pid, foe, { mult: PERK.ramMult }) > 0 && !foe.out) {
-        if (foe.intent?.move === 'charge') foe.intent = { move: 'none' };
+        if (foe.intent?.move === 'charge' || foe.intent?.move === 'sweep') foe.intent = { move: 'none' };
         if (g.rng.chance(PERK.ramOpen)) openUp(g, f, foe);
       }
       return;
@@ -1249,7 +1276,7 @@ function heroActs(g: Game, f: FightState, pid: PlayerId, pick: string): void {
       const fld = fieldOf(f);
       const inside = back[0] >= 0 && back[1] >= 0 && back[0] < fld.w && back[1] < fld.h;
       const free = inside && !taken(g, f, fid(foe)).has(key(back)) && (swimmer(enemyOf(g, foe.enemy)) || standable(fld, back));
-      if (foe.intent?.move === 'charge') foe.intent = { move: 'none' };
+      if (foe.intent?.move === 'charge' || foe.intent?.move === 'sweep') foe.intent = { move: 'none' };
       if (free) {
         ev(f, { a: fid(foe), k: 'move', path: [back] });
         foe.pos = back;
@@ -1477,7 +1504,8 @@ function endOfRound(g: Game, f: FightState): void {
   }
   for (const foe of activeFoes(f)) {
     const def = enemyOf(g, foe.enemy);
-    if (def.morale === undefined) continue;
+    // a seasoned one does not scare
+    if (def.morale === undefined || foe.elite) continue;
     const k = packs.get(foe.enemy)!;
     if (def.traits.includes('pack') && k.all > 1 && k.out * 2 >= k.all) foe.fear += 3;
     if (foe.fear >= moraleOf(f, def)!) {
@@ -1535,13 +1563,15 @@ function finishFight(g: Game, f: FightState, how: 'win' | 'lose' | 'fled'): void
     for (const foe of f.foes) {
       const def = enemyOf(g, foe.enemy);
       if (foe.out === 'dead' || foe.out === 'down') {
-        learn(def.level, def.level * 2);
+        const k = foe.elite ? FOE.elite.loot : 1;
+        learn(def.level, def.level * 2 * (foe.elite ? FOE.elite.xp : 1));
         const b = (g.s.bestiary[foe.enemy] ??= { seen: 1, beaten: 0, known: [] });
         b.beaten += 1;
         // after a few fights everybody knows what the beast is like
         if (b.beaten >= 3) for (const t of def.hidden ?? []) if (!b.known.includes(t)) b.known.push(t);
-        for (const [id, [a, z]] of Object.entries(def.loot ?? {})) loot[id] = (loot[id] ?? 0) + g.rng.int(a, z);
-        if (def.rare && g.rng.chance(def.rare.p)) for (const [id, n] of Object.entries(def.rare.loot)) loot[id] = (loot[id] ?? 0) + n;
+        for (let r = 0; r < k; r++) for (const [id, [a, z]] of Object.entries(def.loot ?? {})) loot[id] = (loot[id] ?? 0) + g.rng.int(a, z);
+        // a seasoned one always has what is rare on its kind
+        if (def.rare && (foe.elite || g.rng.chance(def.rare.p))) for (const [id, n] of Object.entries(def.rare.loot)) loot[id] = (loot[id] ?? 0) + n;
       } else if (foe.out === 'fled') {
         learn(def.level, def.level);
         // driven off: what they had is left behind

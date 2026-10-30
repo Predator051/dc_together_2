@@ -52,7 +52,10 @@ export type Command =
   /** The home garden: sow a seed into an empty bed, gather a ripe one. */
   | { c: 'plant'; bed: number; crop: string }
   /** bed -1: every ripe bed. */
-  | { c: 'harvest'; bed: number };
+  | { c: 'harvest'; bed: number }
+  /** The asks board: ask the other to bring n of a thing home; take an ask of mine back. */
+  | { c: 'ask'; res: string; n: number }
+  | { c: 'unask'; id: number };
 
 export type ClientMsg =
   | { t: 'hello'; token: string }
@@ -267,6 +270,8 @@ export interface DelveRoomView {
 
 export interface DelveView {
   map: string;
+  /** A road with a cart: the light is the caravan's store. */
+  trek?: boolean;
   room: string;
   /** The room as everyone sees it, and what only this player notices. */
   text: string[];
@@ -510,6 +515,15 @@ export interface MapView {
   legs: { me: MapLegView | null; mate: MapLegView | null };
 }
 
+export interface YardPieceView {
+  key: string;
+  x: number;
+  y: number;
+  w: number;
+  spot?: string;
+  edge?: boolean;
+}
+
 export interface FoeView {
   uid: number;
   name: string;
@@ -540,6 +554,10 @@ export interface FoeView {
   pos?: [number, number];
   line?: Array<[number, number]>;
   guarding?: boolean;
+  /** A seasoned one (its mark is first among the traits). */
+  elite?: boolean;
+  /** The one a story fight is about (it has phases): its words open the fight. */
+  boss?: { desc: string };
 }
 
 export interface FightMoveView {
@@ -672,6 +690,16 @@ export interface FolkGearView {
   tools: Array<{ id: string; name: string; icon?: string; n: number; trade: string; fits: boolean }>;
   wears: Array<FolkGarment & { n: number }>;
   canChange: boolean;
+}
+
+export interface AskView {
+  id: number;
+  mine: boolean;
+  res: string;
+  name: string;
+  icon?: string;
+  n: number;
+  got: number;
 }
 
 /** The household's food: eaten and brought in an hour, the store, how long it lasts. */
@@ -846,6 +874,8 @@ export interface PlayerView {
   weather: WeatherView | null;
   events: EventView[];
   garden: GardenView | null;
+  /** What is built in the yard of home (and its people at work), to draw on its plan; empty away from home. */
+  yard: YardPieceView[];
   map: MapView;
   fight: FightView | null;
   /** The fight that has just ended, after its last blow; only to be seen, never answered. */
@@ -854,6 +884,8 @@ export interface PlayerView {
   nearFight: { id: number; text: string } | null;
   residents: ResidentView[];
   larder: LarderView | null;
+  /** The asks board: what each asked the other to bring. */
+  asks: AskView[];
   bestiary: BeastView[];
   /** Panels opened so far (the interface grows with the game). */
   tabs: string[];

@@ -55,6 +55,7 @@ import {
   spendPoint,
 } from './hero.js';
 import { activeFoes, dropFight, fightChoose, fightOf, help, maybeResolve, startFight, takeLoot } from './fight.js';
+import { ask, credit, unask } from './asks.js';
 import { fieldFrom } from './terrain.js';
 import { ambush, areaDef, areaKnown, go, linkTime, settleTravel } from './travel.js';
 import { folkGear, setFeed, setJob, settleWork, teach } from './household.js';
@@ -862,6 +863,8 @@ export class Game {
     }
     this.apply(a.effects, pid);
     this.logGains(pid, gained, mainId);
+    // made at home: it counts towards what the other asked for
+    if (home) credit(this, pid, gained);
     const st = this.s.stats;
     st.actions[pid] = (st.actions[pid] ?? 0) + 1;
     for (const [r, n] of Object.entries(gained)) if (n > 0) st.gathered[r] = (st.gathered[r] ?? 0) + n;
@@ -1008,6 +1011,7 @@ export class Game {
     for (const x of this.joinedIds()) this.p(x).busy = null;
     this.s.proposal = null;
     this.startScene(pr.scene);
+    if (cost && this.s.scene) this.s.scene.paid = { ...cost };
     return OK;
   }
 
@@ -1207,7 +1211,7 @@ export class Game {
     if (a.role && this.p(pid).role !== a.role) return this.ix.ui('err_wrong_role');
     if (a.enabled && !this.test(a.enabled, pid)) return a.disabledHint ? this.render(a.disabledHint, pid) : this.ix.ui('err_not_now');
     if (!this.hasCostAll(a.cost)) return this.ix.ui('err_cost');
-    if (d && (a.light ?? 0) > 0 && d.light < (a.light ?? 0)) return this.ix.ui('delve_no_light');
+    if (d && (a.light ?? 0) > 0 && d.light < (a.light ?? 0)) return this.ix.ui(this.ix.maps.get(d.map)?.trek ? 'trek_no_store' : 'delve_no_light');
     return null;
   }
 
@@ -1360,6 +1364,8 @@ export class Game {
     if (!sc) return;
     const def = this.ix.scenes.get(sc.id)!;
     this.s.scene = null;
+    // an unfinished scene can be tried again: the things of errands it took come back (else a dead end)
+    if (!completed && sc.paid) for (const [r, n] of Object.entries(sc.paid)) if (this.ix.res.get(r)?.kind === 'tool') this.addRes(r, n);
     if (completed) {
       if (def.once !== false) this.s.flags[`done:${def.id}`] = 1;
       this.s.flags[`count:${def.id}`] = this.flag(`count:${def.id}`) + 1;
@@ -1639,6 +1645,12 @@ export class Game {
         break;
       case 'harvest':
         r = harvest(this, pid, cmd.bed);
+        break;
+      case 'ask':
+        r = ask(this, pid, cmd.res, cmd.n);
+        break;
+      case 'unask':
+        r = unask(this, pid, cmd.id);
         break;
       case 'act': {
         const e = this.ix.entry(cmd.id);

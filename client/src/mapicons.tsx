@@ -73,6 +73,13 @@ const DRAW: Record<SceneId, () => JSX.Element> = {
       <path class="thin" d="M12 4.5v5.7M12 13.8v5.7M4.5 12h5.7M13.8 12h5.7M6.7 6.7l4 4M13.3 13.3l4 4M17.3 6.7l-4 4M10.7 13.3l-4 4" />
     </>
   ),
+  quarry: () => (
+    <>
+      <path d="M3 9c3 9 15 9 18 0" />
+      <path d="M7 15l3-4 3 4M13 15l2.5-3 2.5 3" />
+      <path class="thin" d="M3 9h18" />
+    </>
+  ),
   town: () => (
     <>
       <path d="M3 20V12.5l4-3 4 3V20" />

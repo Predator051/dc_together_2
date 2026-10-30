@@ -1,0 +1,30 @@
+[
+  [
+    ["well_old", "an old collapsed well: a low ring of tumbled grey stones half sunk in weeds, a broken grey wooden crossbeam lying across it, no rope, dark empty hole"],
+    ["well", "a repaired well: a neat low ring of fitted grey stones, a wooden frame with a crossbeam and a windlass, a rope and a wooden bucket on the rim"],
+    ["bench", "a heavy old wooden workbench, thick plank top worn smooth, a few hand tools lying on it (a mallet, a chisel, wood shavings), a low stool beside it"],
+    ["bench2", "the same heavy workbench now bound with dark iron strips at the corners, an iron vice bolted to one end, tongs and a file on top"],
+    ["tannery", "a small tanning corner: two wooden vats of dark brown liquid with bark floating, and an upright wooden frame with a stretched pale hide laced to it"],
+    ["kiln", "a charcoal kiln: a low round earth mound covered in turf and clay with a small dark vent hole on top, a neat stack of split logs beside it"],
+    ["forge", "a small village forge in the open: a low stone hearth with glowing coals, an iron anvil set on a thick tree stump, a wooden water trough"],
+    ["forge2", "the same open forge with a big pair of leather bellows on a wooden frame pointing into the hearth, more coals glowing brighter"],
+    ["pan", "a salt boiling pan: a wide shallow rectangular iron pan on a low stone stove with a fire mouth, white salt crust along its edges"],
+    ["settler", "a wooden settling tub of cloudy brine with a short wooden trough leading off one side"],
+    ["rack", "a drying rack: a frame of thin poles with strips of dried fish and bundles of herbs hanging from the crossbars"],
+    ["barrels", "a cluster of four oak salting barrels with iron hoops, one with the lid off showing white salt inside"]
+  ],
+  [
+    ["bell", "a tall wooden post frame with a small crossbeam and a bronze bell hanging from it, a short rope dangling"],
+    ["shelter", "a reed shelter (kurin): a low pitched roof of bundled reeds over a pole frame, open at one end, a bit of straw bedding inside"],
+    ["palisade", "a long straight section of a palisade of sharpened upright logs lashed together, running left to right across the whole cell from edge to edge, seen from above so the tops of the logs and their pointed ends show"],
+    ["palisade_corner", "a corner of the same palisade: two short sections of sharpened upright logs meeting at a right angle, one going right and one going down"],
+    ["w_chop", "a small peasant figure seen from above in a linen shirt and dark trousers, swinging an axe over a chopping block with split logs around"],
+    ["w_carry", "a small peasant woman seen from above in a long linen shirt and headscarf, carrying a big bundle of reeds on her back"],
+    ["w_scrape", "a small peasant figure seen from above kneeling and scraping a hide stretched on the ground"],
+    ["w_stir", "a small peasant figure seen from above standing and stirring with a long wooden paddle, as if over a wide pan"],
+    ["woodpile", "a neat stacked pile of split firewood"],
+    ["sacks", "three tied grain sacks leaning together"],
+    ["cart", "a small wooden two-wheeled handcart with long shafts, empty"],
+    ["sheaves", "a stack of bound reed sheaves for thatching"]
+  ]
+]

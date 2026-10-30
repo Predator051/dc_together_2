@@ -26,6 +26,7 @@ import { FolkStage } from './folk.js';
 import { NeedsBar, NeedsSheet } from './needs.js';
 import { WeatherChip } from './weather.js';
 import { EventCards } from './events.js';
+import { AsksStrip } from './asks.js';
 import { BedCard, firstBed, GardenBeds, GardenScene, GardenWater, gardenWants, sceneHeight, useGardenClock } from './garden.js';
 
 type Tab = 'work' | 'map' | 'hero' | 'notes' | 'log';
@@ -1100,6 +1101,7 @@ export function Game({ s }: { s: NetState }) {
         </p>
       )}
       <EventCards v={v} locked={locked} />
+      <AsksStrip v={v} locked={locked} desktop={desktop} />
       {v.needs && <NeedsBar v={v} offset={s.offset} open={needsShown} onOpen={() => setNeedsOpen(!needsOpen)} />}
       {needsShown && <NeedsSheet v={v} offset={s.offset} desktop={desktop} locked={locked} onClose={() => setNeedsOpen(false)} />}
       {v.stove.text && (

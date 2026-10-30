@@ -293,6 +293,11 @@ export const FOE = {
   rampTo: 4,
   /** A charge that lands. */
   charge: 2.5,
+  /** A wide swing, on each one still standing in its sweep; rounds before it can swing so again. */
+  sweep: 1.6,
+  sweepRest: 3,
+  /** Now and then a routine fight has a seasoned one in it (heroes from this level on). */
+  elite: { p: 0.07, from: 3, hp: 1.6, dmg: 1.25, armor: 1, loot: 2, xp: 2 },
   /** Foes this many levels under the weakest hero can be driven off without a fight. */
   rout: 3,
 };
@@ -336,6 +341,9 @@ export function travelMult(o: { trail: number; load: number; heavy: boolean }): 
 const MIN = 60_000;
 
 /** Numbers of the needs. Rates of chill are points per minute of play. */
+/** The asks board: open asks a hero may have, the most of one thing, experience for each thing brought. */
+export const ASK = { open: 3, most: 40, xpEach: 2, xpMost: 40 };
+
 export const NEED = {
   /** Dishes at once. */
   slots: 3,

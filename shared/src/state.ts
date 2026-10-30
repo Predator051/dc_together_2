@@ -121,6 +121,8 @@ export interface SceneState {
   id: string;
   node: string;
   paused: boolean;
+  /** What was paid to begin it (things of errands come back if it ends unfinished, to be tried again). */
+  paid?: Record<string, number>;
   ready: Partial<Record<PlayerId, boolean>>;
   picks: Partial<Record<PlayerId, string>>;
   /** Options already used in `any` hubs (by node). */
@@ -225,6 +227,10 @@ export interface FoeState {
   taunt?: PlayerId;
   /** Pinned by a shot: on its next turn it does not leave its cell. */
   rooted?: boolean;
+  /** The round it last swung all round (a wide swing is gathered again for a while). */
+  sweptAt?: number;
+  /** An old and seasoned one of its kind: tougher, not to be driven off, more to take from it. */
+  elite?: boolean;
 }
 
 /** One beat of a fight, for it to be played out on screen: who did what to whom. */
@@ -244,7 +250,7 @@ export interface FightEvent {
 export interface Intent {
   move: string;
   target?: PlayerId;
-  /** The run of a charge. */
+  /** The run of a charge; the cells a wide swing will sweep. */
   line?: Array<[number, number]>;
 }
 
@@ -328,6 +334,15 @@ export interface Legacy {
   npcs: Record<string, number>;
 }
 
+export interface AskState {
+  id: number;
+  by: PlayerId;
+  res: string;
+  n: number;
+  got: number;
+  at: number;
+}
+
 export interface WorldState {
   version: number;
   part: number;
@@ -390,4 +405,7 @@ export interface WorldState {
   chain?: string[];
   /** How each player's last fight ended, as it stood after the last blow (the view shows it a moment). */
   afterFight?: Partial<Record<PlayerId, { at: number; how: 'win' | 'lose' | 'fled'; fight: FightState; loot?: Record<string, number> }>>;
+  /** What one hero has asked the other to bring home (the asks board); counted as the other brings it. */
+  asks?: AskState[];
+  nextAskId?: number;
 }
