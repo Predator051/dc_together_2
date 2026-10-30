@@ -2,11 +2,12 @@
 
 import type { ComponentChildren, JSX } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { SCENES, SPOT_ICONS, VIEWS, type SceneId, type SpotIcon } from '../../shared/src/pictures.js';
+import { MOMENTS, SCENES, SPOT_ICONS, VIEWS, type SceneId, type SpotIcon } from '../../shared/src/pictures.js';
 import grounds from './art/grounds.json';
 import stations from './art/stations.json';
 import stationSlotsJson from './art/station-slots.json';
 import views from './art/views.json';
+import moments from './art/moments.json';
 import marks from './art/marks.json';
 import yardCells from './art/yard.json';
 import type { YardPieceView } from '../../shared/src/protocol.js';
@@ -346,6 +347,14 @@ const PICS: Record<SpotIcon, () => JSX.Element> = {
 const PAINTED_VIEWS = new Set(views as string[]);
 
 /** The picture of a place seen at eye level, or null while it is not painted. */
+// A key scene's own moment (scripts/art.ts moment): it heads the scene instead of the place.
+const PAINTED_MOMENTS = new Set(moments as string[]);
+
+export function momentUrl(scene: string): string | null {
+  if (!PAINTED_MOMENTS.has(scene)) return null;
+  return new URL(`./art/moments/m${(MOMENTS as readonly string[]).indexOf(scene) + 1}.webp`, import.meta.url).href;
+}
+
 export function viewUrl(key: string | undefined): string | null {
   if (!key || !PAINTED_VIEWS.has(key)) return null;
   return new URL(`./art/views/w${(VIEWS as readonly string[]).indexOf(key) + 1}.webp`, import.meta.url).href;

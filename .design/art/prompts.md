@@ -217,3 +217,10 @@ show, sides barely), at the same real-world scale, lit by warm low evening light
 a soft dark contact shadow on the ground under it only (no ground patch, no grass around). Row 1: <1–4>.
 Row 2: <5–8>. Row 3: <9–12>. Style: <хвост стиля из bible.md>
 ```
+
+## Моменты ключевых сцен (2026-10-30, `improvements.md` шаг 7) — `.design/art/moments.json`
+1536×1024, нарезка как у видов (`tsx scripts/art.ts moment <png> <scene>`). Без лиц: люди — мелкие фигуры
+вдали или со спины. «Generate an image, landscape 1536x1024. An eye-level painted illustration of a moment in
+a dark folk-tale survival game: <описание>. The main subject sits in the middle horizontal band (the top and
+bottom fifth will be cropped). No faces shown: people only as small distant figures or seen from behind.»
++ хвост стиля.

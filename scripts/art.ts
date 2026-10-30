@@ -51,12 +51,13 @@
 //
 //   tsx scripts/art.ts crops <painted.png> <look>   — five stages of a crop (see `crops`)
 //   tsx scripts/art.ts bed <painted.png>            — an empty raised bed (see `bed`)
+//   tsx scripts/art.ts moment <painted.png> <scene> — a key scene's own moment, cut like a view
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { CROP_LOOKS, FOLK, HEROES, SCENES, SPOT_ICONS, VIEWS } from '../shared/src/pictures.js';
+import { CROP_LOOKS, FOLK, HEROES, MOMENTS, SCENES, SPOT_ICONS, VIEWS } from '../shared/src/pictures.js';
 
 const ROOT = resolve(import.meta.dirname, '..');
 
@@ -284,6 +285,24 @@ function atlas(kind: keyof typeof KINDS, src: string, n: number): void {
 
 // ---------------------------------------------------------------------------- grounds and views
 
+
+/** A key scene's own moment: cut like a view, client/src/art/moments/m<i>.webp, i — its number in MOMENTS. */
+function moment(src: string, key: string): void {
+  const i = (MOMENTS as readonly string[]).indexOf(key) + 1;
+  if (!i) throw new Error(`no moment ${key}`);
+  const [w, h] = sizeOf(src);
+  const ch = Math.round(w / 2.4);
+  const outDir = join(ROOT, 'client/src/art/moments');
+  mkdirSync(outDir, { recursive: true });
+  const top = Math.max(0, Math.round((h - ch) * 0.42));
+  magick(src, '-crop', `${w}x${ch}+0+${top}`, '+repage', '-resize', '1200x500', '-strip', '-quality', '78', '-define', 'webp:method=6', join(outDir, `m${i}.webp`));
+  const listPath = join(ROOT, 'client/src/art/moments.json');
+  const list = new Set<string>(existsSync(listPath) ? JSON.parse(readFileSync(listPath, 'utf8')) : []);
+  list.add(key);
+  writeFileSync(listPath, JSON.stringify([...list].sort()) + '\n');
+  keep(src, `moment${i}`);
+  console.log(`moment ${key} → m${i}.webp`);
+}
 
 function view(src: string, key: string): void {
   const i = (VIEWS as readonly string[]).indexOf(key) + 1;
@@ -606,6 +625,7 @@ else if (cmd === 'tex' && args[0] && args[1] && /^\d+$/.test(args[1])) textures(
 else if (cmd === 'tex' && args[0] && args[1]) texture(resolve(args[0]), args[1]);
 else if (cmd === 'ground' && args[0] && args[1]) ground(resolve(args[0]), args[1]);
 else if (cmd === 'view' && args[0] && args[1]) view(resolve(args[0]), args[1]);
+else if (cmd === 'moment' && args[0] && args[1]) moment(resolve(args[0]), args[1]);
 else if (cmd === 'hero' && args[0] && args[1]) hero(resolve(args[0]), args[1]);
 else if (cmd === 'stations' && args[0] && args[1]) stations(resolve(args[0]), Number(args[1]));
 else if (cmd === 'folk' && args[0] && args[1]) folk(resolve(args[0]), Number(args[1]), Number(args[2] ?? 0.8));

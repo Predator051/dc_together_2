@@ -3,7 +3,7 @@ import type { PlayerView, SceneView } from '../../shared/src/protocol.js';
 import { net } from './net.js';
 import { DelveBody, DelveFoot, OperationBody, OperationFoot, StealthBody, StealthFoot } from './delve.js';
 import { IconCheck, IconChevron } from './icons.js';
-import { viewUrl } from './pictures.js';
+import { momentUrl, viewUrl } from './pictures.js';
 import { sound } from './sound.js';
 import { T } from './strings.js';
 
@@ -66,7 +66,8 @@ export function Scene({ v, sc, locked }: { v: PlayerView; sc: SceneView; locked:
   // the place it happens at, seen at eye level; a supper by the fire (a wet evening outside in the rain);
   // nothing for fights and below ground
   const wet = v.ambient.sky === 'rain' || v.ambient.sky === 'storm';
-  const art = sc.mood === 'hearth' ? viewUrl(wet ? 'hearth2' : 'hearth1') : sc.mood === 'story' ? viewUrl(sc.place) : null;
+  const art =
+    sc.mood === 'hearth' ? viewUrl(wet ? 'hearth2' : 'hearth1') : sc.mood === 'story' ? (momentUrl(sc.id) ?? viewUrl(sc.place)) : null;
 
   return (
     <div class="scene-wrap">
