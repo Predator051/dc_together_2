@@ -227,6 +227,8 @@ export interface FoeState {
   rooted?: boolean;
   /** The round it last swung all round (a wide swing is gathered again for a while). */
   sweptAt?: number;
+  /** An old and seasoned one of its kind: tougher, not to be driven off, more to take from it. */
+  elite?: boolean;
 }
 
 /** One beat of a fight, for it to be played out on screen: who did what to whom. */

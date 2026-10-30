@@ -9044,6 +9044,30 @@ body.sheet-open {
   border-width: 2px;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.6);
 }
+.seal.foe.elite .portrait {
+  border-color: var(--cinnabar-ink);
+  box-shadow:
+    0 0 0 2px rgba(20, 14, 8, 0.7),
+    0 0 0 4px rgba(216, 105, 76, 0.7),
+    0 3px 6px rgba(0, 0, 0, 0.6);
+}
+/* a seasoned one wears a small red lozenge over its head */
+.seal.foe.elite .seal-body::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+  background: var(--cinnabar-ink);
+  border: 1px solid rgba(20, 14, 8, 0.8);
+  pointer-events: none;
+}
+.pill.elite {
+  border-color: var(--cinnabar-ink);
+  color: var(--cinnabar-ink);
+}
 .seal.foe.chosen .portrait {
   border-color: var(--ochre-ink);
   box-shadow:

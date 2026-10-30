@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PlayerId } from '../shared/src/content.js';
-import { defeat, fightOf, isOpen, startFight } from '../server/src/engine/fight.js';
+import { defeat, fightOf, isOpen, makeElite, startFight } from '../server/src/engine/fight.js';
 import { foeTurn } from '../server/src/engine/tactics.js';
 import { E2 } from '../content/a2/ids.js';
 import { fieldFrom, fieldProblems } from '../server/src/engine/terrain.js';
@@ -457,6 +457,34 @@ describe('fights', () => {
     // not in a story fight
     startFight(w.g(), 'a_02', [{ enemy: 'e_01' }], { scene: true });
     expect(w.view(h).fight!.moves.some((x) => x.id === 'rout')).toBe(false);
+  });
+
+  it('a seasoned one: tougher, marked, never driven off or scared away; never in a story fight', () => {
+    const { w, h, m } = field();
+    w.state.players[h].level = 6;
+    w.state.players[m].level = 6;
+    const f = startFight(w.g(), 'a_02', [{ enemy: 'e_01', n: 2 }]);
+    const foe = f.foes[0]!;
+    const hp = foe.hpMax;
+    makeElite(w.g(), f, foe);
+    expect(foe.hpMax).toBeGreaterThan(hp);
+    const v = w.view(h).fight!;
+    expect(v.foes.find((x) => x.uid === foe.uid)!.elite).toBe(true);
+    expect(v.foes.find((x) => x.uid === foe.uid)!.traits[0]).toBe('материй');
+    expect(v.moves.some((x) => x.id === 'rout')).toBe(false);
+    // its mate falls: a pack would break, the seasoned one stays
+    f.foes[1]!.out = 'dead';
+    foe.fear = 99;
+    turnOf(w, h);
+    w.cmd(h, { c: 'fight', id: 'end' });
+    expect(foe.out).toBeNull();
+    // story fights never have one
+    for (let i = 0; i < 60; i++) {
+      const sf = startFight(w.g(), 'a_02', [{ enemy: 'e_05' }], { scene: true });
+      expect(sf.foes.some((x) => x.elite)).toBe(false);
+      w.state.fights = [];
+      for (const pid of [h, m]) w.state.players[pid].fight = null;
+    }
   });
 
   it('a fight waits while both are away; one who stays plays on past the other', () => {

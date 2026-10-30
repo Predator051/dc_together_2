@@ -296,6 +296,8 @@ export const FOE = {
   /** A wide swing, on each one still standing in its sweep; rounds before it can swing so again. */
   sweep: 1.6,
   sweepRest: 3,
+  /** Now and then a routine fight has a seasoned one in it (heroes from this level on). */
+  elite: { p: 0.07, from: 3, hp: 1.6, dmg: 1.25, armor: 1, loot: 2, xp: 2 },
   /** Foes this many levels under the weakest hero can be driven off without a fight. */
   rout: 3,
 };

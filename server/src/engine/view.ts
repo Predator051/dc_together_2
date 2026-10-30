@@ -28,7 +28,7 @@ import { SKILLS, SLOTS, STATS, type SkillId } from '../../../shared/src/content.
 import type { BagView, BeastView, EntrySort, FightView, HeroView, LarderView, MapView, ResidentView, WeatherView } from '../../../shared/src/protocol.js';
 import { perkState, skillLevel, skillXpFor, xpForLevel } from '../../../shared/src/rules.js';
 import { bagCap, bagLoad, gearNote, heroOf, ownsCount, perkTree, useNote } from './hero.js';
-import { HERO_AP, activeFoes, activeId, enemyOf, fid, fightMoves, fightOf, holder, moraleOf, walkable } from './fight.js';
+import { HERO_AP, activeFoes, activeId, eliteMark, enemyOf, fid, fightMoves, fightOf, holder, moraleOf, walkable } from './fight.js';
 import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, routeLegs, routeTo, travelTime, walkOf } from './travel.js';
 import { foodOf, garmentOf, jobYield, larder, rankIn, residentJobs, stateOf, teachBlock, tradeOf, workMult, workingAt } from './household.js';
 import { byFire, campBlock, chillRate, comfortOf, dryOf, eatBlock, restBlock, restLength, tired } from './needs.js';
@@ -830,6 +830,10 @@ function fightViewOf(g: Game, pid: PlayerId, f: FightState, live = true): FightV
       };
       // a fallen foe keeps its cell, so its last blow can be seen landing there
       if (foe.pos) v.pos = foe.pos;
+      if (foe.elite) {
+        v.elite = true;
+        v.traits.unshift(eliteMark(g, foe));
+      }
       const morale = moraleOf(f, def);
       if (morale !== undefined) {
         v.fear = Math.min(foe.fear, morale);

@@ -555,7 +555,7 @@ function FoeSeal({ x, v, c, beat, style, chosen, active, onPick }: { x: Foe; v: 
   const id = `f${x.uid}`;
   return (
     <button
-      class={`seal foe ${chosen ? 'chosen' : ''} ${x.open ? 'open' : ''} ${x.stunned ? 'stunned' : ''} ${active ? 'now' : ''} ${beatClass(beat, id)}`}
+      class={`seal foe ${chosen ? 'chosen' : ''} ${x.elite ? 'elite' : ''} ${x.open ? 'open' : ''} ${x.stunned ? 'stunned' : ''} ${active ? 'now' : ''} ${beatClass(beat, id)}`}
       style={{ ...place(c), ...(style ?? {}) }}
       onClick={onPick}
       aria-pressed={chosen}
@@ -641,8 +641,8 @@ function FoeInfo({ x, v }: { x: Foe | undefined; v: PlayerView }) {
           )}
           {x.calling !== undefined && <span class="pill warn">{T.fightCalling}</span>}
           {x.weak && <span class="pill weak">{x.weak}</span>}
-          {x.traits.map((t) => (
-            <span class="pill">{t}</span>
+          {x.traits.map((t, i) => (
+            <span class={`pill ${x.elite && i === 0 ? 'elite' : ''}`}>{t}</span>
           ))}
         </div>
       </div>

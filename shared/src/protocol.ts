@@ -540,6 +540,8 @@ export interface FoeView {
   pos?: [number, number];
   line?: Array<[number, number]>;
   guarding?: boolean;
+  /** A seasoned one (its mark is first among the traits). */
+  elite?: boolean;
 }
 
 export interface FightMoveView {
