@@ -203,3 +203,17 @@ empty — nothing planted. Soft contact shadow only. Style: <хвост стил
 ```
 
 ### Значки города — лист things 10 (шаблон шага 3, 4×3, прозрачный фон), строки из `things.json`.
+
+## Дом растёт (2026-10-30) — проект «Ілюстрації»
+
+Листы `yard` 1–2 (`.design/art/yard.json`: порядок и описания), нарезка `tsx scripts/art.ts yard <png> <n>`.
+Ракурс — как у плана двора (`grounds/g1.webp`): почти строго сверху, чуть наклонно, свет вечерний слева сверху.
+```
+Generate an image, landscape 1536x1152. A sheet of 12 separate objects for a top-down village map of a
+survival game, arranged in a 4x3 grid, each object centred in its own cell with clear empty space around it,
+on a flat solid pure magenta background (#FF00FF) that fills everything around and between the objects.
+All objects are seen from high above at a steep angle, almost straight down like a game map (tops and roofs
+show, sides barely), at the same real-world scale, lit by warm low evening light from the top left, each with
+a soft dark contact shadow on the ground under it only (no ground patch, no grass around). Row 1: <1–4>.
+Row 2: <5–8>. Row 3: <9–12>. Style: <хвост стиля из bible.md>
+```

@@ -1,12 +1,15 @@
 // Pictures of the plans: small seals for spots and the grounds they stand on, drawn in ink.
 
 import type { ComponentChildren, JSX } from 'preact';
+import { useEffect, useState } from 'preact/hooks';
 import { SCENES, SPOT_ICONS, VIEWS, type SceneId, type SpotIcon } from '../../shared/src/pictures.js';
 import grounds from './art/grounds.json';
 import stations from './art/stations.json';
 import stationSlotsJson from './art/station-slots.json';
 import views from './art/views.json';
 import marks from './art/marks.json';
+import yardCells from './art/yard.json';
+import type { YardPieceView } from '../../shared/src/protocol.js';
 
 // ---------------------------------------------------------------------------- spot seals
 
@@ -882,15 +885,87 @@ function LifeLayer({ scene, warm }: { scene: string; warm: boolean }) {
   );
 }
 
+// ---------------------------------------------------------------------------- the yard of home, as it is built
+
+const YARD = yardCells as unknown as Record<string, [number, number]>;
+const YARD_SEEN = 'bezgomin.yardSeen';
+
+/** Pieces of the yard seen before on this device (null: never looked, so nothing is new). */
+function yardSeen(): Set<string> | null {
+  try {
+    const raw = localStorage.getItem(YARD_SEEN);
+    return raw ? new Set(JSON.parse(raw) as string[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * What is built in the yard, on its painting: each piece cut from a 4×3 atlas of 256 px cells; the palisade
+ * goes round the edges in strips. A piece not seen before on this device rises into its place.
+ */
+function YardLayer({ pieces }: { pieces: YardPieceView[] }) {
+  const [fresh] = useState(() => {
+    const seen = yardSeen();
+    return new Set(seen ? pieces.map((p) => p.key).filter((k) => !seen.has(k)) : []);
+  });
+  useEffect(() => {
+    try {
+      const seen = yardSeen() ?? new Set<string>();
+      for (const p of pieces) seen.add(p.key);
+      localStorage.setItem(YARD_SEEN, JSON.stringify([...seen]));
+    } catch {
+      // nothing remembered: a piece just does not rise
+    }
+  }, [pieces.map((p) => p.key).join()]);
+  return (
+    <span class="yard-layer">
+      {pieces.map((p) => {
+        if (p.edge)
+          return (
+            <span key={p.key} class={`yard-edge ${fresh.has(p.key) ? 'rise' : ''}`}>
+              <i class="pal-top" />
+              <i class="pal-left" />
+              <i class="pal-right" />
+              <i class="pal-bottom l" />
+              <i class="pal-bottom r" />
+            </span>
+          );
+        const cell = YARD[p.key];
+        if (!cell) return null;
+        const [n, i] = cell;
+        return (
+          <span
+            key={p.key}
+            class={`yard-piece ${p.key.startsWith('w_') ? 'worker' : ''} ${fresh.has(p.key) ? 'rise' : ''}`}
+            style={{
+              left: `${p.x}%`,
+              top: `${p.y}%`,
+              width: `${p.w}%`,
+              backgroundImage: `url(${new URL(`./art/yard/y${n}.webp`, import.meta.url).href})`,
+              backgroundPosition: `${((i % 4) / 3) * 100}% ${(Math.floor(i / 4) / 2) * 100}%`,
+            }}
+          />
+        );
+      })}
+    </span>
+  );
+}
+
 /**
  * The ground a plan is drawn on. A painting takes the evening (`dusk`, 0..1) and the weather (`sky`)
  * as tones laid over it; the ink plans have them from the page behind.
  */
-export function Ground({ scene, warm, dusk = 0, sky }: { scene: string; warm: boolean; dusk?: number; sky?: string }) {
+export function Ground({ scene, warm, dusk = 0, sky, pieces }: { scene: string; warm: boolean; dusk?: number; sky?: string; pieces?: YardPieceView[] }) {
+  // what is built stands on the painting: it waits until the painting is there
+  const [shown, setShown] = useState<string | null>(null);
   if (PAINTED.has(scene)) {
     return (
       <div class={`plan-paint tones g-${scene} ${sky ? `sky-${sky}` : ''}`} aria-hidden="true">
-        <img src={groundUrl(scene)} alt="" draggable={false} decoding="async" />
+        <img src={groundUrl(scene)} alt="" draggable={false} decoding="async" onLoad={() => setShown(scene)} ref={(el) => {
+            if (el?.complete && shown !== scene) setShown(scene);
+          }} />
+        {scene === 'yard' && shown === scene && pieces?.length ? <YardLayer pieces={pieces} /> : null}
         <LifeLayer scene={scene} warm={warm} />
         {warm && <span class="plan-paint-glow" />}
         <Tones dusk={dusk} />

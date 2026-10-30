@@ -1,4 +1,5 @@
 // Part two of the game: everything the engine runs. Act one is in ./a1.
+import { yard } from './yard.js';
 import type { Content } from '../shared/src/content.js';
 import { actions, pools } from './a1/actions.js';
 import { actions2 } from './a1/actions2.js';
@@ -68,6 +69,7 @@ export const content: Content = {
   weather,
   events,
   garden,
+  yard,
   ambient: { ...ambient, areas: { ...ambient.areas, a_10: 'hill', a_11: 'river', a_12: 'marsh', a_13: 'river', a_14: 'grove' }, actions: { ...ambient.actions, ...fx2, ...needs1Fx, ...needs2Fx, ...sideFx1, ...sideFx2, ...gardenFx } },
   maps: [],
   start: { resources: {}, hp: 22, area: A.shore },

@@ -25,7 +25,7 @@ import type { Game } from './index.js';
 import { questProgress } from './index.js';
 import { resolveParas } from './text.js';
 import { SKILLS, SLOTS, STATS, type SkillId } from '../../../shared/src/content.js';
-import type { BagView, BeastView, EntrySort, FightView, HeroView, LarderView, MapView, ResidentView, WeatherView } from '../../../shared/src/protocol.js';
+import type { BagView, BeastView, EntrySort, FightView, HeroView, LarderView, MapView, ResidentView, WeatherView, YardPieceView } from '../../../shared/src/protocol.js';
 import { perkState, skillLevel, skillXpFor, xpForLevel } from '../../../shared/src/rules.js';
 import { bagCap, bagLoad, gearNote, heroOf, ownsCount, perkTree, useNote } from './hero.js';
 import { HERO_AP, activeFoes, activeId, eliteMark, enemyOf, fid, fightMoves, fightOf, holder, moraleOf, walkable } from './fight.js';
@@ -34,6 +34,7 @@ import { foodOf, garmentOf, jobYield, larder, rankIn, residentJobs, stateOf, tea
 import { byFire, campBlock, chillRate, comfortOf, dryOf, eatBlock, restBlock, restLength, tired } from './needs.js';
 import { outside, weatherNow } from './weather.js';
 import { eventsView } from './events.js';
+import { asksView } from './asks.js';
 import { bedCount, gardenView } from './garden.js';
 import { FOLK, NEED, TRADE, coldLevel, mealFading } from '../../../shared/src/rules.js';
 
@@ -780,6 +781,21 @@ function mapView(g: Game, pid: PlayerId): MapView {
   };
 }
 
+/** What stands in the yard of home now, and who of the household is at work there (seen from home only). */
+function yardView(g: Game, pid: PlayerId): YardPieceView[] {
+  const p = g.p(pid);
+  if (p.travel || !g.ix.c.areas.find((a) => a.id === p.at)?.home) return [];
+  const working = new Set<string>();
+  for (const r of Object.values(g.s.residents)) {
+    if (!r.job) continue;
+    const t = g.ix.c.trades?.find((x) => x.jobs.includes(r.job!));
+    if (t) working.add(t.id);
+  }
+  return (g.ix.c.yard ?? [])
+    .filter((y) => (y.trade ? working.has(y.trade) : !y.when || g.test(y.when, pid)))
+    .map(({ key, x, y, w, spot, edge }) => ({ key, x, y, w, ...(spot ? { spot } : {}), ...(edge ? { edge } : {}) }));
+}
+
 function intentText(g: Game, f: NonNullable<ReturnType<typeof fightOf>>, it: { move: string; target?: PlayerId } | null, viewer: PlayerId): string | undefined {
   if (!it) return undefined;
   const who = it.target ? (it.target === viewer ? g.ix.ui('intent_you') : g.p(it.target).name) : '';
@@ -830,6 +846,7 @@ function fightViewOf(g: Game, pid: PlayerId, f: FightState, live = true): FightV
       };
       // a fallen foe keeps its cell, so its last blow can be seen landing there
       if (foe.pos) v.pos = foe.pos;
+      if (def.phases) v.boss = { desc: g.render(def.desc, pid) };
       if (foe.elite) {
         v.elite = true;
         v.traits.unshift(eliteMark(g, foe));
@@ -1297,12 +1314,14 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     weather: weatherView(g, pid),
     events: eventsView(g, pid, (c) => costView(g, c, pid)),
     garden: gardenView(g, pid),
+    yard: yardView(g, pid),
     map: mapView(g, pid),
     fight: fightView(g, pid),
     fightEnd: fightEndView(g, pid),
     nearFight: nearFight(g, pid),
     residents: residentsView(g, pid),
     larder: larderView(g),
+    asks: asksView(g, pid),
     bestiary: bestiaryView(g, pid),
     tabs: tabsOf(g, pid),
     atHome: g.atHome(pid),

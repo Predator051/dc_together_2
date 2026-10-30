@@ -195,6 +195,51 @@ function lungeTo(beat: Beat | null, id: string, where: (id: string) => Cell | un
   return { '--lx': `${Math.sign(b[0] - a[0]) * 30}%`, '--ly': `${Math.sign(b[1] - a[1]) * 30}%` } as Vars;
 }
 
+/** A blow that takes a quarter of one's health or more shakes the field. */
+function heavyBlow(beat: Beat | null, f: FightView): boolean {
+  if (!beat || beat.step || beat.e.k !== 'hit' || !beat.e.t) return false;
+  const t = beat.e.t;
+  const max = t.startsWith('f') ? f.foes.find((x) => `f${x.uid}` === t)?.hpMax : f.party.find((p) => p.pid === t)?.hpMax;
+  return !!max && (beat.e.n ?? 0) >= max * 0.25;
+}
+
+/** The one a story fight is about comes forward a moment before the first move (once per fight on this device). */
+const BOSS_SEEN = 'bezgomin.bossSeen';
+
+function BossCard({ f }: { f: FightView }) {
+  const boss = f.foes.find((x) => x.boss && !x.out);
+  const [shown, setShown] = useState(() => {
+    if (!boss || f.ended || still()) return false;
+    try {
+      return Number(localStorage.getItem(BOSS_SEEN) ?? 0) < f.id;
+    } catch {
+      return true;
+    }
+  });
+  // seen once it has played out (or was tapped away), not when it was merely put up
+  const done = () => {
+    setShown(false);
+    try {
+      localStorage.setItem(BOSS_SEEN, String(f.id));
+    } catch {
+      // nothing remembered: the card shows again the next time the fight is opened
+    }
+  };
+  useEffect(() => {
+    if (!shown) return;
+    const t = window.setTimeout(done, 3200);
+    return () => clearTimeout(t);
+  }, [shown]);
+  if (!shown || !boss) return null;
+  return (
+    <div class="boss-card" role="presentation" onClick={done}>
+      <Portrait icon={boss.icon} size="xl" />
+      <b class="boss-name">{boss.name}</b>
+      <p class="boss-desc">{boss.boss!.desc}</p>
+    </div>
+  );
+}
+
 function BeatPop({ beat, id }: { beat: Beat | null; id: string }) {
   if (!beat || beat.step) return null;
   const { e } = beat;
@@ -210,9 +255,12 @@ function BeatPop({ beat, id }: { beat: Beat | null; id: string }) {
   else if (e.k === 'open' && e.a === id) [text, cls] = [T.fightOpen, 'word gold'];
   if (!text) return null;
   return (
-    <span key={`${e.s}:${id}`} class={`delta-pop ${cls}`} aria-hidden="true">
-      {text}
-    </span>
+    <>
+      {cls === 'blow' && <span key={`k${e.s}:${id}`} class="hit-spark" aria-hidden="true" />}
+      <span key={`${e.s}:${id}`} class={`delta-pop ${cls}`} aria-hidden="true">
+        {text}
+      </span>
+    </>
   );
 }
 
@@ -410,10 +458,11 @@ export function FightPanel({ f, v, locked, onGone }: { f: FightView; v: PlayerVi
         </p>
         <div class="grid-main">
         <div
-          class={`grid-field g-${fld.ground} ${texUrl(fld.ground) ? 'painted' : ''} ${painted ? 'paint-on' : ''}`}
+          class={`grid-field g-${fld.ground} ${texUrl(fld.ground) ? 'painted' : ''} ${painted ? 'paint-on' : ''} ${heavyBlow(beat, f) ? 'quake' : ''}`}
           style={{ '--w': String(fld.w), '--h': String(fld.h), ...(texUrl(fld.ground) ? { '--ground': `url(${texUrl(fld.ground)}) center / cover` } : {}) } as Vars}
         >
           <canvas class="field-paint" ref={paintRef} aria-hidden="true" />
+          <BossCard key={f.id} f={f} />
           <div class="field-cells">{cells}</div>
           <div class="units">
             {f.party.map((p) => (

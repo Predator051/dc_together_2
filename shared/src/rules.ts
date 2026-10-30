@@ -341,6 +341,9 @@ export function travelMult(o: { trail: number; load: number; heavy: boolean }): 
 const MIN = 60_000;
 
 /** Numbers of the needs. Rates of chill are points per minute of play. */
+/** The asks board: open asks a hero may have, the most of one thing, experience for each thing brought. */
+export const ASK = { open: 3, most: 40, xpEach: 2, xpMost: 40 };
+
 export const NEED = {
   /** Dishes at once. */
   slots: 3,

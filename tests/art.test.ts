@@ -12,6 +12,7 @@ import stations from '../client/src/art/stations.json';
 import stationSlots from '../client/src/art/station-slots.json';
 import grounds from '../client/src/art/grounds.json';
 import perkMarks from '../client/src/art/perks.json';
+import yardArt from '../client/src/art/yard.json';
 import { SKILLS, STATS } from '../shared/src/content.js';
 
 // Every mark of a thing is painted; a new mark needs its cell in an atlas (scripts/art.ts things).
@@ -165,6 +166,21 @@ describe('marks of works', () => {
         const ok = a.icon.startsWith('spot:') ? (SPOT_ICONS as readonly string[]).includes(a.icon.slice(5)) : (ITEM_ICONS as readonly string[]).includes(a.icon);
         expect(ok, a.id).toBe(true);
       }
+    }
+  });
+});
+
+// Everything that can stand in the yard of home is painted (scripts/art.ts yard); the palisade has its strips.
+describe('painted yard', () => {
+  it('every piece has its cell in an atlas that exists', () => {
+    const cells = yardArt as unknown as Record<string, [number, number]>;
+    for (const y of content.yard ?? []) {
+      if (y.edge) {
+        for (const f of ['ph', 'pv']) expect(existsSync(new URL(`../client/src/art/yard/${f}.webp`, import.meta.url)), f).toBe(true);
+        continue;
+      }
+      expect(cells[y.key], y.key).toBeDefined();
+      expect(existsSync(new URL(`../client/src/art/yard/y${cells[y.key]![0]}.webp`, import.meta.url)), y.key).toBe(true);
     }
   });
 });

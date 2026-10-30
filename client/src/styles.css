@@ -9802,3 +9802,407 @@ body.sheet-open {
   display: inline;
   color: var(--faded);
 }
+
+/* ---------------------------------------------------------------- the yard of home, as it is built */
+/* comes in with the painting under it */
+.yard-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: tile-in 0.6s ease-out backwards;
+}
+.yard-piece {
+  position: absolute;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background-size: 400% 300%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+.yard-piece.worker {
+  animation: yard-work 3.2s ease-in-out infinite;
+}
+.yard-piece.rise {
+  animation: yard-rise 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) 0.35s backwards;
+}
+.yard-edge,
+.yard-edge i {
+  position: absolute;
+  pointer-events: none;
+}
+.yard-edge {
+  inset: 0;
+}
+.yard-edge.rise {
+  animation: tile-in 1.4s ease-out 0.35s backwards;
+}
+.yard-edge .pal-top,
+.yard-edge .pal-bottom {
+  height: 7.5%;
+  background: url('./art/yard/ph.webp') repeat-x left bottom / auto 100%;
+}
+.yard-edge .pal-top {
+  top: -1.5%;
+  left: 2%;
+  right: 2%;
+}
+.yard-edge .pal-bottom {
+  bottom: 1%;
+}
+.yard-edge .pal-bottom.l {
+  left: 2%;
+  width: 43%;
+}
+.yard-edge .pal-bottom.r {
+  left: 53%;
+  right: 2%;
+}
+.yard-edge .pal-left,
+.yard-edge .pal-right {
+  top: 2%;
+  bottom: 3%;
+  width: 4.4%;
+  background: url('./art/yard/pv.webp') repeat-y center top / 100% auto;
+}
+.yard-edge .pal-left {
+  left: 1%;
+}
+.yard-edge .pal-right {
+  right: 1.2%;
+}
+@keyframes yard-rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -40%) scale(0.86);
+  }
+}
+@keyframes yard-work {
+  0%,
+  100% {
+    transform: translate(-50%, -50%);
+  }
+  50% {
+    transform: translate(-50%, -52%);
+  }
+}
+/* a spot standing on a building drawn in the yard: a smaller mark at its corner */
+.spot.on-built {
+  margin-top: -18px;
+}
+.spot.on-built .spot-medal {
+  width: 36px;
+  height: 36px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .yard-piece.worker,
+  .yard-piece.rise,
+  .yard-edge.rise {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------- the asks board */
+.asks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+.asks.quiet {
+  margin-bottom: 10px;
+}
+.ask-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ask {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 4px 4px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--leaf);
+}
+.ask.theirs {
+  border-color: var(--ochre);
+  background: var(--ochre-wash);
+}
+.ask-pic {
+  flex: none;
+  width: 26px;
+  height: 26px;
+}
+.ask-pic .thing {
+  width: 100%;
+  height: 100%;
+}
+.ask-body {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+.ask-who {
+  font-size: 0.85rem;
+  color: var(--faded);
+}
+.ask.theirs .ask-who {
+  color: var(--ochre-ink);
+}
+.ask-line {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ask-line b {
+  font-variant-numeric: tabular-nums;
+}
+.ask-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--rule);
+  overflow: hidden;
+}
+.ask-bar span {
+  display: block;
+  height: 100%;
+  background: var(--ochre-ink);
+  transition: width 0.4s ease;
+}
+.ask-back {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--faded);
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .ask-back:hover {
+    color: var(--ink);
+  }
+}
+.ask-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ask-q {
+  margin: 0;
+}
+.ask-cells {
+  max-height: 30vh;
+  overflow-y: auto;
+}
+.ask-amount {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.ask-amount b {
+  min-width: 2ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.ask-amount > span {
+  margin-right: 4px;
+  color: var(--faded);
+}
+.ask-hint {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+/* ---------------------------------------------------------------- life on the land */
+/* the edge of the fog breathes: a second, fainter fog drifts a little over the first */
+.land-fog.drift {
+  opacity: 0.45;
+  animation: fog-drift 26s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes fog-drift {
+  from {
+    transform: translate(-16px, 7px);
+  }
+  to {
+    transform: translate(16px, -7px);
+  }
+}
+.land-smoke i {
+  left: -22px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
+  animation-name: land-smoke-rise;
+  animation-duration: 6.2s;
+}
+@keyframes land-smoke-rise {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.5);
+  }
+  20% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(20px, -96px) scale(2.6);
+  }
+}
+.land-birds {
+  position: absolute;
+  width: 44px;
+  height: 18px;
+  fill: none;
+  stroke: rgba(28, 22, 16, 0.85);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  pointer-events: none;
+  opacity: 0;
+  animation: land-birds 36s linear infinite backwards;
+}
+.land-birds path {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: birds-flap 0.45s ease-in-out infinite alternate;
+}
+@keyframes land-birds {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  3% {
+    opacity: 0.9;
+  }
+  30% {
+    opacity: 0.9;
+  }
+  34% {
+    opacity: 0;
+    transform: translate(300px, -36px);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(300px, -36px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .land-fog.drift,
+  .land-birds,
+  .land-smoke {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- the fight, felt */
+/* the one a story fight is about comes forward before the first move */
+.boss-card {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 18px;
+  text-align: center;
+  background: radial-gradient(ellipse at 50% 45%, rgba(16, 11, 6, 0.6), rgba(16, 11, 6, 0.92) 75%);
+  cursor: pointer;
+  animation: boss-in 3.2s ease forwards;
+}
+.boss-card .portrait {
+  animation: boss-step 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  box-shadow:
+    0 0 0 3px rgba(216, 105, 76, 0.55),
+    0 8px 24px rgba(0, 0, 0, 0.7);
+}
+.boss-name {
+  font: 700 1.45rem var(--serif);
+  color: var(--cinnabar-ink);
+  letter-spacing: 0.02em;
+  animation: boss-step 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s backwards;
+}
+.boss-desc {
+  max-width: 30ch;
+  margin: 0;
+  font-style: italic;
+  color: var(--ink);
+  animation: boss-step 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s backwards;
+}
+@keyframes boss-in {
+  0% {
+    opacity: 0;
+  }
+  10%,
+  84% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+@keyframes boss-step {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.94);
+  }
+}
+/* a blow lands: a short burst over the one struck */
+.hit-spark {
+  position: absolute;
+  inset: -14%;
+  z-index: 2;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 236, 196, 0.9) 0, rgba(232, 140, 64, 0.5) 30%, rgba(232, 140, 64, 0) 62%);
+  pointer-events: none;
+  animation: hit-spark 0.34s ease-out forwards;
+}
+@keyframes hit-spark {
+  from {
+    opacity: 1;
+    transform: scale(0.3);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+}
+/* a heavy one shakes the ground */
+.grid-field.quake {
+  animation: quake 0.36s ease-out;
+}
+@keyframes quake {
+  20% {
+    transform: translate(-4px, 2px);
+  }
+  40% {
+    transform: translate(4px, -2px);
+  }
+  60% {
+    transform: translate(-2px, 1px);
+  }
+  80% {
+    transform: translate(2px, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boss-card,
+  .hit-spark {
+    display: none;
+  }
+  .grid-field.quake {
+    animation: none;
+  }
+}

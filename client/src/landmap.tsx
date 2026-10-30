@@ -322,6 +322,45 @@ interface Cam {
 }
 
 const K_MAX = 1.35;
+/** A tap this far from a place (sheet px, more when zoomed out) picks it. */
+const NEAR_TAP = 120;
+
+// ---------------------------------------------------------------------------- life on the land
+
+/** Lived-in places smoke; birds go over the water of the places that have it (once they are explored). */
+const SMOKES = ['a_01', 'a_11'];
+const BIRDS = ['a_02', 'a_03', 'a_07', 'a_12', 'a_13', 'a_14'];
+
+function LandLife({ nodes }: { nodes: MapNodeView[] }) {
+  const known = nodes.filter((n) => n.known && SHEET.at[n.id]);
+  return (
+    <>
+      {known
+        .filter((n) => SMOKES.includes(n.id))
+        .map((n) => {
+          const [x, y] = SHEET.at[n.id]!;
+          return (
+            <span key={`s${n.id}`} class="life-smoke land-smoke" style={{ left: `${x + 12}px`, top: `${y - 30}px` }}>
+              <i />
+              <i />
+              <i />
+            </span>
+          );
+        })}
+      {known
+        .filter((n) => BIRDS.includes(n.id))
+        .map((n, i) => {
+          const [x, y] = SHEET.at[n.id]!;
+          return (
+            <svg key={`b${n.id}`} class="land-birds" style={{ left: `${x - 140}px`, top: `${y - 60}px`, animationDelay: `${3 + ((i * 9) % 31)}s` }} viewBox="0 0 40 16" aria-hidden="true">
+              <path d="M2 8q4-5 8 0q4-5 8 0" />
+              <path d="M22 4q3-4 6 0q3-4 6 0" />
+            </svg>
+          );
+        })}
+    </>
+  );
+}
 
 /**
  * `cover` fills the box with land; a tall phone may step back further, with dark margins,
@@ -432,14 +471,28 @@ export function LandMap({
     return () => ro.disconnect();
   }, []);
 
-  // a tap on the land itself (not on a place or its ring) lets the picked place go
+  // a tap on the land itself (not on a place or its ring) picks the place nearest to it, if one is near;
+  // further off it lets the picked place go
   const pickRef = useRef(onPick);
   pickRef.current = onPick;
+  const nodesRef = useRef(m.nodes);
+  nodesRef.current = m.nodes;
   useEffect(() => {
     const box = boxRef.current;
     if (!box) return;
     const off = (e: MouseEvent) => {
-      if (!(e.target as Element).closest('.land-pin, .pin-ring, .land-tools')) pickRef.current(null);
+      if ((e.target as Element).closest('.land-pin, .pin-ring, .land-tools')) return;
+      const r = box.getBoundingClientRect();
+      const c = cam.current;
+      const at: Pt = [(e.clientX - r.left - c.x) / c.k, (e.clientY - r.top - c.y) / c.k];
+      let best: { id: string; d: number } | null = null;
+      for (const n of nodesRef.current) {
+        const p = SHEET.at[n.id];
+        if (!p) continue;
+        const d = Math.hypot(p[0] - at[0], p[1] - at[1]);
+        if (!best || d < best.d) best = { id: n.id, d };
+      }
+      pickRef.current(best && best.d <= NEAR_TAP / Math.min(1, c.k) ? best.id : null);
     };
     box.addEventListener('click', off);
     return () => box.removeEventListener('click', off);
@@ -640,9 +693,11 @@ export function LandMap({
             })}
           </svg>
           {fog && <img class="land-fog" src={fog} alt="" draggable={false} style={{ width: `${SHEET.w}px`, height: `${SHEET.h}px` }} />}
+          {fog && <img class="land-fog drift" src={fog} alt="" draggable={false} style={{ width: `${SHEET.w}px`, height: `${SHEET.h}px` }} />}
           {fogBefore && (
             <img class="land-fog lifts" src={fogBefore} alt="" draggable={false} style={{ width: `${SHEET.w}px`, height: `${SHEET.h}px` }} />
           )}
+          <LandLife nodes={m.nodes} />
           <div class={`land-tones tones ${sky ? `sky-${sky}` : ''}`}>
             <Tones dusk={dusk} />
           </div>

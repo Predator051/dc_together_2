@@ -209,11 +209,14 @@ function SpotButton({
   ]
     .filter(Boolean)
     .join(', ');
+  // standing on a building drawn in the yard: the mark steps to its lower inner corner, smaller
+  const on = v.yard.find((y) => y.spot === s.icon);
+  const at = on ? { x: s.x + (s.x < 50 ? 1 : -1) * on.w * 0.36, y: s.y + on.w * 0.36 } : s;
   return (
     <button
       type="button"
-      class={`spot ${active ? 'on' : ''} ${s.ready > 0 || s.id === 'paths' || s.id === 'store' || s.id === 'bag' || s.id === 'folk' ? 'live' : 'idle'} ${s.together ? 'pair' : ''} ${running ? 'running' : ''}`}
-      style={{ left: `${s.x}%`, top: `${s.y}%`, '--i': String(i) }}
+      class={`spot ${on ? 'on-built' : ''} ${active ? 'on' : ''} ${s.ready > 0 || s.id === 'paths' || s.id === 'store' || s.id === 'bag' || s.id === 'folk' ? 'live' : 'idle'} ${s.together ? 'pair' : ''} ${running ? 'running' : ''}`}
+      style={{ left: `${at.x}%`, top: `${at.y}%`, '--i': String(i) }}
       aria-label={label}
       aria-pressed={active}
       onClick={onPick}
@@ -331,6 +334,7 @@ export function AreaPlan({
               warm={v.stove.state === 'warm' || v.stove.state === 'low'}
               dusk={v.ambient.kind === 'cellar' || v.ambient.kind === 'candle' ? 0 : duskOf(v.dayAt, now)}
               sky={v.ambient.sky ?? undefined}
+              pieces={v.yard}
             />
             {spots.map((s, i) => (
               <SpotButton

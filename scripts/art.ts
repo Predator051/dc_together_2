@@ -46,6 +46,8 @@
 // A sheet of perks is 4×3 marks of the hero's growth, cut like things (client/src/art/perks/k<n>.webp,
 // order .design/art/perks.json; keys: perk ids, branch_<id>, stat_<id>, skill_<id>).
 // A sheet of tex is 3×3 square grounds painted edge to edge (see `textures`).
+// A sheet of yard is 4×3 things built in the yard of home and its people at work, seen from above like the
+// yard painting, cut like things (256 px cells, client/src/art/yard/y<n>.webp, order .design/art/yard.json).
 //
 //   tsx scripts/art.ts crops <painted.png> <look>   — five stages of a crop (see `crops`)
 //   tsx scripts/art.ts bed <painted.png>            — an empty raised bed (see `bed`)
@@ -100,7 +102,7 @@ interface AtlasKind {
   prefix: string;
 }
 
-const KINDS: Record<'things' | 'foes' | 'marks' | 'feats' | 'perks', AtlasKind> = {
+const KINDS: Record<'things' | 'foes' | 'marks' | 'feats' | 'perks' | 'yard', AtlasKind> = {
   things: { cols: 4, rows: 3, cell: 128, prefix: 't' },
   // things on the ground of a fight, seen from above
   feats: { cols: 4, rows: 3, cell: 160, prefix: 'e' },
@@ -109,6 +111,8 @@ const KINDS: Record<'things' | 'foes' | 'marks' | 'feats' | 'perks', AtlasKind> 
   marks: { cols: 4, rows: 3, cell: 128, prefix: 'm' },
   // marks of the hero's growth: perks, their branches, strengths, skills
   perks: { cols: 4, rows: 3, cell: 128, prefix: 'k' },
+  // what is built in the yard of home, and its people at work, seen from above like the yard itself
+  yard: { cols: 4, rows: 3, cell: 256, prefix: 'y' },
 };
 
 /** A painting without real transparency: the flat ground around the things is wiped from the edges in. */
@@ -597,7 +601,7 @@ function bed(src: string): void {
 
 const [cmd, ...args] = process.argv.slice(2);
 if (cmd === 'map' && args[0] && args[1]) map(resolve(args[0]), args[1], Number(args[2] ?? 6), Number(args[3] ?? 4));
-else if ((cmd === 'things' || cmd === 'foes' || cmd === 'marks' || cmd === 'feats' || cmd === 'perks') && args[0] && args[1]) atlas(cmd, resolve(args[0]), Number(args[1]));
+else if ((cmd === 'things' || cmd === 'foes' || cmd === 'marks' || cmd === 'feats' || cmd === 'perks' || cmd === 'yard') && args[0] && args[1]) atlas(cmd, resolve(args[0]), Number(args[1]));
 else if (cmd === 'tex' && args[0] && args[1] && /^\d+$/.test(args[1])) textures(resolve(args[0]), Number(args[1]));
 else if (cmd === 'tex' && args[0] && args[1]) texture(resolve(args[0]), args[1]);
 else if (cmd === 'ground' && args[0] && args[1]) ground(resolve(args[0]), args[1]);

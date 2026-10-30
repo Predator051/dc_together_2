@@ -381,7 +381,7 @@ export function eliteMark(g: Game, foe: FoeState): string {
 }
 
 function eliteLine(g: Game, foe: FoeState): string {
-  return g.ix.ui('fight_elite').replace('{foe}', enemyOf(g, foe.enemy).name).replace('{mark}', eliteMark(g, foe));
+  return g.ix.ui(enemyOf(g, foe.enemy).humane ? 'fight_elite_person' : 'fight_elite_beast').replace('{foe}', enemyOf(g, foe.enemy).name);
 }
 
 /** Who moves first: the quick, the sharp-eyed, then the rest. */
