@@ -1,4 +1,5 @@
 import type { Field } from './field.js';
+import type { TemperState } from './rules.js';
 import type { Gender, PlayerId, Role, LogKind, Slot, StatId, SkillId } from './content.js';
 
 /**
@@ -40,6 +41,10 @@ export interface PlayerState {
   perks: string[];
   /** Unspent perk points (one per level from the second, v13). */
   perkPoints: number;
+  /** Past the act's level ceiling. */
+  temper?: TemperState;
+  /** Experience still to be doubled: the one behind, back after being away. */
+  catchUp?: number;
   /** Skill experience. */
   skills: Record<SkillId, number>;
   /** Worn things (item ids). */

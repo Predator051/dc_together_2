@@ -73,6 +73,11 @@ export class Bot {
       const id = this.o.careless ? this.rng.pick(['str', 'agi', 'end', 'per', 'wil']) : plan[(v.hero.level - 2) % plan.length]!;
       return { c: 'stat', id };
     }
+    // past the act's ceiling: health first, then load, speed, and the rest for the store
+    if (v.hero.temper && v.hero.temper.points > 0) {
+      const k = ['hp', 'carry', 'pace', 'gift'].map((id) => v.hero.temper!.kinds.find((x) => x.id === id)!).find((x) => x.most === null || x.taken < x.most);
+      if (k) return { c: 'temper', id: k.id };
+    }
     if (v.proposal) return null; // mine: wait for the answer
     // a small happening: answer it (a careless player at random, a careful one the first that can be done)
     const ev = v.events[0];

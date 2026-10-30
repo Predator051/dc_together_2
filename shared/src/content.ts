@@ -1108,6 +1108,10 @@ export interface Content {
     branches: PerkBranchDef[];
     /** The hero level each step of the tree opens at (index 0 — step 1). */
     tiers: number[];
+    /** The highest level a hero reaches in each act; past it experience tempers (`.design/personal.md` §2). */
+    caps?: Record<number, number>;
+    /** What a rank of temper spent on «gift» puts into the store, by act. */
+    temperGift?: Record<number, Record<string, number>>;
   };
   /** What residents eat (one an hour each). */
   food?: string;

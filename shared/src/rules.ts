@@ -29,7 +29,45 @@ export interface HeroLike {
   perks: string[];
   equip: Partial<Record<Slot, string>>;
   skills: Record<SkillId, number>;
+  /** Strength bought past the act's ceiling. */
+  temper?: TemperState;
 }
+
+/** Past the level ceiling of the act, experience tempers the hero instead (`.design/personal.md` §2). */
+export interface TemperState {
+  /** Experience toward the next rank. */
+  xp: number;
+  /** All experience that ever went into it. */
+  total: number;
+  rank: number;
+  /** Unspent ranks. */
+  points: number;
+  spent: Partial<Record<TemperKind, number>>;
+}
+
+export type TemperKind = 'hp' | 'carry' | 'pace' | 'gift';
+
+export const TEMPER = {
+  /** Each rank costs this much more than the one before. */
+  grow: 1.15,
+  /** The first rank costs what the step to the level above the ceiling would. */
+  kinds: {
+    hp: { most: 6 },
+    carry: { most: 5 },
+    /** Work time −1% a rank. */
+    pace: { most: 5, by: 0.01 },
+    /** Materials of the act into the store; no end to it. */
+    gift: { most: Infinity },
+  } as Record<TemperKind, { most: number; by?: number }>,
+};
+
+/** Experience for rank `rank` (from 1) past ceiling `cap`. */
+export function temperCost(cap: number, rank: number): number {
+  return Math.round((xpForLevel(cap + 1) - xpForLevel(cap)) * Math.pow(TEMPER.grow, rank - 1));
+}
+
+/** The one who is behind learns twice as fast for a while after being away (per hour away, at most). */
+export const CATCH = { perHour: 30, most: 300 };
 
 export interface Derived {
   hpMax: number;
@@ -112,8 +150,8 @@ export function derive(h: HeroLike, gear: (id: string) => GearDef | undefined, b
   const perkCarry = (has('steady') ? PERK.steadyCarry : 0) + (has('packer') ? PERK.packerCarry : 0);
   const b = body ?? { hp: 0, dmg: 0, hit: 0, dodge: 0 };
   return {
-    hpMax: Math.max(4, 10 + 3 * s.end + 2 * (h.level - 1) + hp + b.hp + (has('tough') ? PERK.toughHp : 0)),
-    carry: 8 + 2 * s.str + carry + perkCarry,
+    hpMax: Math.max(4, 10 + 3 * s.end + 2 * (h.level - 1) + hp + b.hp + (has('tough') ? PERK.toughHp : 0) + (h.temper?.spent.hp ?? 0)),
+    carry: 8 + 2 * s.str + carry + perkCarry + (h.temper?.spent.carry ?? 0),
     armor: armor + (has('bark') ? PERK.barkArmor : 0),
     dodge: Math.max(0, Math.min(0.3, 0.025 * s.agi + dodge) + b.dodge),
     hit: 0.7 + 0.03 * s.agi + acc + 0.03 * skill + b.hit,

@@ -26,8 +26,8 @@ import { questProgress } from './index.js';
 import { resolveParas } from './text.js';
 import { SKILLS, SLOTS, STATS, type SkillId } from '../../../shared/src/content.js';
 import type { BagView, BeastView, EntrySort, PrepView, FightView, HeroView, LarderView, MapView, ResidentView, WeatherView, YardPieceView } from '../../../shared/src/protocol.js';
-import { perkState, skillLevel, skillXpFor, xpForLevel } from '../../../shared/src/rules.js';
-import { bagCap, bagLoad, gearNote, heroOf, ownsCount, perkTree, useNote } from './hero.js';
+import { TEMPER, perkState, skillLevel, skillXpFor, temperCost, xpForLevel, type TemperKind } from '../../../shared/src/rules.js';
+import { bagCap, bagLoad, gearNote, heroOf, levelCap, ownsCount, perkTree, useNote } from './hero.js';
 import { HERO_AP, activeFoes, activeId, eliteMark, enemyOf, fid, fightMoves, fightOf, holder, moraleOf, walkable } from './fight.js';
 import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, routeLegs, routeTo, travelTime, walkOf } from './travel.js';
 import { foodOf, garmentOf, jobYield, larder, rankIn, residentJobs, stateOf, teachBlock, tradeOf, workMult, workingAt } from './household.js';
@@ -624,6 +624,32 @@ function skillText(g: Game, id: SkillId, lv: number): string {
   return out.join(', ');
 }
 
+/** The act's level ceiling, temper past it, and catch-up experience. */
+function capView(g: Game, pid: PlayerId): Pick<HeroView, 'cap' | 'temper' | 'catchUp'> {
+  const p = g.p(pid);
+  const cap = levelCap(g);
+  const out: Pick<HeroView, 'cap' | 'temper' | 'catchUp'> = {};
+  if (cap !== undefined) out.cap = { level: cap, reached: p.level >= cap };
+  const t = p.temper;
+  if (t && cap !== undefined) {
+    out.temper = {
+      rank: t.rank,
+      points: t.points,
+      xp: t.xp,
+      next: temperCost(cap, t.rank + 1),
+      kinds: (Object.keys(TEMPER.kinds) as TemperKind[]).map((k) => ({
+        id: k,
+        name: g.ix.ui(`temper_${k}`),
+        text: g.ix.ui(`temper_${k}_text`),
+        taken: t.spent[k] ?? 0,
+        most: Number.isFinite(TEMPER.kinds[k].most) ? TEMPER.kinds[k].most : null,
+      })),
+    };
+  }
+  if (p.catchUp) out.catchUp = p.catchUp;
+  return out;
+}
+
 function heroView(g: Game, pid: PlayerId): HeroView {
   const p = g.p(pid);
   const d = heroOf(g, pid);
@@ -693,6 +719,7 @@ function heroView(g: Game, pid: PlayerId): HeroView {
       items: Object.values(p.sets[name] ?? {}).map((id) => g.ix.res.get(id!)?.name ?? id!),
     })),
     canChange: atHome && p.fight === null,
+    ...capView(g, pid),
   };
 }
 

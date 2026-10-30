@@ -31,6 +31,8 @@ export type Command =
   /** Spend a stat point / pick a perk. */
   | { c: 'stat'; id: string }
   | { c: 'perk'; id: string }
+  /** Spend a rank of temper (past the act's level ceiling): hp, carry, pace or gift. */
+  | { c: 'temper'; id: string }
   /** A move in a fight: hit:<uid>, shoot:<uid>, guard, cover, free, lift, use:<item>, flee. */
   | { c: 'fight'; id: string }
   /** Join a fight going on where you stand. */
@@ -427,6 +429,18 @@ export interface HeroView {
   outfits: Array<{ name: string; items: string[] }>;
   /** Gear can be changed only at home. */
   canChange: boolean;
+  /** The highest level of this act (when there is one) and whether it is reached. */
+  cap?: { level: number; reached: boolean };
+  /** Past the ceiling: ranks, experience toward the next, what each kind gives and how much of it is taken. */
+  temper?: {
+    rank: number;
+    points: number;
+    xp: number;
+    next: number;
+    kinds: Array<{ id: string; name: string; text: string; taken: number; most: number | null }>;
+  };
+  /** Experience still counted double (the one behind, back after being away). */
+  catchUp?: number;
 }
 
 export interface BagView {

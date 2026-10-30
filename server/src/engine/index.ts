@@ -54,6 +54,9 @@ import {
   settleHealth,
   skillOf,
   spendPoint,
+  spendTemper,
+  catchUp,
+  temperPace,
 } from './hero.js';
 import { activeFoes, dropFight, fightChoose, fightOf, help, maybeResolve, startFight, takeLoot } from './fight.js';
 import { ask, credit, unask } from './asks.js';
@@ -806,7 +809,7 @@ export class Game {
 
   /** How long the action keeps this hero busy. */
   actionTime(a: ActionDef, pid: PlayerId): number {
-    let t = a.cooldown * this.cooldownMult(this.ix.areaOf(a.group)) * paceOf(this, pid) * (skyFor(this, pid)?.pace ?? 1);
+    let t = a.cooldown * this.cooldownMult(this.ix.areaOf(a.group)) * paceOf(this, pid) * temperPace(this, pid) * (skyFor(this, pid)?.pace ?? 1);
     if (a.skill) {
       const h = heroOf(this, pid);
       const knack = a.knack && a.knack.role === this.p(pid).role ? a.knack.x : 1;
@@ -1647,6 +1650,9 @@ export class Game {
       case 'perk':
         r = pickPerk(this, pid, cmd.id);
         break;
+      case 'temper':
+        r = spendTemper(this, pid, cmd.id);
+        break;
       case 'fight':
         r = fightChoose(this, pid, cmd.id);
         break;
@@ -1743,6 +1749,7 @@ export class Game {
     } else if (p.away) {
       // a real absence (not a dropped connection) earns a "while you were away" summary
       if (this.now - p.away.at >= WELCOME_AFTER) p.welcome = p.away;
+      catchUp(this, pid, this.now - p.away.at);
       p.away = null;
     }
     if (!online) {
