@@ -15,7 +15,7 @@ const PAINTED_FOLK = new Set(painted as string[]);
 /** A resident's painted face, or null while it is not painted. */
 export function folkFace(id: string): string | null {
   if (!PAINTED_FOLK.has(id)) return null;
-  return new URL(`./art/folk/f${(FOLK as readonly string[]).indexOf(id) + 1}.webp`, import.meta.url).href;
+  return new URL(`./art/folk/${id}.webp`, import.meta.url).href;
 }
 
 function load(key: string): string | null {

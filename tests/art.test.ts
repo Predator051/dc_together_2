@@ -55,8 +55,7 @@ describe('painted grounds', () => {
     expect(SCENES.filter((s) => !list.includes(s))).toEqual([]);
     expect(list.filter((s) => !(SCENES as readonly string[]).includes(s))).toEqual([]);
     for (const s of list) {
-      const i = (SCENES as readonly string[]).indexOf(s) + 1;
-      expect(existsSync(new URL(`../client/src/art/grounds/g${i}.webp`, import.meta.url)), s).toBe(true);
+      expect(existsSync(new URL(`../client/src/art/grounds/${s}.webp`, import.meta.url)), s).toBe(true);
     }
   });
 });
@@ -92,9 +91,8 @@ describe('painted views', () => {
     const list = views as string[];
     expect(VIEWS.filter((k) => !list.includes(k))).toEqual([]);
     for (const k of list) {
-      const i = (VIEWS as readonly string[]).indexOf(k) + 1;
-      expect(i, k).toBeGreaterThan(0);
-      expect(existsSync(new URL(`../client/src/art/views/w${i}.webp`, import.meta.url)), k).toBe(true);
+      expect((VIEWS as readonly string[]).includes(k), k).toBe(true);
+      expect(existsSync(new URL(`../client/src/art/views/${k}.webp`, import.meta.url)), k).toBe(true);
     }
   });
 });
@@ -105,9 +103,8 @@ describe('painted heroes', () => {
     const list = heroes as string[];
     expect(list).toEqual(expect.arrayContaining(['maker-m', 'hunter-f']));
     for (const k of list) {
-      const i = (HEROES as readonly string[]).indexOf(k) + 1;
-      expect(i, k).toBeGreaterThan(0);
-      for (const f of [`p${i}`, `q${i}`]) expect(existsSync(new URL(`../client/src/art/heroes/${f}.webp`, import.meta.url)), `${k} ${f}`).toBe(true);
+      expect((HEROES as readonly string[]).includes(k), k).toBe(true);
+      for (const f of [`fig-${k}`, `face-${k}`]) expect(existsSync(new URL(`../client/src/art/heroes/${f}.webp`, import.meta.url)), `${k} ${f}`).toBe(true);
     }
   });
 });
@@ -118,8 +115,7 @@ describe('painted stations', () => {
     const list = stations as string[];
     expect(SPOT_ICONS.filter((k) => !list.includes(k))).toEqual([]);
     for (const k of list) {
-      const i = (SPOT_ICONS as readonly string[]).indexOf(k) + 1;
-      expect(existsSync(new URL(`../client/src/art/stations/s${i}.webp`, import.meta.url)), k).toBe(true);
+      expect(existsSync(new URL(`../client/src/art/stations/${k}.webp`, import.meta.url)), k).toBe(true);
     }
   });
 
@@ -144,7 +140,7 @@ describe('painted folk', () => {
   it('every resident has a face, and every face its picture', () => {
     expect(content.residents.map((r) => r.id).filter((id) => !(FOLK as readonly string[]).includes(id))).toEqual([]);
     expect([...FOLK].filter((id) => !(folk as string[]).includes(id))).toEqual([]);
-    FOLK.forEach((id, i) => expect(existsSync(new URL(`../client/src/art/folk/f${i + 1}.webp`, import.meta.url)), id).toBe(true));
+    FOLK.forEach((id) => expect(existsSync(new URL(`../client/src/art/folk/${id}.webp`, import.meta.url)), id).toBe(true));
   });
 });
 
@@ -191,9 +187,8 @@ describe('painted moments', () => {
   it('every moment is a scene of the story, every painted one is on disk', () => {
     for (const id of MOMENTS) expect(content.scenes.some((s) => s.id === id), id).toBe(true);
     for (const id of moments as string[]) {
-      const i = (MOMENTS as readonly string[]).indexOf(id) + 1;
-      expect(i, id).toBeGreaterThan(0);
-      expect(existsSync(new URL(`../client/src/art/moments/m${i}.webp`, import.meta.url)), id).toBe(true);
+      expect((MOMENTS as readonly string[]).includes(id), id).toBe(true);
+      expect(existsSync(new URL(`../client/src/art/moments/${id}.webp`, import.meta.url)), id).toBe(true);
     }
   });
 });

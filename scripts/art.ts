@@ -21,25 +21,24 @@
 // Portraits of foes go the same way (3×3 sheets, 192 px cells, client/src/art/foes/f<n>.webp).
 //
 // A ground is the painted plan of a place: a square painting cut to the plan's 8:7 and saved as
-// client/src/art/grounds/g<i>.webp, i — the scene's number in SCENES; the painted scenes are listed
-// in client/src/art/grounds.json.
+// client/src/art/grounds/<scene>.webp; the painted scenes are listed in client/src/art/grounds.json.
+// (Files are named by key, never by place in a list: a list that grows must not shift old pictures.)
 //
 // A view is a place seen at eye level (the head of a scene there, the card of the place on the map):
-// a wide strip cut from the middle, client/src/art/views/w<i>.webp, i — the key's number in VIEWS;
-// the painted keys are listed in client/src/art/views.json.
+// a wide strip cut from the middle, client/src/art/views/<key>.webp; the painted keys are listed in
+// client/src/art/views.json.
 //
-// A hero is painted at full height on a magenta ground: the figure (client/src/art/heroes/p<i>.webp,
-// for the gear screen) and the face cut from the same painting (q<i>.webp), i — the key's number in
-// HEROES; the painted keys are listed in client/src/art/heroes.json.
+// A hero is painted at full height on a magenta ground: the figure (client/src/art/heroes/fig-<key>.webp,
+// for the gear screen) and the face cut from the same painting (face-<key>.webp); the painted keys are
+// listed in client/src/art/heroes.json.
 //
 // A sheet of stations is four close views of workplaces in a 2×2 grid (order: .design/art/stations.json,
-// sheet n); each quarter becomes client/src/art/stations/s<i>.webp, i — the spot icon's number in
-// SPOT_ICONS; the painted ones are listed in client/src/art/stations.json.
+// sheet n); each quarter becomes client/src/art/stations/<spot icon>.webp; the painted ones are listed in
+// client/src/art/stations.json.
 //
 // A sheet of folk is four faces of residents in a 2×2 grid (order: .design/art/folk.json, sheet n; keys
 // not in FOLK are spares and dropped); the middle `crop` (0.8 by default) of each quarter becomes
-// client/src/art/folk/f<i>.webp, i — the resident's number in FOLK; the painted ones are listed in
-// client/src/art/folk.json.
+// client/src/art/folk/<resident>.webp; the painted ones are listed in client/src/art/folk.json.
 //
 // A sheet of feats is 4×3 things on the ground of a fight seen from above (trees, stones, carts…), cut
 // like things (160 px cells, client/src/art/feats/e<n>.webp, order .design/art/feats.json).
@@ -286,63 +285,59 @@ function atlas(kind: keyof typeof KINDS, src: string, n: number): void {
 // ---------------------------------------------------------------------------- grounds and views
 
 
-/** A key scene's own moment: cut like a view, client/src/art/moments/m<i>.webp, i — its number in MOMENTS. */
+/** A key scene's own moment: cut like a view, client/src/art/moments/<scene>.webp. */
 function moment(src: string, key: string): void {
-  const i = (MOMENTS as readonly string[]).indexOf(key) + 1;
-  if (!i) throw new Error(`no moment ${key}`);
+  if (!(MOMENTS as readonly string[]).includes(key)) throw new Error(`no moment ${key}`);
   const [w, h] = sizeOf(src);
   const ch = Math.round(w / 2.4);
   const outDir = join(ROOT, 'client/src/art/moments');
   mkdirSync(outDir, { recursive: true });
   const top = Math.max(0, Math.round((h - ch) * 0.42));
-  magick(src, '-crop', `${w}x${ch}+0+${top}`, '+repage', '-resize', '1200x500', '-strip', '-quality', '78', '-define', 'webp:method=6', join(outDir, `m${i}.webp`));
+  magick(src, '-crop', `${w}x${ch}+0+${top}`, '+repage', '-resize', '1200x500', '-strip', '-quality', '78', '-define', 'webp:method=6', join(outDir, `${key}.webp`));
   const listPath = join(ROOT, 'client/src/art/moments.json');
   const list = new Set<string>(existsSync(listPath) ? JSON.parse(readFileSync(listPath, 'utf8')) : []);
   list.add(key);
   writeFileSync(listPath, JSON.stringify([...list].sort()) + '\n');
-  keep(src, `moment${i}`);
-  console.log(`moment ${key} → m${i}.webp`);
+  keep(src, `moment-${key}`);
+  console.log(`moment ${key} → ${key}.webp`);
 }
 
 function view(src: string, key: string): void {
-  const i = (VIEWS as readonly string[]).indexOf(key) + 1;
-  if (!i) throw new Error(`no view ${key}`);
+  if (!(VIEWS as readonly string[]).includes(key)) throw new Error(`no view ${key}`);
   const [w, h] = sizeOf(src);
   const ch = Math.round(w / 2.4);
   const outDir = join(ROOT, 'client/src/art/views');
   mkdirSync(outDir, { recursive: true });
   // the strip sits a little above the middle, where the horizon was asked to be
   const top = Math.max(0, Math.round((h - ch) * 0.42));
-  magick(src, '-crop', `${w}x${ch}+0+${top}`, '+repage', '-resize', '1200x500', '-strip', '-quality', '78', '-define', 'webp:method=6', join(outDir, `w${i}.webp`));
+  magick(src, '-crop', `${w}x${ch}+0+${top}`, '+repage', '-resize', '1200x500', '-strip', '-quality', '78', '-define', 'webp:method=6', join(outDir, `${key}.webp`));
   const listPath = join(ROOT, 'client/src/art/views.json');
   const list = new Set<string>(existsSync(listPath) ? JSON.parse(readFileSync(listPath, 'utf8')) : []);
   list.add(key);
   writeFileSync(listPath, JSON.stringify([...list].sort()) + '\n');
-  keep(src, `view${i}`);
-  console.log(`view ${key}: ${w}×${h} → w${i}.webp`);
+  keep(src, `view-${key}`);
+  console.log(`view ${key}: ${w}×${h} → ${key}.webp`);
 }
 
 function ground(src: string, scene: string): void {
-  const i = (SCENES as readonly string[]).indexOf(scene) + 1;
-  if (!i) throw new Error(`no scene ${scene}`);
+  if (!(SCENES as readonly string[]).includes(scene)) throw new Error(`no scene ${scene}`);
   const [w, h] = sizeOf(src);
   const ch = Math.round((w * 7) / 8);
   const outDir = join(ROOT, 'client/src/art/grounds');
   mkdirSync(outDir, { recursive: true });
-  magick(src, '-gravity', 'center', '-crop', `${w}x${Math.min(h, ch)}+0+0`, '+repage', '-resize', '960x840', '-strip', '-quality', '78', '-define', 'webp:method=6', join(outDir, `g${i}.webp`));
+  magick(src, '-gravity', 'center', '-crop', `${w}x${Math.min(h, ch)}+0+0`, '+repage', '-resize', '960x840', '-strip', '-quality', '78', '-define', 'webp:method=6', join(outDir, `${scene}.webp`));
   const listPath = join(ROOT, 'client/src/art/grounds.json');
   const list = new Set<string>(existsSync(listPath) ? JSON.parse(readFileSync(listPath, 'utf8')) : []);
   list.add(scene);
   writeFileSync(listPath, JSON.stringify([...list].sort()) + '\n');
-  keep(src, `ground${i}`);
-  console.log(`ground ${scene}: ${w}×${h} → g${i}.webp`);
+  keep(src, `ground-${scene}`);
+  console.log(`ground ${scene}: ${w}×${h} → ${scene}.webp`);
 }
 
 // ---------------------------------------------------------------------------- heroes
 
 function hero(src: string, key: string): void {
-  const i = (HEROES as readonly string[]).indexOf(key) + 1;
-  if (!i) throw new Error(`no hero look ${key}`);
+  if (!(HEROES as readonly string[]).includes(key)) throw new Error(`no hero look ${key}`);
   const [w, h] = sizeOf(src);
   const px = execFileSync('magick', [src, '-depth', '8', 'RGBA:-'], { maxBuffer: 64 << 20 });
   clearGround(px, w, h);
@@ -359,7 +354,7 @@ function hero(src: string, key: string): void {
   // the figure stands in a 1:2 box, feet on its floor
   const fh = Math.round(bh * 1.03);
   const fw = Math.max(bw, Math.round(fh / 2));
-  magick(clean, '-crop', `${bw}x${bh}+${x0}+${y0}`, '+repage', '-background', 'none', '-gravity', 'south', '-extent', `${fw}x${fh}`, '-resize', '400x800', '-quality', '84', '-define', 'webp:alpha-quality=90', join(outDir, `p${i}.webp`));
+  magick(clean, '-crop', `${bw}x${bh}+${x0}+${y0}`, '+repage', '-background', 'none', '-gravity', 'south', '-extent', `${fw}x${fh}`, '-resize', '400x800', '-quality', '84', '-define', 'webp:alpha-quality=90', join(outDir, `fig-${key}.webp`));
   // the face: head and shoulders, centred on where the head is
   const headRows = Math.round(bh * 0.1);
   let sx = 0;
@@ -369,13 +364,13 @@ function hero(src: string, key: string): void {
   const side = Math.round(bh * 0.27);
   const fx = Math.max(0, Math.min(w - side, cx - Math.round(side / 2)));
   const fy = Math.max(0, y0 - Math.round(bh * 0.015));
-  magick(clean, '-crop', `${side}x${side}+${fx}+${fy}`, '+repage', '-background', 'none', '-gravity', 'center', '-extent', `${side}x${side}`, '-resize', '256x256', '-quality', '86', '-define', 'webp:alpha-quality=90', join(outDir, `q${i}.webp`));
+  magick(clean, '-crop', `${side}x${side}+${fx}+${fy}`, '+repage', '-background', 'none', '-gravity', 'center', '-extent', `${side}x${side}`, '-resize', '256x256', '-quality', '86', '-define', 'webp:alpha-quality=90', join(outDir, `face-${key}.webp`));
   const listPath = join(ROOT, 'client/src/art/heroes.json');
   const list = new Set<string>(existsSync(listPath) ? JSON.parse(readFileSync(listPath, 'utf8')) : []);
   list.add(key);
   writeFileSync(listPath, JSON.stringify([...list].sort()) + '\n');
-  keep(src, `hero${i}`);
-  console.log(`hero ${key}: figure ${bw}×${bh} → p${i}.webp, face → q${i}.webp`);
+  keep(src, `hero-${key}`);
+  console.log(`hero ${key}: figure ${bw}×${bh} → fig-${key}.webp, face → face-${key}.webp`);
 }
 
 // ---------------------------------------------------------------------------- stations
@@ -394,11 +389,10 @@ function stations(src: string, n: number): void {
   const listPath = join(ROOT, 'client/src/art/stations.json');
   const list = new Set<string>(existsSync(listPath) ? JSON.parse(readFileSync(listPath, 'utf8')) : []);
   keys.forEach((k, q) => {
-    const i = (SPOT_ICONS as readonly string[]).indexOf(k) + 1;
-    if (!i) throw new Error(`no spot icon ${k}`);
+    if (!(SPOT_ICONS as readonly string[]).includes(k)) throw new Error(`no spot icon ${k}`);
     const x = (q % 2) * qw + inset;
     const y = Math.floor(q / 2) * qh + inset;
-    magick(src, '-crop', `${qw - 2 * inset}x${qh - 2 * inset}+${x}+${y}`, '+repage', '-resize', '720x480^', '-gravity', 'center', '-extent', '720x480', '-strip', '-quality', '76', '-define', 'webp:method=6', join(outDir, `s${i}.webp`));
+    magick(src, '-crop', `${qw - 2 * inset}x${qh - 2 * inset}+${x}+${y}`, '+repage', '-resize', '720x480^', '-gravity', 'center', '-extent', '720x480', '-strip', '-quality', '76', '-define', 'webp:method=6', join(outDir, `${k}.webp`));
     list.add(k);
   });
   writeFileSync(listPath, JSON.stringify([...list].sort()) + '\n');
@@ -422,13 +416,12 @@ function folk(src: string, n: number, crop: number): void {
   const list = new Set<string>(existsSync(listPath) ? JSON.parse(readFileSync(listPath, 'utf8')) : []);
   const made: string[] = [];
   keys.forEach((k, q) => {
-    const i = (FOLK as readonly string[]).indexOf(k) + 1;
-    if (!i) return;
+    if (!(FOLK as readonly string[]).includes(k)) return;
     const x = (q % 2) * qw + Math.round((qw - side) / 2);
     const y = Math.floor(q / 2) * qh + Math.round((qh - side) / 2);
-    magick(src, '-crop', `${side}x${side}+${x}+${y}`, '+repage', '-resize', '256x256', '-strip', '-quality', '84', '-define', 'webp:method=6', join(outDir, `f${i}.webp`));
+    magick(src, '-crop', `${side}x${side}+${x}+${y}`, '+repage', '-resize', '256x256', '-strip', '-quality', '84', '-define', 'webp:method=6', join(outDir, `${k}.webp`));
     list.add(k);
-    made.push(`f${i}`);
+    made.push(k);
   });
   writeFileSync(listPath, JSON.stringify([...list].sort()) + '\n');
   keep(src, `folk${n}`);
@@ -556,12 +549,11 @@ function cellBlots(px: Buffer, w: number, h: number, cols: number): { boxes: Arr
 /**
  * A crop painted in five stages side by side on one ground line (sown → ripe), on a transparent or flat
  * ground. Each stage is cut out and set on a canvas shared by all five, root at the bottom middle, so the
- * stages keep the sizes they were painted at: client/src/art/crops/c<look>s<stage>.webp, the look's
- * number in CROP_LOOKS; the painted looks and the canvas proportion go to client/src/art/crops.json.
+ * stages keep the sizes they were painted at: client/src/art/crops/<look>-<stage>.webp; the painted looks
+ * and the canvas proportion go to client/src/art/crops.json.
  */
 function crops(src: string, look: string): void {
-  const li = (CROP_LOOKS as readonly string[]).indexOf(look);
-  if (li < 0) throw new Error(`unknown look ${look}`);
+  if (!(CROP_LOOKS as readonly string[]).includes(look)) throw new Error(`unknown look ${look}`);
   const [w, h] = sizeOf(src);
   const px = execFileSync('magick', [src, '-depth', '8', 'RGBA:-'], { maxBuffer: 64 << 20 });
   const wiped = clearGround(px, w, h);
@@ -584,7 +576,7 @@ function crops(src: string, look: string): void {
   mkdirSync(outDir, { recursive: true });
   boxes.forEach((b, i) => {
     const [x0, y0, x1, y1] = b!;
-    magick(only(i), '-crop', `${x1 - x0 + 1}x${y1 - y0 + 1}+${x0}+${y0}`, '+repage', '-background', 'none', '-gravity', 'south', '-extent', `${cw}x${ch}`, '-filter', 'Lanczos', '-resize', `${outW}x${outH}!`, '-quality', '84', '-define', 'webp:alpha-quality=90', join(outDir, `c${li + 1}s${i}.webp`));
+    magick(only(i), '-crop', `${x1 - x0 + 1}x${y1 - y0 + 1}+${x0}+${y0}`, '+repage', '-background', 'none', '-gravity', 'south', '-extent', `${cw}x${ch}`, '-filter', 'Lanczos', '-resize', `${outW}x${outH}!`, '-quality', '84', '-define', 'webp:alpha-quality=90', join(outDir, `${look}-${i}.webp`));
   });
   const manifestPath = join(ROOT, 'client/src/art/crops.json');
   const manifest = (existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : {}) as Record<string, number>;
