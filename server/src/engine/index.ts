@@ -399,6 +399,18 @@ export class Game {
     if ('weather' in c) return weatherNow(this)?.id === c.weather;
     if ('resident' in c) return !!this.s.residents[c.resident];
     if ('seen' in c) return !!this.s.seenRes[c.seen];
+    if ('past' in c) {
+      const has = (x: PlayerId) => !!this.s.past?.[x]?.flags[c.past];
+      const who = c.who ?? 'me';
+      if (who === 'either') return PLAYER_IDS.some(has);
+      if (who === 'both') return PLAYER_IDS.every(has);
+      if (!pid) return false;
+      return has(who === 'me' ? pid : this.other(pid));
+    }
+    if ('mainFlag' in c) {
+      const v = this.s.mainFlags?.[c.mainFlag] ?? 0;
+      return c.gte === undefined ? v !== 0 : v >= c.gte;
+    }
     return false;
   }
 

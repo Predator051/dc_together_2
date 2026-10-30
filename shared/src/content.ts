@@ -46,6 +46,13 @@ export type Cond =
   | { resident: string }
   /** This thing has been in the store at least once. */
   | { seen: string }
+  /**
+   * In the main story: a flag of a hero's past (`.design/personal.md` §4) — the viewer's (`me`, the default),
+   * the partner's, either's or both's. A line or an option only the one who remembers sees.
+   */
+  | { past: string; who?: 'me' | 'mate' | 'either' | 'both' }
+  /** In a past: a flag of the main story as it stood when the hero last sat down by the fire. */
+  | { mainFlag: string; gte?: number }
   | { all: Cond[] }
   | { any: Cond[] }
   | { not: Cond };

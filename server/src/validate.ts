@@ -224,7 +224,8 @@ export function validateContent(c: Content): Report {
   }
 
   // flags of the legacy are written by the server when part one is carried over
-  const isWritten = (f: string) => written.has(f) || f.startsWith('legacy');
+  // `main_act` is written into a past by the server (`server/src/past.ts`)
+  const isWritten = (f: string) => written.has(f) || f.startsWith('legacy') || f === 'main_act';
   const checkCond = (where: string, cond: Cond | undefined) => {
     for (const x of condsOf(cond)) {
       if ('flag' in x && !isWritten(x.flag)) err(`${where}: reads flag "${x.flag}" that is never set`);
@@ -245,6 +246,7 @@ export function validateContent(c: Content): Report {
       if ('weather' in x && !c.weather?.kinds.some((k) => k.id === x.weather)) err(`${where}: unknown weather ${x.weather}`);
       if ('resident' in x && !residentIds.has(x.resident)) err(`${where}: unknown resident ${x.resident}`);
       if ('seen' in x && !res.has(x.seen)) err(`${where}: unknown resource ${x.seen}`);
+      if ('past' in x && !/^p[hm]_/.test(x.past)) err(`${where}: a past's flag is named ph_… (the hunter's) or pm_… (the maker's): ${x.past}`);
     }
   };
   const checkEffects = (where: string, effs: Effect[], inScene: boolean) => {
@@ -592,6 +594,9 @@ export function validateContent(c: Content): Report {
           checkCond(nw, o.visible);
           checkCond(nw, o.enabled);
           if (n.mode === 'joint' && o.role) err(`${nw}: joint choice option ${o.id} limited to a role can never be agreed on`);
+          // one remembers, the other does not: such an option can only be someone's own pick
+          if (n.mode === 'joint' && condsOf(o.visible).some((x) => 'past' in x && (x.who ?? 'me') !== 'either' && x.who !== 'both'))
+            err(`${nw}: joint choice option ${o.id} seen by one who remembers can never be agreed on (use each/any)`);
           if (n.mode === 'each' && o.next !== undefined) warnings.push(`${nw}: option next ignored in 'each' mode`);
         }
         if (n.mode === 'joint' && !n.mismatch) err(`${nw}: joint choice needs a mismatch node`);

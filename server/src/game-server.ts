@@ -207,7 +207,7 @@ export class GameServer {
     if (on) {
       const block = rememberBlock(g, pid, this.pasts);
       if (block) return block;
-      enterPast(this.state, pid, ix!, this.clock());
+      enterPast(this.state, pid, ix!, this.clock(), this.ix.c.storyFlags);
       g.logRaw('system', { [other]: g.render(g.ix.ui('mate_remembers'), other, pid) }, pid);
     } else {
       if (!this.state.players[pid].remembering) return 'err_not_now';

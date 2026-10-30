@@ -51,7 +51,7 @@ export function loadPasts(main: WorldState, pasts: Pasts, now: number): void {
 }
 
 /** Into the past: the world is made the first time; time there stood still while the hero was away. */
-export function enterPast(main: WorldState, pid: PlayerId, ix: ContentIndex, now: number): WorldState {
+export function enterPast(main: WorldState, pid: PlayerId, ix: ContentIndex, now: number, storyFlags: string[] = []): WorldState {
   const hero = main.players[pid];
   let s = main.past?.[pid];
   if (!s) {
@@ -72,6 +72,8 @@ export function enterPast(main: WorldState, pid: PlayerId, ix: ContentIndex, now
   s.meta.lastTick = now;
   s.workAt = now;
   s.flags[MAIN_ACT] = main.meta.act;
+  // what the past may reflect of the story so far (its own flags never come back the other way here)
+  s.mainFlags = Object.fromEntries(Object.entries(main.flags).filter(([k]) => storyFlags.some((p) => k.startsWith(p))));
   hero.remembering = true;
   hero.busy = null;
   new Game(ix, s, now).setOnline(pid, true);

@@ -420,6 +420,8 @@ export interface WorldState {
   asks?: AskState[];
   /** A world for one hero (the past): scenes start at once, nobody waits for a partner. */
   solo?: boolean;
+  /** In a past: the main story's flags as they were when the hero came in (what the past may reflect). */
+  mainFlags?: Record<string, number>;
   /** The heroes' pasts, one world each (only in the main world). */
   past?: Partial<Record<PlayerId, WorldState>>;
   /** The hard road is on (both agreed). */
