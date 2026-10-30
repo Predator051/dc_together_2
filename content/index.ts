@@ -37,6 +37,7 @@ import { resources2 } from './a2/resources.js';
 import { scenesA2, suppersA2 } from './a2/scenes.js';
 import { scenesA2b } from './a2/scenes2.js';
 import { actions3, fx3 } from './a3/actions.js';
+import { prepActions3, prepFx3, preps3 } from './a3/preps.js';
 import { enemies3 } from './a3/enemies.js';
 import { clues3, goals3, mysteries3, npcs3 } from './a3/journal.js';
 import { areas3, locations3 } from './a3/places.js';
@@ -52,7 +53,7 @@ const withBarrels = (list: ResourceDef[]): ResourceDef[] =>
 export const content: Content = {
   areas: [...areas, ...areas2, ...areas3, ...sideAreas1],
   resources: withBarrels([...resources, ...resources2, ...needs1Resources, ...needs2Resources, ...sideResources1, ...sideResources2, ...gardenResources, ...folkResources, ...resources3]),
-  actions: [...actions, ...actions2, ...actionsA2, ...needs1Actions, ...needs2Actions, ...sideActions1, ...sideActions2, ...gardenActions, ...folkActions, ...actions3],
+  actions: [...actions, ...actions2, ...actionsA2, ...needs1Actions, ...needs2Actions, ...sideActions1, ...sideActions2, ...gardenActions, ...folkActions, ...actions3, ...prepActions3],
   pools,
   locations: [...locations, ...locations2, ...locations3, ...sideLocations1, ...sideLocations2, ...gardenLocations],
   scenes: [...scenes1, ...scenes2, ...scenesA2, ...scenesA2b, ...suppersA2, ...sideScenes1, ...sideScenes2, ...scenesA3],
@@ -69,6 +70,7 @@ export const content: Content = {
   hero,
   dog: { flag: 'p2_dog_back', name: 'Сірко', trained: { flag: 'p2_dog_trained' }, collar: { flag: 'q20_collar' } },
   quests: [...quests1, ...quests2],
+  preps: [...preps3],
   daily: [...sideDaily1, ...sideDaily2],
   workBonus: [...sideWorkBonus2],
   food: R.food,
@@ -78,7 +80,7 @@ export const content: Content = {
   events,
   garden,
   yard,
-  ambient: { ...ambient, areas: { ...ambient.areas, a_10: 'hill', a_11: 'river', a_12: 'marsh', a_13: 'river', a_14: 'grove', a_15: 'hill' }, actions: { ...ambient.actions, ...fx2, ...fx3, ...needs1Fx, ...needs2Fx, ...sideFx1, ...sideFx2, ...gardenFx } },
+  ambient: { ...ambient, areas: { ...ambient.areas, a_10: 'hill', a_11: 'river', a_12: 'marsh', a_13: 'river', a_14: 'grove', a_15: 'hill' }, actions: { ...ambient.actions, ...fx2, ...fx3, ...prepFx3, ...needs1Fx, ...needs2Fx, ...sideFx1, ...sideFx2, ...gardenFx } },
   maps: [...treks3],
   start: { resources: {}, hp: 22, area: A.shore },
   storyFlags: ['p2_', 'done:s_', 'legacy'],

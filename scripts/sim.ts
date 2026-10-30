@@ -205,6 +205,9 @@ const TABLE: Array<{ name: string; foes: Array<{ enemy: string; n?: number }>; s
   { name: '✦ Хапун', foes: [{ enemy: E2.snatcher }], stages: ['E5', 'E6'], who: ['both', 'maker'], elite: true },
   { name: 'Вершники ×2', foes: [{ enemy: E3.rider, n: 2 }], stages: ['E7', 'E8'], who: ['both', 'hunter'] },
   { name: 'Ярема + вершник', foes: [{ enemy: E3.captain }, { enemy: E3.rider }], stages: ['E7', 'E8'], who: ['both'] },
+  // readied alone beforehand (`prep_*`): the ford with one rider, the mound with two wolves, the captain without his rider
+  { name: 'Вершник ×1 (підг.)', foes: [{ enemy: E3.rider, n: 1 }], stages: ['E7'], who: ['both'] },
+  { name: 'Ярема сам (підг.)', foes: [{ enemy: E3.captain }], stages: ['E7', 'E8'], who: ['both'] },
   { name: 'Гак + хапун', foes: [{ enemy: E2.hook }, { enemy: E2.snatcher, n: 1 }], stages: ['E5', 'E6', 'E7'], who: ['both'] },
 ];
 

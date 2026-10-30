@@ -1,4 +1,5 @@
 import type { QuestDef,
+  PrepDef,
   ActionDef,
   ChoiceNode,
   CombatNode,
@@ -94,6 +95,7 @@ export class ContentIndex {
   readonly goals = new Map<string, Content['goals'][number]>();
   readonly npcs = new Map<string, Content['npcs'][number]>();
   readonly maps = new Map<string, DelveMapDef>();
+  readonly preps = new Map<string, PrepDef>();
   readonly enemies = new Map<string, EnemyDef>();
   /** Scouting scene → the place it explores. */
   readonly scoutOf = new Map<string, string>();
@@ -112,6 +114,7 @@ export class ContentIndex {
     for (const g of c.goals) this.goals.set(g.id, g);
     for (const n of c.npcs) this.npcs.set(n.id, n);
     for (const m of c.maps ?? []) this.maps.set(m.id, m);
+    for (const p of c.preps ?? []) this.preps.set(p.id, p);
   }
 
   entry(id: string): Entry | null {
@@ -177,6 +180,7 @@ export class Game {
     if (!this.s.scene && this.chain.length) this.startScene(this.chain.shift()!);
     this.updateGoal();
     this.updateQuests();
+    this.updatePreps();
     this.s.meta.rng = this.rng.state;
   }
 
@@ -223,6 +227,38 @@ export class Game {
         st[q.id] = 'done';
         say((pid) => `${this.ix.ui('quest_done')} ${quoted(q.title)}. ${this.render(q.reward, pid)}`);
         for (const pid of this.joinedIds()) gainXp(this, pid, 15);
+      }
+    }
+  }
+
+  /** A preparation is listed while its scene can still come and it is open. */
+  prepOpen(p: PrepDef): boolean {
+    const sc = this.ix.scenes.get(p.scene);
+    if (!sc || this.flag(`done:${sc.id}`)) return false;
+    const open = p.open ?? sc.visible;
+    return !open || this.test(open);
+  }
+
+  /** Preparations come to be done; both hear when a scene can first be readied, and when a step of it is. */
+  private updatePreps(): void {
+    const ps = this.ix.c.preps;
+    if (!ps?.length) return;
+    const told = (this.s.preps ??= {});
+    for (const p of ps) {
+      if (!this.prepOpen(p)) continue;
+      if (!this.flag(p.id) && p.done && this.test(p.done)) this.s.flags[p.id] = 1;
+      const title = quoted(this.ix.scenes.get(p.scene)!.title);
+      if (!told[`open:${p.scene}`]) {
+        told[`open:${p.scene}`] = 1;
+        const out: Partial<Record<PlayerId, string>> = {};
+        for (const pid of this.joinedIds()) out[pid] = `${title} — ${this.ix.ui('prep_open')}`;
+        this.logRaw('find', out);
+      }
+      if (this.flag(p.id) && !told[p.id]) {
+        told[p.id] = 1;
+        const out: Partial<Record<PlayerId, string>> = {};
+        for (const pid of this.joinedIds()) out[pid] = `${title}: ${this.ix.ui('prep_done')} ${this.render(p.gives, pid)}`;
+        this.logRaw('find', out);
       }
     }
   }
@@ -750,6 +786,10 @@ export class Game {
     if (a.once && this.flag(`built:${a.id}`)) return false;
     if (a.oncePerPlayer && this.p(pid).flags[`built:${a.id}`]) return false;
     if (a.visible && !this.test(a.visible, pid)) return false;
+    if (a.prep) {
+      const p = this.ix.preps.get(a.prep);
+      if (!p || this.flag(p.id) || !this.prepOpen(p)) return false;
+    }
     if (this.atLimit(a)) return false;
     return true;
   }

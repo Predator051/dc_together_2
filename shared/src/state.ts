@@ -386,6 +386,8 @@ export interface WorldState {
   goal: string | null;
   /** Side errands: begun, done, or closed another way. */
   quests?: Record<string, 'on' | 'done' | 'closed'>;
+  /** What was already told of preparations: `open:<scene>` (it can be readied), `<prep id>` (readied). */
+  preps?: Record<string, 1>;
   stats: Stats;
 
   // ----- part two -----

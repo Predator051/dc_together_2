@@ -195,6 +195,8 @@ export function Notes({
           .sort((a, b) => Number(a.state !== 'on') - Number(b.state !== 'on'))
       : [];
   const questsOpen = filtering || !open.has('_quests_shut');
+  const preps = filter === 'all' ? j.preps.filter((p) => !needle || norm(`${p.title} ${p.items.map((x) => x.text).join(' ')}`).includes(needle)) : [];
+  const prepsOpen = filtering || !open.has('_preps_shut');
   const beasts = filter === 'all' ? v.bestiary.filter((b) => !needle || norm(`${b.name} ${b.desc}`).includes(needle)) : [];
   const isOpen = (id: string) => filtering || open.has(id);
 
@@ -229,7 +231,7 @@ export function Notes({
       return next;
     });
 
-  if (!j.clues.length && !j.questions.length && !j.people.length && !j.quests.length && !v.bestiary.length) return <p class="empty">{T.emptyNotes}</p>;
+  if (!j.clues.length && !j.questions.length && !j.people.length && !j.quests.length && !j.preps.length && !v.bestiary.length) return <p class="empty">{T.emptyNotes}</p>;
 
   const newCount = j.clues.filter(isNew).length;
   const mineCount = j.clues.filter((c) => c.personal).length;
@@ -286,9 +288,58 @@ export function Notes({
 
       {help && <NotesHelp onClose={closeHelp} />}
 
-      {shown.length === 0 && people.length === 0 && beasts.length === 0 && quests.length === 0 && <p class="empty">{T.nothingFound}</p>}
+      {shown.length === 0 && people.length === 0 && beasts.length === 0 && quests.length === 0 && preps.length === 0 && <p class="empty">{T.nothingFound}</p>}
 
       <div class="topics">
+        {preps.length > 0 && (
+          <section class={`topic preps-topic ${prepsOpen ? 'open' : ''}`}>
+            <button
+              type="button"
+              class="topic-head"
+              aria-expanded={prepsOpen}
+              disabled={filtering}
+              onClick={() => toggle('_preps_shut')}
+            >
+              <span class="topic-main">
+                <span class="topic-q">{T.preps}</span>
+                <span class="topic-sub">
+                  <span>{T.prepsSub}</span>
+                </span>
+              </span>
+              {!filtering && <IconDown class="topic-chev" />}
+            </button>
+            {prepsOpen && (
+              <div class="topic-body">
+                {preps.map((p) => {
+                  const n = p.items.filter((x) => x.done).length;
+                  return (
+                    <article key={p.scene} class="quest prep">
+                      <div class="clue-head">
+                        <b>{hl(p.title, needle)}</b>
+                        <span class={`pill ${n === p.items.length ? 'done' : ''}`}>
+                          {n}/{p.items.length} {T.readied}
+                        </span>
+                      </div>
+                      {p.where && (
+                        <p class="quest-from">
+                          {T.prepWhere} {p.where}
+                        </p>
+                      )}
+                      <ul class="prep-steps">
+                        {p.items.map((x) => (
+                          <li key={x.id} class={`${x.done ? 'did' : ''} ${x.mine ? 'prep-own' : 'prep-mate'}`}>
+                            <span class="prep-who">{!x.role ? T.prepAny : x.mine ? T.prepMine : T.prepMate}</span> {hl(x.text, needle)}
+                            {x.gives && <span class="prep-gives">{x.gives}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
         {quests.length > 0 && (
           <section class={`topic quests-topic ${questsOpen ? 'open' : ''}`}>
             <button

@@ -280,6 +280,8 @@ export interface ActionDef {
   why?: Text;
   /** Part of this side errand (players see it like any other; the test bots leave it alone unless told). */
   quest?: string;
+  /** Readies a together scene (`PrepDef` id): shown only while that is open and not yet done. */
+  prep?: string;
   /** Hide when this many of the yielded gear exist (stored + worn + carried). Default for gear: 2. */
   limit?: number;
   /** Needs a tool of this kind on (shown disabled with the reason otherwise). */
@@ -503,6 +505,28 @@ export interface QuestDef {
   reward: Text;
   fail?: Cond;
   failText?: Text;
+}
+
+/**
+ * Something one hero can do alone, before a scene the two will play together, that makes that scene go
+ * better (an option more, an easier fight, a kinder end). Never needed: the scene goes without it.
+ * Once done its flag (`id`) is set and stays; the scene reads it.
+ */
+export interface PrepDef {
+  /** Also the flag the scene reads (`prep_…`). */
+  id: string;
+  /** The together scene it readies. */
+  scene: string;
+  /** Whose to do (the other sees it too). */
+  role?: Role;
+  /** What to do (the journal). */
+  text: Text;
+  /** What it will change in the scene, said without telling the scene (shown once done). */
+  gives: Text;
+  /** Listed from when (default: from when the scene can be seen). */
+  open?: Cond;
+  /** Counts as done when this holds (default: its flag is set, by its work's effects). */
+  done?: Cond;
 }
 
 export interface OptionDef {
@@ -1098,6 +1122,8 @@ export interface Content {
   };
   /** Side errands. */
   quests?: QuestDef[];
+  /** What one can do alone before a together scene. */
+  preps?: PrepDef[];
   /** Trades residents grow in (see `.design/residents2.md`). */
   trades?: TradeDef[];
   /** Residents work faster while these hold (multipliers). */

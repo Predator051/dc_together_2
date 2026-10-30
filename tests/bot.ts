@@ -15,6 +15,8 @@ export interface BotOptions {
   seed?: number;
   /** Takes up side errands too (by default only the story is played). */
   side?: boolean;
+  /** Never readies a together scene alone (the scenes must go without it). */
+  noPrep?: boolean;
 }
 
 /** Shillings of act two. */
@@ -753,6 +755,8 @@ export class Bot {
       const a = g.ix.actions.get(id);
       if (!a) return 0;
       if (a.quest && !this.o.side) return 0;
+      // readying a together scene: done while here, unless told not to
+      if (a.prep) return this.o.noPrep ? 0 : 70;
       // an errand's own step (a search, a count, a build away from home): do it while here
       if (a.quest && this.questStep(a, g)) return a.kind === 'build' || a.kind === 'craft' ? 90 : 45;
       if (this.o.careless) {

@@ -130,6 +130,10 @@ export interface EntryView {
   spot?: string;
   /** Part of a side errand. */
   quest?: boolean;
+  /** Readies a together scene. */
+  prep?: boolean;
+  /** A together scene that can be readied: how much of it is. */
+  readied?: { n: number; of: number };
   /** What it is for, so a long workplace can be laid out in sections: done together, upkeep, or what it makes. */
   sort?: EntrySort;
   /** The mark for its button: a thing's icon, `spot:` + a spot icon, or (a way out) `@` + the scene it leads to. */
@@ -474,6 +478,15 @@ export interface QuestView {
   now: string | null;
   /** What came of it (done or closed). */
   outcome?: string;
+}
+
+/** What can be done alone before a together scene (the journal, «До зустрічі»). */
+export interface PrepView {
+  scene: string;
+  title: string;
+  /** Where the scene is begun (a place name), when it has one. */
+  where?: string;
+  items: Array<{ id: string; text: string; role?: Role; mine: boolean; done: boolean; gives?: string }>;
 }
 
 export interface MapNodeView {
@@ -861,7 +874,7 @@ export interface PlayerView {
   proposal: ProposalView | null;
   scene: SceneView | null;
   log: LogView[];
-  journal: { clues: ClueView[]; questions: QuestionView[]; people: PersonView[]; quests: QuestView[] };
+  journal: { clues: ClueView[]; questions: QuestionView[]; people: PersonView[]; quests: QuestView[]; preps: PrepView[] };
   actDone: { act: number; text: string } | null;
   welcome: WelcomeView | null;
   summary: SummaryView | null;

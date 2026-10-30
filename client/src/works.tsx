@@ -42,6 +42,12 @@ function Entry({ e, c }: { e: EntryView; c: Ctx }) {
         ) : (
           <>
             {e.quest && <span class="pill errand">{T.questTag}</span>}
+            {e.prep && <span class="pill prep">{T.prepBadge}</span>}
+            {e.readied && (
+              <span class={`pill prep ${e.readied.n === e.readied.of ? 'full' : ''}`}>
+                {e.readied.n}/{e.readied.of} {T.readied}
+              </span>
+            )}
             {e.together && (
               <span class="pill pair">
                 <IconPair />
@@ -232,6 +238,7 @@ function Medal({
           </span>
         )}
         {list.some((e) => e.quest) && <span class="act-quest" aria-hidden="true" />}
+        {!list.some((e) => e.quest) && list.some((e) => e.prep) && <span class="act-quest prep" aria-hidden="true" />}
       </span>
       {(named || sort) && <span class="act-label">{name}</span>}
     </button>
@@ -293,6 +300,12 @@ function WorkCard({ e, c, place }: { e: EntryView; c: Ctx; place: string }) {
         <h4 class="work-card-name">
           {e.label}
           {e.quest && <span class="pill errand">{T.questTag}</span>}
+          {e.prep && <span class="pill prep">{T.prepBadge}</span>}
+          {e.readied && (
+            <span class={`pill prep ${e.readied.n === e.readied.of ? 'full' : ''}`}>
+              {e.readied.n}/{e.readied.of} {T.readied}
+            </span>
+          )}
           {e.together && (
             <span class="pill pair">
               <IconPair />

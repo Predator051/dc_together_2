@@ -747,6 +747,26 @@ export function validateContent(c: Content): Report {
   }
   for (const s of c.scenes) if (s.quest && !questIds.has(s.quest)) err(`scene ${s.id}: unknown quest ${s.quest}`);
   for (const a of c.actions) if (a.quest && !questIds.has(a.quest)) err(`action ${a.id}: unknown quest ${a.quest}`);
+
+  // preparations: each readies a together scene that reads its flag, and is done by something
+  const prepIds = new Set<string>();
+  for (const p of c.preps ?? []) {
+    if (prepIds.has(p.id)) err(`prep ${p.id}: duplicate id`);
+    prepIds.add(p.id);
+    if (!p.id.startsWith('prep_')) err(`prep ${p.id}: its flag must start with prep_ (not a story flag)`);
+    const sc = c.scenes.find((x) => x.id === p.scene);
+    if (!sc) {
+      err(`prep ${p.id}: unknown scene ${p.scene}`);
+      continue;
+    }
+    if (p.open) checkCond(`prep ${p.id} open`, p.open);
+    if (p.done) checkCond(`prep ${p.id} done`, p.done);
+    const maps = (c.maps ?? []).filter((m) => JSON.stringify(sc).includes(`"${m.id}"`));
+    if (![sc, ...maps].some((x) => JSON.stringify(x).includes(`"${p.id}"`))) err(`prep ${p.id}: scene ${p.scene} never reads it`);
+    const setters = c.actions.filter((a) => a.prep === p.id && JSON.stringify(a.effects ?? []).includes(`"${p.id}"`));
+    if (!p.done && !setters.length) err(`prep ${p.id}: nothing does it`);
+  }
+  for (const a of c.actions) if (a.prep && !prepIds.has(a.prep)) err(`action ${a.id}: unknown prep ${a.prep}`);
   // every job of residents stands in exactly one trade, and a trade holds only jobs
   for (const a of c.actions) {
     if (!a.job) continue;

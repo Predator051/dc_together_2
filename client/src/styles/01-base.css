@@ -464,6 +464,12 @@ b {
 .pill.errand {
   color: var(--verdigris);
 }
+.pill.prep {
+  color: var(--ochre-ink);
+}
+.pill.prep.full {
+  color: var(--verdigris);
+}
 .pill.new {
   color: var(--cinnabar-ink);
   font-weight: 600;
@@ -2186,6 +2192,55 @@ img.plant-pic {
 }
 .quest .quest-outcome {
   color: var(--ink);
+}
+/* preparation: what one can do alone before a together scene */
+.prep-steps {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.prep-steps li {
+  position: relative;
+  padding: 3px 0 3px 1.3em;
+  color: var(--ink-2);
+  font-size: 0.97rem;
+  line-height: 1.55;
+}
+.prep-steps li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 0.62em;
+  height: 0.62em;
+  border: 1.5px solid var(--ochre-ink);
+  border-radius: 2px;
+}
+.prep-steps li.did::before {
+  background: var(--verdigris);
+  border-color: var(--verdigris);
+}
+.prep-steps li.did {
+  color: var(--faded);
+}
+.prep-steps li.prep-mate:not(.did) {
+  color: var(--faded);
+}
+.prep-who {
+  margin-right: 4px;
+  color: var(--ochre-ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.prep-steps li.did .prep-who {
+  color: var(--faded);
+}
+.prep-gives {
+  display: block;
+  color: var(--verdigris);
+  font-style: italic;
 }
 .pill.done {
   color: var(--verdigris);

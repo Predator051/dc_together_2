@@ -8,7 +8,20 @@ const roadFights: Record<string, SceneNode> = {
   ford: {
     text: 'На тому березі з верболозу виїжджають двоє вершників. Піки впоперек сідел. — Куди, діду? — гукає один, хоч дідів серед вас нема. — Показуй, що везеш.',
     hunter: 'Третій лишився в кущах. Ти чуєш, як він вовтузиться зі свистком.',
+    goto: [{ if: { flag: 'prep_ford' }, next: 'fordKnown' }],
     next: 'fordFight',
+  },
+  fordKnown: {
+    text: 'Ви переходите брід не там, де колія, а нижче, — і виходите просто на кущ, де сидить вершник зі свистком. Свисток летить у воду разом із ним. Другий, що напував коня, не встигає навіть сісти в сідло.',
+    hunter: 'Той самий кущ. Ти {пам\'ятав|пам\'ятала} його весь шлях.',
+    maker: 'Бо {partner} цей брід уже {p:бачив|бачила}. Ти просто йдеш слідом.',
+    next: 'fordFightSmall',
+  },
+  fordFightSmall: {
+    type: 'fight',
+    foes: [{ enemy: E3.rider, n: 1 }],
+    win: 'fordWon',
+    lose: 'lost',
   },
   fordFight: {
     type: 'fight',
@@ -23,7 +36,18 @@ const roadFights: Record<string, SceneNode> = {
   },
   mound: {
     text: 'Біля підніжжя могили воли раптом стають і ревуть. З ковили піднімаються сірі спини.',
+    goto: [{ if: { flag: 'prep_wolves' }, next: 'moundKnown' }],
     next: 'moundFight',
+  },
+  moundKnown: {
+    text: 'Воли стають і ревуть — як погоничі й казали. Ви вже палите вогонь: суха ковила, дьоготь на ганчірці. Зграя кружляє довкола диму, і тільки двоє найголодніших наважуються вийти.',
+    next: 'moundFightSmall',
+  },
+  moundFightSmall: {
+    type: 'fight',
+    foes: [{ enemy: E2.wolf, n: 2 }],
+    win: 'moundWon',
+    lose: 'lost',
   },
   moundFight: {
     type: 'fight',
@@ -121,8 +145,11 @@ export const scenesA3: SceneDef[] = [
         next: 'n2',
       },
       n2: {
-        text: 'Назустріч виходить висока кістлява жінка з ціпком. — Параска, — каже вона. — Старша тут. Що вам треба? Людей не віддаємо, харчів не маємо. Як по сіль — то сіль у цеху.',
-        effects: [{ meet: N3.paraska }],
+        text: [
+          'Назустріч виходить висока кістлява жінка з ціпком. — Параска, — каже вона. — Старша тут. Що вам треба? Людей не віддаємо, харчів не маємо. Як по сіль — то сіль у цеху.',
+          { if: { flag: 'prep_quarry_ask' }, text: 'Потім вона придивляється. — Чекайте. То це ви питали про нас у корчмі? Погонич переказував. Казав — не цехові. — Голос у неї не м\'якшає, але ціпок вона опускає.' },
+        ],
+        effects: [{ meet: N3.paraska }, { if: { flag: 'prep_quarry_ask' }, then: [{ inc: 'p2_rep_camp', max: 6 }] }],
         next: 'n3',
       },
       n3: {
@@ -135,7 +162,16 @@ export const scenesA3: SceneDef[] = [
         type: 'choice',
         mode: 'joint',
         text: 'Табір не довіряє. Чим почати?',
+        hunter: [{ if: { flag: 'prep_quarry_look' }, text: 'Ти {бачив|бачила} згори жінок із відрами — аж до балки й назад. Криниця в них пересохла.' }],
         options: [
+          {
+            id: 'water',
+            label: 'Навозити води — у них пересохла криниця',
+            visible: { flag: 'prep_quarry_look' },
+            enabled: { res: R.water, gte: 8 },
+            disabledHint: 'Треба вісім мір води.',
+            effects: [{ take: { [R.water]: 8 } }, { inc: 'p2_rep_camp', by: 2, max: 6 }, { set: 'p2_camp_fed' }],
+          },
           {
             id: 'food',
             label: 'Привезти харчів на всіх',
@@ -302,7 +338,10 @@ export const scenesA3: SceneDef[] = [
         type: 'delve',
         map: D3.south,
         light: 6,
-        bonus: [{ if: { flag: 'p2_rep_chumak', gte: 5 }, light: 1 }],
+        bonus: [
+          { if: { flag: 'p2_rep_chumak', gte: 5 }, light: 1 },
+          { if: { flag: 'prep_cart' }, light: 1 },
+        ],
         out: 'back',
         dark: 'dark',
       },
@@ -602,6 +641,7 @@ export const scenesA3: SceneDef[] = [
             role: 'hunter',
             label: 'Завмерти між наметами',
             delta: { alarm: -1 },
+            bonus: [{ if: { flag: 'prep_shirts' }, delta: { alarm: -1 } }],
             log: { self: 'Ти стаєш у ряд між тихими — сірий серед сірих. Вартовий проходить повз.', other: '{name} завмирає серед тихих.' },
           },
           {
@@ -633,6 +673,7 @@ export const scenesA3: SceneDef[] = [
           },
         ],
         events: [
+          { from: 1, every: 99, if: { flag: 'prep_grease' }, delta: { alarm: -1 }, text: 'Змащені вози підходять до самого ряду — і жодне колесо не рипить.' },
           { from: 1, every: 1, delta: { alarm: 1 }, text: 'Вартовий обходить табір із ліхтарем.' },
           { from: 2, every: 2, if: { flag: 'p2_mokiy_guide' }, delta: { alarm: -1 }, text: 'Мокій відводить вартових: свій голос, свої слова — «тихо, хлопці, сотник спить».' },
           { from: 3, every: 99, if: { flag: 'p2_yavtukh_owned' }, delta: { out: 2 }, text: 'Явтух сам підводить передній віз до ряду. — Сідайте, синки. Поїдемо.' },
@@ -656,7 +697,19 @@ export const scenesA3: SceneDef[] = [
       },
       win: {
         text: 'Вози повні. Люди сидять тісно, тримаються одне за одного. Мокій шепоче: «Рушай». І тут з синього намету виходить сотник із шаблею.',
+        goto: [{ if: { flag: 'prep_whistle' }, next: 'bossAlone' }],
         next: 'boss',
+      },
+      bossAlone: {
+        text: 'Він озирається на коновʼязь — туди, де мав стояти його вершник. Порожньо: той із вечора скаче степом, шукаючи гінця, що не вернувся.',
+        hunter: 'Кінь гінця, мабуть, і досі пасеться десь на сході.',
+        next: 'bossFightAlone',
+      },
+      bossFightAlone: {
+        type: 'fight',
+        foes: [{ enemy: E3.captain }],
+        win: 'freed',
+        lose: 'bossLost',
       },
       boss: {
         type: 'fight',

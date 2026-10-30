@@ -875,6 +875,9 @@ span.spot-pic.painted {
   background: var(--gall);
   box-shadow: 0 0 0 2px var(--page);
 }
+.act-quest.prep {
+  background: var(--ochre);
+}
 .act-medal.running .act-disc,
 .act-medal.together .act-disc {
   border-color: var(--ochre);

@@ -382,6 +382,9 @@ export const ui: Record<string, string> = {
   intent_none: 'збився',
   // ----- errands
   quest_new: 'Нове доручення:',
+  prep_open: 'до цього можна підготуватися заздалегідь, кожен сам. Що саме — у записах, «До зустрічі».',
+  prep_done: 'підготовлено.',
+  prep_for: 'До зустрічі:',
   quest_done: 'Доручення виконано:',
   quest_closed: 'Доручення закрито:',
   perk_got: 'Нове вміння:',
