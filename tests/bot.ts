@@ -354,6 +354,7 @@ export class Bot {
     if (sc.kind === 'stealth' && sc.stealth) return this.stealth(v);
     if (sc.kind === 'operation' && sc.operation) return this.operation(v);
     if (sc.kind === 'delve' && sc.delve) return this.delve(v);
+    if (sc.kind === 'squad' && sc.squad) return this.squad(v);
     if (sc.kind === 'choice' && sc.options) {
       if (sc.myPick) return null;
       const opts = sc.options.filter((o) => o.enabled);
@@ -425,6 +426,25 @@ export class Bot {
     return { c: 'choose', id: loose ? 'sneak' : 'step' };
   }
   private lastSign = '';
+
+  /** Posts: the hunter sets them (who is good at a post first), then both say they are ready. */
+  private squad(v: PlayerView): Command | null {
+    const sq = v.scene!.squad!;
+    if (sq.myReady) return null;
+    const free = sq.folk.filter((r) => !r.hurt && !r.post);
+    if (v.me.role === 'hunter' && free.length) {
+      const open = sq.posts.filter((p) => !p.who);
+      for (const p of open) {
+        const r = free.find((x) => x.good.includes(p.id)) ?? (open.length >= free.length ? free[0] : undefined);
+        if (r) return { c: 'choose', id: `set:${p.id}:${r.id}` };
+      }
+      // more posts than hands: the rest go where nobody good stands
+      if (open.length) return { c: 'choose', id: `set:${open[0]!.id}:${free[0]!.id}` };
+    }
+    // the maker waits for the hunter's posts
+    if (v.me.role !== 'hunter' && !sq.partnerReady) return null;
+    return { c: 'choose', id: 'ready' };
+  }
 
   /**
    * Two fronts: push the win bar (directly or by moving people onto it), feed what feeds it, and

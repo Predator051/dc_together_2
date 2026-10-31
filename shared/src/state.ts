@@ -142,6 +142,8 @@ export interface SceneState {
   delve?: DelveState | null;
   stealth?: StealthState | null;
   operation?: OperationState | null;
+  /** Who stands at which post (post id → resident id), and who has said they are ready. */
+  squad?: { posts: Record<string, string>; ready: Partial<Record<PlayerId, boolean>> } | null;
   /** The last hand sign each player showed (in earplugs nobody hears anybody). */
   signs?: Partial<Record<PlayerId, { id: string; at: number; turn: number }>>;
 }
@@ -220,6 +222,10 @@ export interface FoeState {
   stun?: boolean;
   /** The round it was last dazed (it cannot be dazed two rounds running). */
   stunAt?: number;
+  /** Knocked down in this round (one who feels no pain gets up again). */
+  downAt?: number;
+  /** Got up once already. */
+  rose?: boolean;
   /** Where it stands on the field. */
   pos?: [number, number];
   /** Behind its shield until its next turn. */
@@ -310,6 +316,8 @@ export interface FightState {
   used?: string[];
   /** Shots let fly by each hero (some come back after a win). */
   shots?: Partial<Record<PlayerId, number>>;
+  /** The household helping from their posts (rendered when the fight began). */
+  aid?: Array<{ do: 'heal' | 'stun' | 'hurt' | 'guard' | 'tie'; n: number; from: number; every: number; text: Record<PlayerId, string> }>;
 }
 
 export interface ResidentState {

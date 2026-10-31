@@ -291,7 +291,7 @@ export function startFight(
   g: Game,
   area: string,
   foes: Array<{ enemy: string; n?: number }>,
-  opts: { scene?: boolean; party?: PlayerId[]; field?: Field; starts?: { heroes: Cell[]; foes: Cell[] } } = {},
+  opts: { scene?: boolean; party?: PlayerId[]; field?: Field; starts?: { heroes: Cell[]; foes: Cell[] }; aid?: FightState['aid'] } = {},
 ): FightState {
   const party = (opts.party ?? g.joinedIds().filter((pid) => canJoin(g, pid, area))).slice();
   // a new fight puts the last one out of sight (and what was left to take from it goes into the bag)
@@ -321,6 +321,7 @@ export function startFight(
     ap: 0,
     guard: {},
     stance: {},
+    ...(opts.aid?.length ? { aid: opts.aid } : {}),
   };
   // a ground drawn by hand says where each side comes in; the rest find a place as usual
   const heroStarts = [...(opts.starts?.heroes ?? [])];
@@ -972,6 +973,7 @@ export function damageFoe(g: Game, f: FightState, foe: FoeState, n: number, by?:
   if (foe.hp <= 0) {
     foe.hp = 0;
     foe.out = def.humane ? 'down' : 'dead';
+    foe.downAt = f.round;
     foe.holds = null;
     say(g, f, def.humane ? 'fight_foe_down' : 'fight_foe_dead', null, foeVars(g, foe, f));
     ev(f, { a: fid(foe), k: 'down' });
@@ -1451,8 +1453,75 @@ function hunterNotices(g: Game, f: FightState): void {
 /** A fight that will not end (nobody can get at anybody): the foes give it up. */
 const MAX_ROUNDS = 40;
 
+/** The household at their posts does its part at the end of a round. */
+function aidRound(g: Game, f: FightState): void {
+  for (const a of f.aid ?? []) {
+    if (a.do === 'tie' || f.round < a.from || (f.round - a.from) % a.every !== 0) continue;
+    const foes = activeFoes(f);
+    if (a.do === 'heal') {
+      const hurt = alive(g, f).filter((pid) => g.p(pid).hp < g.p(pid).hpMax);
+      if (!hurt.length) continue;
+      for (const pid of hurt) {
+        const p = g.p(pid);
+        const n = Math.min(a.n, p.hpMax - p.hp);
+        p.hp += n;
+        ev(f, { a: pid, t: pid, k: 'heal', n });
+      }
+    } else if (a.do === 'guard') {
+      for (const pid of alive(g, f)) (f.guard ??= {})[pid] = Math.max(f.guard?.[pid] ?? 0, a.n);
+    } else if (a.do === 'stun') {
+      const foe = foes.filter((x) => !x.stun && !enemyOf(g, x.enemy).phases);
+      if (!foe.length) continue;
+      const one = g.rng.pick(foe);
+      one.stun = true;
+      one.stunAt = f.round;
+      one.holds = null;
+      if (one.intent?.move === 'charge' || one.intent?.move === 'sweep') one.intent = { move: 'none' };
+      ev(f, { a: fid(one), k: 'stun' });
+    } else if (a.do === 'hurt') {
+      if (!foes.length) continue;
+      const one = g.rng.pick(foes);
+      ev(f, { a: fid(one), k: 'tick', n: a.n });
+      damageFoe(g, f, one, a.n);
+    }
+    for (const pid of f.party) pushLine(f, pid, a.text[pid] ?? '');
+  }
+}
+
+/** Who feels no pain gets up a round after falling, once, unless the household ties them. */
+function riseAgain(g: Game, f: FightState): void {
+  const tie = f.aid?.find((a) => a.do === 'tie');
+  for (const foe of f.foes) {
+    if (foe.out !== 'down' || foe.rose || foe.downAt === undefined || f.round < foe.downAt + 1) continue;
+    if (!enemyOf(g, foe.enemy).traits.includes('numb')) continue;
+    foe.rose = true;
+    if (tie) {
+      for (const pid of f.party) pushLine(f, pid, `${tie.text[pid] ?? ''}`);
+      continue;
+    }
+    foe.out = null;
+    foe.hp = Math.ceil(foe.hpMax * 0.4);
+    foe.fear = 0;
+    if (!foe.pos || taken(g, f, fid(foe)).has(key(foe.pos))) {
+      foe.pos = undefined;
+      placeFoe(g, f, foe);
+    }
+    if (!foe.pos) {
+      foe.out = 'down';
+      continue;
+    }
+    reveal(g, f, foe.enemy, 'numb');
+    say(g, f, 'fight_foe_rises', null, foeVars(g, foe, f));
+    ev(f, { a: fid(foe), k: 'come' });
+    if (!f.order?.includes(fid(foe))) f.order?.push(fid(foe));
+    planIntent(g, f, foe);
+  }
+}
+
 function endOfRound(g: Game, f: FightState): void {
   hunterNotices(g, f);
+  aidRound(g, f);
+  riseAgain(g, f);
   if (f.round >= MAX_ROUNDS) {
     for (const foe of activeFoes(f)) {
       foe.out = 'fled';

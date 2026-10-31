@@ -92,6 +92,8 @@ function nodeEffects(n: SceneNode): Effect[] {
       for (const a of r.acts ?? []) list.push(...(a.effects ?? []));
     }
   if (n.type === 'choice') for (const o of n.options) list.push(...(o.effects ?? []));
+  // posts held are written by the squad itself
+  if (n.type === 'squad') for (const p of n.posts) list.push({ set: `post_${p.id}` }, { set: `post_${p.id}_good` });
   return effectsOf(list);
 }
 
@@ -257,6 +259,8 @@ export function validateContent(c: Content): Report {
       if ('take' in e) checkRes(where, e.take);
       if ('clue' in e && !clues.has(e.clue)) err(`${where}: unknown clue ${e.clue}`);
       if ('mystery' in e && !mysteries.has(e.mystery)) err(`${where}: unknown mystery ${e.mystery}`);
+      // a mystery has words for levels 0–4 (ui level_N)
+      if ('mystery' in e && (e.level < 0 || !c.ui[`level_${e.level}`])) err(`${where}: no words for mystery level ${e.level}`);
       if ('moveTo' in e && !areas.has(e.moveTo)) err(`${where}: unknown area ${e.moveTo}`);
       if (('rel' in e && !npcs.has(e.rel)) || ('meet' in e && !npcs.has(e.meet))) err(`${where}: unknown npc`);
       if ('scene' in e) {
@@ -685,6 +689,16 @@ export function validateContent(c: Content): Report {
         for (const b of n.bonus ?? []) checkCond(nw, b.if);
         if (n.light < 1) err(`${nw}: no light to start with`);
       }
+      if (n.type === 'squad') {
+        if (!n.posts.length) err(`${nw}: no posts`);
+        const postIds = new Set<string>();
+        for (const p of n.posts) {
+          if (postIds.has(p.id)) err(`${nw}: duplicate post ${p.id}`);
+          postIds.add(p.id);
+          for (const r of p.good ?? []) if (!c.residents.some((x) => x.id === r)) err(`${nw}: unknown resident ${r}`);
+        }
+      }
+      if (n.type === 'fight') for (const a of n.aid ?? []) checkCond(nw, a.if);
       if (n.type === 'operation') {
         const ids = new Set(n.tracks.map((t) => t.id));
         const known = (k: string) => ids.has(k) || err(`${nw}: unknown track ${k}`);

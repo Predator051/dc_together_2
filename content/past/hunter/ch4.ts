@@ -545,7 +545,7 @@ export const scenesH4: SceneDef[] = [
       },
       n4: {
         text: 'Під дубом хтось спить. Ти стоїш з луком, і не знаєш ще, що робитимеш.',
-        effects: [{ actDone: 4 }, { set: 'ph_ch4_done' }, { mystery: HM.carts, level: 5 }, { checkpoint: 'ph4.end' }],
+        effects: [{ actDone: 4 }, { set: 'ph_ch4_done' }, { mystery: HM.carts, level: 4 }, { checkpoint: 'ph4.end' }],
         next: null,
       },
     },

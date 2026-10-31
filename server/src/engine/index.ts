@@ -25,6 +25,7 @@ import type { QuestDef,
   OperationMoveDef,
   OperationNode,
   SceneNode,
+  SquadNode,
   StealthNode,
   Text,
   TextNode,
@@ -337,7 +338,22 @@ export class Game {
   private beginSceneFight(fn: FightNode): void {
     const area = this.p(this.joinedIds()[0] ?? 'p1').at;
     const drawn = fn.field ? fieldFrom(fn.field.rows, fn.field.ground) : null;
-    startFight(this, area, fn.foes, { scene: true, party: this.joinedIds(), ...(drawn ? { field: drawn.field, starts: { heroes: drawn.heroes, foes: drawn.foes } } : {}) });
+    const ids = this.joinedIds();
+    const aid = (fn.aid ?? [])
+      .filter((a) => this.test(a.if))
+      .map((a) => ({
+        do: a.do,
+        n: a.n ?? 0,
+        from: a.from ?? 1,
+        every: a.every ?? 1,
+        text: Object.fromEntries(ids.map((pid) => [pid, this.render(a.text, pid)])) as Record<PlayerId, string>,
+      }));
+    startFight(this, area, fn.foes, {
+      scene: true,
+      party: ids,
+      ...(aid.length ? { aid } : {}),
+      ...(drawn ? { field: drawn.field, starts: { heroes: drawn.heroes, foes: drawn.foes } } : {}),
+    });
   }
 
   // ----- conditions ----------------------------------------------------------
@@ -1151,6 +1167,48 @@ export class Game {
       for (const t of n.tracks) tracks[t.id] = Math.min(t.max, t.flag ? this.flag(t.flag) : (t.start ?? 0));
       sc.operation = { turn: 0, tracks, picks: {}, lines: { p1: [], p2: [] } };
     } else sc.operation = null;
+    sc.squad = n.type === 'squad' ? { posts: {}, ready: {} } : null;
+  }
+
+  // ----- the household goes along: posts ---------------------------------------
+
+  /** Residents who can go: at home, not hurt. */
+  squadFolk(): string[] {
+    return Object.keys(this.s.residents).filter((id) => this.s.residents[id]!.hurtUntil <= this.now);
+  }
+
+  private squadChoose(pid: PlayerId, n: SquadNode, optId: string): Result {
+    const sq = this.s.scene!.squad;
+    if (!sq) return this.fail('err_not_now');
+    const [cmd, post, who] = optId.split(':');
+    if (cmd === 'set' || cmd === 'clear') {
+      if (!post || !n.posts.some((x) => x.id === post)) return this.fail('err_not_now');
+      if (cmd === 'set') {
+        if (!who || !this.squadFolk().includes(who)) return this.fail('err_not_now');
+        for (const [k, v] of Object.entries(sq.posts)) if (v === who) delete sq.posts[k];
+        sq.posts[post] = who;
+      } else delete sq.posts[post];
+      sq.ready = {};
+      return OK;
+    }
+    if (cmd === 'unready') {
+      delete sq.ready[pid];
+      return OK;
+    }
+    if (cmd !== 'ready') return this.fail('err_not_now');
+    sq.ready[pid] = true;
+    if (!this.joinedIds().every((x) => sq.ready[x])) return OK;
+    for (const p of n.posts) {
+      delete this.s.flags[`post_${p.id}`];
+      delete this.s.flags[`post_${p.id}_good`];
+      const r = sq.posts[p.id];
+      if (!r) continue;
+      this.s.flags[`post_${p.id}`] = 1;
+      if (p.good?.includes(r)) this.s.flags[`post_${p.id}_good`] = 1;
+    }
+    this.s.scene!.squad = null;
+    this.goTo(n.next);
+    return OK;
   }
 
   // ----- operations: two fronts at once ----------------------------------------
@@ -1466,7 +1524,7 @@ export class Game {
     if (!sc || sc.paused) return this.fail('err_not_now');
     const def = this.ix.scenes.get(sc.id)!;
     const n = this.node(def, sc.node);
-    if (n.type === 'choice' || n.type === 'combat' || n.type === 'delve' || n.type === 'stealth' || n.type === 'operation' || n.type === 'fight')
+    if (n.type === 'choice' || n.type === 'combat' || n.type === 'delve' || n.type === 'stealth' || n.type === 'operation' || n.type === 'fight' || n.type === 'squad')
       return this.fail('err_not_now');
     sc.ready[pid] = true;
     if (!this.joinedIds().every((x) => sc.ready[x])) return OK;
@@ -1497,6 +1555,7 @@ export class Game {
     if (n.type === 'delve') return this.delveChoose(pid, n, optId);
     if (n.type === 'stealth') return this.stealthChoose(pid, n, optId);
     if (n.type === 'operation') return this.operationChoose(pid, n, optId);
+    if (n.type === 'squad') return this.squadChoose(pid, n, optId);
     if (n.type !== 'choice') return this.fail('err_not_now');
     const opt = n.options.find((o) => o.id === optId);
     if (!opt || !this.optionVisible(opt, pid, sc.node)) return this.fail('err_not_now');

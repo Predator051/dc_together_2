@@ -45,6 +45,27 @@ export const preps4: PrepDef[] = [
     text: 'Кілька днів носити воду вартовим біля водопою — як свій.',
     gives: 'вартові біля води знатимуть вас в обличчя.',
   },
+  // ------------------------------------------------------------------ the siege
+  {
+    id: 'prep_walls',
+    scene: S4.siege,
+    text: 'Поставити навколо схованки другий ряд засік.',
+    gives: 'перший натиск розіб\'ється об засіки.',
+  },
+  {
+    id: 'prep_smoke',
+    scene: S4.siege,
+    role: 'hunter',
+    text: 'Скласти на вітрі купи мокрого очерету — щоб було чим задимити берег.',
+    gives: 'буде чим засліпити тих, хто прийде, — і розбудити.',
+  },
+  {
+    id: 'prep_nets',
+    scene: S4.siege,
+    role: 'maker',
+    text: 'Сплести сіті й натягти між кілками в протоці.',
+    gives: 'не кожен пліт дійде до берега.',
+  },
 ];
 
 export const prepActions4: ActionDef[] = [
@@ -134,6 +155,59 @@ export const prepActions4: ActionDef[] = [
   },
 ];
 
+export const prepActions43: ActionDef[] = [
+  {
+    id: 'x_264',
+    icon: 'reed',
+    group: L4.hide,
+    spot: 'reeds',
+    prep: 'prep_walls',
+    label: 'Поставити другий ряд засік',
+    cost: { [R.reed]: 8, [R.rope]: 2 },
+    effects: [{ set: 'prep_walls' }],
+    cooldown: 30 * SEC,
+    kind: 'build',
+    busy: 'ставить засіки',
+    log: {
+      self: 'Кілки в мул, очерет снопами між ними, зверху — гостре. Килина обходить, смикає, киває: — Кінь не перескочить.',
+      other: '{name} ставить засіки навколо схованки.',
+    },
+  },
+  {
+    id: 'x_265',
+    icon: 'spot:reed',
+    group: L4.hide,
+    spot: 'reeds',
+    role: 'hunter',
+    prep: 'prep_smoke',
+    label: 'Скласти купи мокрого очерету на вітрі',
+    effects: [{ set: 'prep_smoke' }],
+    cooldown: 35 * SEC,
+    busy: 'складає мокрий очерет',
+    log: {
+      self: 'Три купи на вітряному боці острівця, кожна — з оберемок свіжого зеленого очерету. Сухий зверху, щоб займався, мокрий під ним, щоб диміло. Ти пам\'ятаєш, як тихі біля обозу кашляли від диму — і прокидалися.',
+      other: '{name} складає на березі купи мокрого очерету.',
+    },
+  },
+  {
+    id: 'x_266',
+    icon: 'rope',
+    group: L.bench,
+    role: 'maker',
+    prep: 'prep_nets',
+    label: 'Сплести сіті для протоки',
+    cost: { [R.rope]: 4 },
+    effects: [{ set: 'prep_nets' }],
+    cooldown: 25 * SEC,
+    kind: 'craft',
+    busy: 'плете сіті',
+    log: {
+      self: 'Вічко на дві долоні — рибі пройти, жердині застрягти. Три сіті, кожна на вісім кроків. Хлопчик зі схованки знає, де їх натягти.',
+      other: '{name} плете сіті.',
+    },
+  },
+];
+
 /** Two of the hiding place who would rather live at home, once the place trusts you. */
 export const hideActions4: ActionDef[] = [
   {
@@ -182,4 +256,7 @@ export const prepFx4: Record<string, FxKind> = {
   x_261: 'care',
   x_262: 'build',
   x_263: 'care',
+  x_264: 'build',
+  x_265: 'care',
+  x_266: 'build',
 };

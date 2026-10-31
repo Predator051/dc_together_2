@@ -243,7 +243,7 @@ export interface SceneView {
   paused: boolean;
   pausedText?: string;
   blocks: SceneBlock[];
-  kind: 'text' | 'choice' | 'combat' | 'delve' | 'stealth' | 'operation' | 'fight';
+  kind: 'text' | 'choice' | 'combat' | 'delve' | 'stealth' | 'operation' | 'fight' | 'squad';
   mode?: 'joint' | 'each' | 'any';
   button?: string;
   options?: OptionView[];
@@ -266,6 +266,7 @@ export interface SceneView {
   delve?: DelveView;
   stealth?: StealthView;
   operation?: OperationView;
+  squad?: SquadView;
   /** Hand signs: mine and the partner's latest. */
   signs?: { mine?: string; partner?: string; fresh: boolean };
 }
@@ -309,6 +310,13 @@ export interface DelveView {
   acts: Array<{ id: string; label: string; light: number; enabled: boolean; reason?: string; gives?: string }>;
   canLeave: boolean;
   lines: string[];
+}
+
+export interface SquadView {
+  posts: Array<{ id: string; label: string; text: string; who?: string }>;
+  folk: Array<{ id: string; name: string; post?: string; good: string[]; hurt: boolean }>;
+  myReady: boolean;
+  partnerReady: boolean;
 }
 
 export interface OperationView {

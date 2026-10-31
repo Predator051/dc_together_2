@@ -173,6 +173,11 @@ export const T = {
   signDanger: 'Небезпека',
   signHere: 'Сюди',
   opTurn: 'Хід',
+  squadReady: 'Так і стоїмо',
+  squadChange: 'Переставити',
+  squadGood: 'Тут знається',
+  squadNobody: 'Удома нікого — підете самі.',
+  squadNote: 'Кожного — на одне місце. ✦ — тут знається.',
 
   tabHere: 'Тут',
   tabMap: 'Мапа',

@@ -50,9 +50,10 @@ import { enemies4 } from './a4/enemies.js';
 import { clues4, goals4, mysteries4, npcs4 } from './a4/journal.js';
 import { areas4, locations4 } from './a4/places.js';
 import { resources4 } from './a4/resources.js';
-import { hideActions4, prepActions4, prepFx4, preps4, residents4 } from './a4/preps.js';
+import { hideActions4, prepActions4, prepActions43, prepFx4, preps4, residents4 } from './a4/preps.js';
 import { scenesA4 } from './a4/scenes.js';
 import { scenesA42 } from './a4/scenes2.js';
+import { scenesA43 } from './a4/scenes3.js';
 import { treks4 } from './a4/treks.js';
 
 /** Barrels at home keep more food and salted meat. */
@@ -62,10 +63,10 @@ const withBarrels = (list: ResourceDef[]): ResourceDef[] =>
 export const content: Content = {
   areas: [...areas, ...areas2, ...areas3, ...areas4, ...sideAreas1],
   resources: withBarrels([...resources, ...resources2, ...needs1Resources, ...needs2Resources, ...sideResources1, ...sideResources2, ...gardenResources, ...folkResources, ...resources3, ...resources4]),
-  actions: [...actions, ...actions2, ...actionsA2, ...needs1Actions, ...needs2Actions, ...sideActions1, ...sideActions2, ...gardenActions, ...folkActions, ...actions3, ...prepActions3, ...actions4, ...prepActions4, ...hideActions4],
+  actions: [...actions, ...actions2, ...actionsA2, ...needs1Actions, ...needs2Actions, ...sideActions1, ...sideActions2, ...gardenActions, ...folkActions, ...actions3, ...prepActions3, ...actions4, ...prepActions4, ...prepActions43, ...hideActions4],
   pools,
   locations: [...locations, ...locations2, ...locations3, ...locations4, ...sideLocations1, ...sideLocations2, ...gardenLocations],
-  scenes: [...scenes1, ...scenes2, ...scenesA2, ...scenesA2b, ...suppersA2, ...sideScenes1, ...sideScenes2, ...scenesA3, ...scenesA4, ...scenesA42],
+  scenes: [...scenes1, ...scenes2, ...scenesA2, ...scenesA2b, ...suppersA2, ...sideScenes1, ...sideScenes2, ...scenesA3, ...scenesA4, ...scenesA42, ...scenesA43],
   encounters: [],
   clues: [...clues, ...clues2, ...clues3, ...clues4, ...sideClues1, ...sideClues2],
   mysteries: [...mysteries, ...mysteries2, ...mysteries3, ...mysteries4, ...sideMysteries],
@@ -97,6 +98,7 @@ export const content: Content = {
     1: 'Кінець першої дії. Варниця ваша — працюйте, ходіть плавнями, готуйтеся. Далі буде.',
     2: 'Кінець другої дії. Варниця тепер — дім для багатьох. А шлях кличе далі. Далі буде.',
     3: 'Кінець третьої дії. Сотню виведено, табір у кар\'єрі став більшим. А з півдня йде колона. Далі буде.',
+    4: 'Кінець четвертої дії. Схованку виведено, Данило будить своїх зсередини. А цехмістер пише листи. Далі буде.',
   },
   roleTitles,
   ui,

@@ -709,7 +709,7 @@ export const scenesM4: SceneDef[] = [
       },
       n4: {
         text: 'Ти довго дивишся вслід. Потім розумієш, що не спиш — і що в лісі є ще хтось. Кроки. Легкі, обережні. Мисливські.',
-        effects: [{ actDone: 4 }, { set: 'pm_ch4_done' }, { mystery: PM.numbers, level: 5 }, { checkpoint: 'pm4.end' }],
+        effects: [{ actDone: 4 }, { set: 'pm_ch4_done' }, { mystery: PM.numbers, level: 4 }, { checkpoint: 'pm4.end' }],
         next: null,
       },
     },

@@ -156,6 +156,12 @@ export function collectStrings(c: Content): Found[] {
     for (const [id, n] of Object.entries(s.nodes)) {
       const w = `scene ${s.id}.${id}`;
       if (n.type === 'stealth') for (const [k, v] of Object.entries(n.sees)) pushText(out, `${w}.sees.${k}`, v);
+      if (n.type === 'squad')
+        n.posts.forEach((p) => {
+          pushText(out, `${w}.post.${p.id}`, p.label);
+          pushText(out, `${w}.post.${p.id}.text`, p.text);
+        });
+      if (n.type === 'fight') (n.aid ?? []).forEach((a, i) => pushText(out, `${w}.aid${i}`, a.text));
       if (n.type === 'operation') {
         n.tracks.forEach((t) => pushText(out, `${w}.track.${t.id}`, t.label));
         n.moves.forEach((m) => {

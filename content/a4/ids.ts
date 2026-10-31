@@ -25,6 +25,8 @@ export const E4 = {
   looter: 'e_22',
   strays: 'e_23',
   carter: 'e_24',
+  silent: 'e_25',
+  osavul: 'e_26',
 } as const;
 
 export const S4 = {
@@ -35,6 +37,9 @@ export const S4 = {
   rows: 's_124',
   brew: 's_125',
   wake: 's_126',
+  kasian: 's_127',
+  siege: 's_128',
+  letter: 's_129',
 } as const;
 
 /** Two of the hiding place who go to live at home. */

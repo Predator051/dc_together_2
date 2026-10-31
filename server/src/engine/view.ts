@@ -370,13 +370,13 @@ function sceneView(g: Game, pid: PlayerId): SceneView | null {
     pausedText: sc.paused ? g.render(g.ix.ui('scene_paused'), pid) : undefined,
     blocks,
     kind:
-      n.type === 'choice' || n.type === 'combat' || n.type === 'delve' || n.type === 'stealth' || n.type === 'operation' || n.type === 'fight'
+      n.type === 'choice' || n.type === 'combat' || n.type === 'delve' || n.type === 'stealth' || n.type === 'operation' || n.type === 'fight' || n.type === 'squad'
         ? n.type
         : 'text',
     mood:
       n.type === 'combat' || n.type === 'fight'
         ? 'fight'
-        : n.type === 'delve' || n.type === 'stealth' || n.type === 'operation'
+        : n.type === 'delve' || n.type === 'stealth' || n.type === 'operation' || n.type === 'squad'
           ? 'deep'
           : def.pool
             ? 'hearth'
@@ -481,6 +481,29 @@ function sceneView(g: Game, pid: PlayerId): SceneView | null {
     };
     view.myPick = op.picks[pid];
     view.partnerPicked = !!op.picks[other];
+  } else if (n.type === 'squad' && sc.squad) {
+    const sq = sc.squad;
+    const free = new Set(g.squadFolk());
+    const postOf = new Map(Object.entries(sq.posts).map(([p, r]) => [r, p]));
+    view.squad = {
+      posts: n.posts.map((p) => ({
+        id: p.id,
+        label: g.render(p.label, pid),
+        text: g.render(p.text, pid),
+        ...(sq.posts[p.id] ? { who: sq.posts[p.id] } : {}),
+      })),
+      folk: Object.keys(g.s.residents).map((id) => ({
+        id,
+        name: g.render(g.ix.c.residents.find((r) => r.id === id)?.name ?? id, pid),
+        ...(postOf.has(id) ? { post: postOf.get(id) } : {}),
+        good: n.posts.filter((p) => p.good?.includes(id)).map((p) => p.id),
+        hurt: !free.has(id),
+      })),
+      myReady: !!sq.ready[pid],
+      partnerReady: !!sq.ready[other],
+    };
+    view.myPick = sq.ready[pid] ? 'ready' : undefined;
+    view.partnerPicked = !!sq.ready[other];
   } else if (n.type === 'fight') {
     // the fight itself is shown by the fight panel
   } else {

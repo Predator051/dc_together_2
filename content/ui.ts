@@ -216,6 +216,7 @@ export const ui: Record<string, string> = {
   fight_covered_other: '{name} {прийняв|прийняла} удар на себе: −{n}.',
   fight_foe_dead: '{foe} падає й більше не встає.',
   fight_foe_down: '{foe} падає й не може звестися.',
+  fight_foe_rises: '{foe} підводиться — мовчки, ніби нічого й не було.',
   fight_foe_fled: '{foe} тікає.',
   fight_foe_guard: '{foe} закривається.',
   fight_calls: '{foe} гукає на поміч.',

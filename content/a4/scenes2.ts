@@ -166,8 +166,6 @@ export const scenesA42: SceneDef[] = [
         effects: [
           { set: 'p2_rows_seen' },
           { clue: 'c_75' },
-          { mystery: M2.danylo, level: 5 },
-          { mystery: M2.buyer, level: 4 },
           { moveTo: A4.hide, who: 'both' },
           { xp: 25, who: 'both' },
           { checkpoint: 'a4.rows' },
@@ -241,7 +239,7 @@ export const scenesA42: SceneDef[] = [
             { text: 'Ти дивишся на похідний чрен на колесах. Його можна поставити будь-де.' },
           ],
         ],
-        effects: [{ clue: 'c_76' }, { mystery: M4.brew, level: 3 }],
+        effects: [{ clue: 'c_76' }, { mystery: M4.brew, level: 4 }],
         next: 'choice',
       },
       choice: {
@@ -444,7 +442,6 @@ export const scenesA42: SceneDef[] = [
           { set: 'p2_danylo_inside' },
           { add: { [T4.pebble]: 1 } },
           { clue: 'c_77' },
-          { mystery: M2.danylo, level: 6 },
           { moveTo: A4.hide, who: 'both' },
           { heal: 'full' },
           { xp: 30, who: 'both' },

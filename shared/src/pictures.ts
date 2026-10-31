@@ -68,7 +68,7 @@ export const SPOT_ICONS = [
 export type SpotIcon = (typeof SPOT_ICONS)[number];
 
 /** Portraits of foes. */
-export const PORTRAITS = ['rat', 'viper', 'oldviper', 'dog', 'leech', 'boar', 'greyboar', 'catfish', 'hound', 'cloak', 'chief', 'wolf', 'snatcher', 'hook', 'matka', 'elder', 'shewolf', 'rider', 'captain'] as const;
+export const PORTRAITS = ['rat', 'viper', 'oldviper', 'dog', 'leech', 'boar', 'greyboar', 'catfish', 'hound', 'cloak', 'chief', 'wolf', 'snatcher', 'hook', 'matka', 'elder', 'shewolf', 'rider', 'captain', 'silent', 'osavul'] as const;
 export type PortraitId = (typeof PORTRAITS)[number];
 
 /** How a crop looks on its bed, from sowing to ripe. */

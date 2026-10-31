@@ -136,6 +136,8 @@ const ACT41 = (w: World) => !!w.state.flags['p2_kryvets'] && !!w.state.flags['p2
 const STORY41 = ['s_120', 's_121', 's_122', 's_123'];
 const ACT42 = (w: World) => !!w.state.flags['p2_danylo_inside'] && !w.state.scene;
 const STORY42 = ['s_124', 's_125', 's_126'];
+const ACT4 = (w: World) => !!w.state.flags['p2_act4_done'] && !w.state.scene;
+const STORY43 = ['s_127', 's_128', 's_129'];
 const STORY3 = ['s_100', 's_101', 's_102', 's_103', 's_104', 's_105', 's_106', 's_107', 's_108', 's_109'];
 
 describe('two bots play act three to its end', () => {
@@ -175,6 +177,14 @@ describe('two bots play act three to its end', () => {
     const m42 = (r42.world.now - from42) / 60000;
     expect(m42).toBeGreaterThan(12);
     expect(m42).toBeLessThan(40);
+
+    // part three: the guild master, the siege of the hiding place with the household at their posts, the letter
+    const r43 = autoplay({}, {}, { from: r42.world, until: ACT4, maxSteps: 150000, stallLimit: 15000 });
+    if (!r43.done) console.log(r43.reason, show(r43.world));
+    expect(r43.done).toBe(true);
+    for (const s of STORY43) expect(r43.world.state.flags[`done:${s}`], s).toBe(1);
+    expect(r43.world.state.meta.actDone).toBe(4);
+    expect(Object.keys(r43.world.state.flags).filter((f) => f.startsWith('post_')).length).toBeGreaterThan(2);
 
     const nr = autoplay({ noPrep: true }, { noPrep: true }, { from: bare, until: ACT3, maxSteps: 200000, stallLimit: 20000 });
     if (!nr.done) console.log(nr.reason, show(nr.world));

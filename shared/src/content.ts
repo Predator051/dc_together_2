@@ -191,7 +191,9 @@ export type TraitId =
   | 'fearNoise'
   | 'drag'
   | 'leech'
-  | 'shield';
+  | 'shield'
+  /** Feels no pain: knocked down, it gets up once more, unless someone ties it. */
+  | 'numb';
 
 export interface GearDef {
   slot: Slot;
@@ -695,16 +697,52 @@ export interface FieldDef {
   rows: string[];
 }
 
+/**
+ * What the household does from the sides of a fight, from the posts they were set to (a squad node): every
+ * round from `from`, each `every` rounds. heal: both heroes; stun: one foe loses its turn; hurt: one foe takes
+ * `n`; guard: both heroes are covered by `n`; tie: the knocked down who feel no pain stay down.
+ */
+export interface FightAidDef {
+  if: Cond;
+  do: 'heal' | 'stun' | 'hurt' | 'guard' | 'tie';
+  n?: number;
+  from?: number;
+  every?: number;
+  text: Text;
+}
+
 export interface FightNode extends NodeBase {
   type: 'fight';
   foes: Array<{ enemy: string; n?: number }>;
   /** Fought on this ground instead of one made for the place. */
   field?: FieldDef;
+  /** The household helping from their posts. */
+  aid?: FightAidDef[];
   win: string;
   lose: string;
 }
 
-export type SceneNode = TextNode | ChoiceNode | CombatNode | DelveNode | StealthNode | OperationNode | FightNode;
+/** A post a resident can be set to before a fight or a siege. */
+export interface SquadPostDef {
+  id: string;
+  label: Text;
+  /** What it is for (shown under the label). */
+  text: Text;
+  /** Residents who are good at it (their being there sets `post_<id>_good`). */
+  good?: string[];
+}
+
+/**
+ * The household goes along: both heroes set residents to posts (one each), then say they are ready. Sets the
+ * flag `post_<id>` for each post held (and `post_<id>_good` when one good at it holds it); later nodes read them.
+ */
+export interface SquadNode extends NodeBase {
+  type: 'squad';
+  posts: SquadPostDef[];
+  next: string;
+}
+
+export type SceneNode = TextNode | ChoiceNode | CombatNode | DelveNode | StealthNode | OperationNode | FightNode | SquadNode;
 
 export interface DelveExitDef {
   to: string;

@@ -182,6 +182,21 @@ const DRAW: Record<PortraitId, () => JSX.Element> = {
       <path d="M12 30h24M24 24v18" />
     </Ink>
   ),
+  silent: () => (
+    <Ink>
+      <path d="M24 7c-5 0-8 4-8 9v4l-6 21h28l-6-21v-4c0-5-3-9-8-9z" />
+      <path class="thin" d="M20 18h3M25 18h3M21 24h6" />
+      <path class="thin" d="M18 30l6 4 6-4" />
+    </Ink>
+  ),
+  osavul: () => (
+    <Ink>
+      <path class="thick" d="M24 8c-6 0-9 4-9 10v3L8 42h32l-7-21v-3c0-6-3-10-9-10z" />
+      <path class="thin" d="M14 12c3-5 17-5 20 0" />
+      <path class="shade" d="M17 23c2 4 5 4 7 1 2 3 5 3 7-1" />
+      <path d="M12 32h24" />
+    </Ink>
+  ),
   hook: () => (
     <Ink>
       <path class="thick" d="M24 6c-6 0-9 4-9 10v4L8 42h32l-7-22v-4c0-6-3-10-9-10z" />
