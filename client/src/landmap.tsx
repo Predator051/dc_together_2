@@ -1,10 +1,12 @@
 // The painted map: land you drag about and zoom, the roads between places, fog over what nobody has
 // seen yet, and the heroes walking the roads as it happens. Places without a spot on the painting
-// keep the old drawn scheme (see MapPanel).
+// keep the old drawn scheme (see MapPanel). There are several sheets (the north of the story, the south
+// of the memories); the map shows the one that holds every place it shows now.
 import type { JSX } from 'preact';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { MapLegView, MapNodeView, MapView } from '../../shared/src/protocol.js';
 import sheet1 from './art/map1.json';
+import sheet2 from './art/map2.json';
 import { MapIcon } from './mapicons.js';
 import { Tones, markStyle } from './pictures.js';
 import { T } from './strings.js';
@@ -24,31 +26,51 @@ interface Sheet {
   water: Record<string, Pt[]>;
 }
 
-const SHEET = sheet1 as unknown as Sheet;
+const SHEETS: Record<string, Sheet> = { map1: sheet1 as unknown as Sheet, map2: sheet2 as unknown as Sheet };
+const FILES = import.meta.glob('./art/map*/*.webp', { eager: true, query: '?url', import: 'default' });
+
+// The sheet shown now (one map is on screen at a time).
+let NAME = 'map1';
+let SHEET = SHEETS.map1!;
+
+/** Show the sheet that holds every place of this map; false when none does. */
+function pickSheet(m: MapView): boolean {
+  if (!m.nodes.length) return false;
+  for (const [name, sh] of Object.entries(SHEETS)) {
+    if (m.nodes.every((n) => sh.at[n.id])) {
+      NAME = name;
+      SHEET = sh;
+      return true;
+    }
+  }
+  return false;
+}
 
 function tileUrl(r: number, c: number): string {
-  return new URL(`./art/map1/r${r}c${c}.webp`, import.meta.url).href;
+  return FILES[`./art/${NAME}/r${r}c${c}.webp`] ?? '';
 }
-const PREVIEW = new URL('./art/map1/preview.webp', import.meta.url).href;
+function previewUrl(): string {
+  return FILES[`./art/${NAME}/preview.webp`] ?? '';
+}
 
 /**
  * Fetch the tiles of the land already seen while nobody looks at the map, so it opens painted at once.
  * The browser keeps them (the files are named by their content).
  */
 export function preloadLand(m: MapView): void {
-  if (!paintedFits(m)) return;
+  if (!pickSheet(m)) return;
   for (const [r, c] of tilesOf(seenOf(m))) {
     const img = new Image();
     img.decoding = 'async';
     img.src = tileUrl(r, c);
   }
-  new Image().src = PREVIEW;
+  new Image().src = previewUrl();
   fogUrl(seenOf(m), new Set());
 }
 
 /** The painting holds every place the map shows now. */
 export function paintedFits(m: MapView): boolean {
-  return m.nodes.length > 0 && m.nodes.every((n) => SHEET.at[n.id]);
+  return pickSheet(m);
 }
 
 // ---------------------------------------------------------------------------- roads
@@ -98,10 +120,10 @@ function wander(a: Pt, b: Pt, key: string): Pt[] {
   return [[(a[0] + b[0]) / 2 + nx * off, (a[1] + b[1]) / 2 + ny * off]];
 }
 
-function buildWay(key: string, mid: Pt[], water: boolean): Way | null {
+function buildWay(sh: Sheet, key: string, mid: Pt[], water: boolean): Way | null {
   const [a, b] = key.split('|') as [string, string];
-  const pa = SHEET.at[a];
-  const pb = SHEET.at[b];
+  const pa = sh.at[a];
+  const pb = sh.at[b];
   if (!pa || !pb) return null;
   const pts = smooth([pa, ...(mid.length ? mid : wander(pa, pb, key)), pb]);
   const run = [0];
@@ -110,15 +132,18 @@ function buildWay(key: string, mid: Pt[], water: boolean): Way | null {
   return { key, a, b, water, pts, run, d };
 }
 
+// every sheet's ways at once: the places of different sheets have different ids
 const WAYS: Map<string, Way> = (() => {
   const all = new Map<string, Way>();
-  for (const [k, mid] of Object.entries(SHEET.roads)) {
-    const w = buildWay(k, mid, false);
-    if (w) all.set(k, w);
-  }
-  for (const [k, mid] of Object.entries(SHEET.water)) {
-    const w = buildWay(k, mid, true);
-    if (w) all.set(k, w);
+  for (const sh of Object.values(SHEETS)) {
+    for (const [k, mid] of Object.entries(sh.roads)) {
+      const w = buildWay(sh, k, mid, false);
+      if (w) all.set(k, w);
+    }
+    for (const [k, mid] of Object.entries(sh.water)) {
+      const w = buildWay(sh, k, mid, true);
+      if (w) all.set(k, w);
+    }
   }
   return all;
 })();
@@ -433,6 +458,7 @@ export function LandMap({
   const cam = useRef<Cam>({ x: 0, y: 0, k: 0.6 });
   const [ready, setReady] = useState(false);
   const skew = now - Date.now();
+  pickSheet(m);
 
   const seen = useMemo(() => seenOf(m), [m]);
   const fresh = useFresh(m);
@@ -662,7 +688,7 @@ export function LandMap({
                 top: `${r * th}px`,
                 width: `${tw}px`,
                 height: `${th}px`,
-                backgroundImage: `url(${PREVIEW})`,
+                backgroundImage: `url(${previewUrl()})`,
                 backgroundSize: `${SHEET.w}px ${SHEET.h}px`,
                 backgroundPosition: `-${c * tw}px -${r * th}px`,
               }}
