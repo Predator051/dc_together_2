@@ -62,7 +62,7 @@ import { activeFoes, dropFight, fightChoose, fightOf, help, maybeResolve, startF
 import { ask, credit, unask } from './asks.js';
 import { setHard } from './hard.js';
 import { fieldFrom } from './terrain.js';
-import { ambush, areaDef, areaKnown, go, linkTime, settleTravel } from './travel.js';
+import { ambush, areaDef, areaKnown, go, linkTime, settleTravel, takeCarried } from './travel.js';
 import { folkGear, setFeed, setJob, settleWork, teach } from './household.js';
 import { camp, drink, eat, feed, nightRest, paceOf, rest, settleNeeds, soak } from './needs.js';
 
@@ -681,6 +681,8 @@ export class Game {
     if ('moveTo' in e) {
       for (const pid of this.targets(e.who ?? 'actor', actor)) {
         const p = this.p(pid);
+        // led away from home by the story: what goes along by itself goes along
+        if (!areaDef(this, e.moveTo)?.home) takeCarried(this, pid);
         p.at = e.moveTo;
         p.travel = null;
         if (p.busy?.action.startsWith('go:')) p.busy = null;
@@ -845,7 +847,9 @@ export class Game {
     if (a.enabled && !this.test(a.enabled, pid)) return a.disabledHint ? this.render(a.disabledHint, pid) : this.ix.ui('err_not_now');
     if (!this.hasCostFor(pid, a.cost)) return this.ix.ui('err_cost');
     if (!this.atHome(pid) && a.yield && !a.effects && !a.chance) {
-      const fits = Object.keys(a.yield).some((r) => (this.ix.res.get(r)?.weight ?? 1) <= heroOf(this, pid).carry - this.bagLoadOf(pid) + 1e-9);
+      // what the work uses up leaves the bag first
+      const freed = Object.entries(a.cost ?? {}).reduce((sum, [r, n]) => sum + (this.ix.res.get(r)?.weight ?? 1) * n, 0);
+      const fits = Object.keys(a.yield).some((r) => (this.ix.res.get(r)?.weight ?? 1) <= heroOf(this, pid).carry - this.bagLoadOf(pid) + freed + 1e-9);
       if (!fits) return this.ix.ui('err_bag_full');
     }
     if (a.yield && !a.effects && !a.chance) {

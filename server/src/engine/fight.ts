@@ -1526,13 +1526,14 @@ export function kept(g: Game, id: string): boolean {
   return k === 'use' || k === 'tool';
 }
 
-/** A beaten hero comes to at home: the bag is lost (but for what is kept), a while to recover. */
+/** A beaten hero comes to at home (or the place's refuge): the bag is lost (but for what is kept), a while to recover. */
 export function defeat(g: Game, pid: PlayerId): void {
   const p = g.p(pid);
   p.bag = Object.fromEntries(Object.entries(p.bag).filter(([id]) => kept(g, id)));
   p.hp = Math.max(1, Math.ceil(p.hpMax * 0.3));
   p.poison = 0;
-  p.at = g.ix.homeArea;
+  const refuge = g.ix.c.areas.find((a) => a.id === p.at)?.refuge;
+  p.at = refuge ?? g.ix.homeArea;
   p.travel = null;
   // brought home and laid by the fire: warm and dry, if weak
   if (p.needs) {
@@ -1541,7 +1542,8 @@ export function defeat(g: Game, pid: PlayerId): void {
   }
   p.fight = null;
   p.busy = { action: 'rest:defeat', until: g.now + DEFEAT_BUSY };
-  g.log({ self: g.ix.ui('defeat_self'), other: g.ix.ui('defeat_other'), kind: 'warn' }, pid);
+  const say = refuge ? 'defeat_refuge' : 'defeat';
+  g.log({ self: g.ix.ui(`${say}_self`), other: g.ix.ui(`${say}_other`), kind: 'warn' }, pid);
 }
 
 function finishFight(g: Game, f: FightState, how: 'win' | 'lose' | 'fled'): void {

@@ -389,6 +389,8 @@ export interface AreaDef {
   ambush?: number;
   /** Home: the store is here, the bag is emptied on arrival. */
   home?: boolean;
+  /** Where a hero beaten here comes to (default: home) — on a road far from any home. */
+  refuge?: string;
   /** The place is on the map at all (as '?') while this holds. */
   visible?: Cond;
   /** Scene that explores it (both together); until done the place cannot be entered alone. */

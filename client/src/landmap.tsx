@@ -7,6 +7,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/ho
 import type { MapLegView, MapNodeView, MapView } from '../../shared/src/protocol.js';
 import sheet1 from './art/map1.json';
 import sheet2 from './art/map2.json';
+import sheet3 from './art/map3.json';
 import { MapIcon } from './mapicons.js';
 import { Tones, markStyle } from './pictures.js';
 import { T } from './strings.js';
@@ -28,7 +29,7 @@ interface Sheet {
   edge?: Record<string, Pt>;
 }
 
-const SHEETS: Record<string, Sheet> = { map1: sheet1 as unknown as Sheet, map2: sheet2 as unknown as Sheet };
+const SHEETS: Record<string, Sheet> = { map1: sheet1 as unknown as Sheet, map2: sheet2 as unknown as Sheet, map3: sheet3 as unknown as Sheet };
 /** Each sheet as it is drawn: its own places and the edge ones together. */
 const DRAWN: Record<string, Sheet> = Object.fromEntries(Object.entries(SHEETS).map(([k, sh]) => [k, { ...sh, at: { ...sh.edge, ...sh.at } }]));
 const FILES = import.meta.glob('./art/map*/*.webp', { eager: true, query: '?url', import: 'default' });

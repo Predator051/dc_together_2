@@ -5,10 +5,10 @@ const SEC = 1000;
 const inside = { flag: 'pm_in' };
 
 export const resourcesM: ResourceDef[] = [
-  { id: PR.oak, icon: 'oak', name: 'Дубові дошки', order: 1, cap: 24, weight: 2 },
+  { id: PR.oak, icon: 'oak', name: 'Дубові дошки', order: 1, cap: 24, weight: 1 },
   { id: PR.osier, icon: 'osier', name: 'Лоза', order: 2, cap: 30, weight: 0.5 },
   { id: PR.clay, icon: 'clay', name: 'Глина', order: 3, cap: 16, weight: 2 },
-  { id: PR.iron, icon: 'iron', name: 'Залізо', order: 4, cap: 12, weight: 2 },
+  { id: PR.iron, icon: 'iron', name: 'Залізо', order: 4, cap: 12, weight: 1 },
   { id: PR.coal, icon: 'coal', name: 'Вугілля', order: 5, cap: 16, weight: 1 },
   // money goes along by itself: the market is where it is spent
   { id: PR.coin, carry: true, icon: 'coin', name: 'Шаги', order: 6, weight: 0 },

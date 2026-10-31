@@ -1,0 +1,573 @@
+// The hunter's past, chapter four «Дорога» (`.design/pasts-later.md` §4): leading the last family north
+// through the ridges of the marshes, over an old dam, up a steppe ravine to a village under the forest. The
+// trail is the hunter's own now (`ph_track`): every step leaves it, water and false tracks hide it — and
+// someone who reads trails as well as she does is following it.
+import type { ActionDef, AreaDef, ClueDef, Cond, EnemyDef, GoalDef, LocationDef, SceneDef } from '../../../shared/src/content.js';
+import { HL, HM, HR } from './ids.js';
+
+const SEC = 1000;
+
+export const HA4 = { camp: 'ph_a6', ridges: 'ph_a7', dam: 'ph_a8', ravine: 'ph_a9', wood: 'ph_a10' } as const;
+export const HL4 = { camp: 'ph_l6', ridges: 'ph_l7', dam: 'ph_l8', ravine: 'ph_l9', wood: 'ph_l10' } as const;
+export const HE4 = { gnat: 'ph_e8', rider: 'ph_e9', wolf: 'ph_e10' } as const;
+export const HN4 = { gnat: 'ph_n6', horpyna: 'ph_n7' } as const;
+export const HS4 = { ridges: 'ph_s20', gnat: 'ph_s21', village: 'ph_s22' } as const;
+
+const ch4: Cond = { flag: 'ph_ch4' };
+const led = (n: number): Cond => ({ flag: 'ph_led4', gte: n });
+
+export const enemiesH4: EnemyDef[] = [
+  {
+    id: HE4.gnat,
+    icon: 'cloak',
+    name: 'Гнат',
+    acc: 'Гната',
+    gen: 'Гната',
+    verb: 'б\'є',
+    level: 6,
+    hp: 40,
+    dmg: [4, 7],
+    armor: 1,
+    evade: 2,
+    morale: 16,
+    humane: true,
+    traits: ['fast'],
+    ai: [{ move: 'attack', w: 3 }, { move: 'guard', w: 1 }],
+    loot: { [HR.coin]: [3, 6] },
+    desc: 'Слідопит полку. Читає землю так само, як ти: зупиняється там само, де й ти.',
+  },
+  {
+    id: HE4.rider,
+    icon: 'rider',
+    name: 'Полковий',
+    acc: 'полкового',
+    gen: 'полкового',
+    verb: 'б\'є',
+    level: 6,
+    hp: 24,
+    dmg: [4, 6],
+    armor: 1,
+    morale: 12,
+    humane: true,
+    traits: [],
+    ai: [{ move: 'attack', w: 1 }],
+    loot: { [HR.coin]: [1, 3] },
+    desc: 'Полковий у синьому, з перев\'язаною ногою. Ходить за Гнатом, куди той скаже.',
+  },
+  {
+    id: HE4.wolf,
+    icon: 'wolf',
+    name: 'Сірий вовк',
+    acc: 'вовка',
+    gen: 'вовка',
+    verb: 'рве',
+    level: 6,
+    hp: 20,
+    dmg: [3, 6],
+    evade: 1,
+    morale: 12,
+    traits: ['pack', 'night'],
+    ai: [{ move: 'attack', w: 3 }, { move: 'grab', w: 1 }],
+    loot: { [HR.hide]: [1, 1] },
+    desc: 'Степові вовки йдуть за біженцями, як за отарою. Слабких чують здалеку.',
+  },
+];
+
+export const areasH4: AreaDef[] = [
+  {
+    id: HA4.camp,
+    name: 'Ночівля на гриві',
+    where: 'на ночівлі',
+    scene: 'reeds',
+    pos: [1, 4],
+    visible: ch4,
+    desc: 'Суха гряда серед очерету, курінь із гілля, вогонь у ямці. Горпина спить, обійнявши дітей.',
+    links: [
+      { to: HA4.ridges, time: 8 * SEC },
+      { to: HA4.dam, time: 10 * SEC, if: led(1) },
+    ],
+  },
+  {
+    id: HA4.ridges,
+    name: 'Гриви',
+    where: 'на гривах',
+    scene: 'reeds',
+    pos: [0, 3],
+    visible: ch4,
+    danger: 6,
+    ambush: 0.05,
+    refuge: HA4.camp,
+    foes: [{ enemy: HE4.wolf, n: [2, 2], w: 1 }],
+    desc: 'Довгі сухі пасма в плавнях, як пальці. По них можна йти, не замочивши ніг, — якщо знаєш, по яких.',
+    links: [{ to: HA4.dam, time: 8 * SEC, if: led(1) }],
+  },
+  {
+    id: HA4.dam,
+    name: 'Стара гребля',
+    where: 'на греблі',
+    scene: 'dyke',
+    pos: [1, 2],
+    visible: { all: [ch4, led(1)] },
+    danger: 6,
+    ambush: 0.05,
+    refuge: HA4.camp,
+    foes: [{ enemy: HE4.wolf, n: [2, 3], w: 1 }],
+    desc: 'Земляний вал через болото, зламаний шлюз. Інакше тут не перейти — тільки по греблі.',
+    links: [
+      { to: HA4.ravine, time: 14 * SEC, if: { flag: 'done:ph_s21' } },
+      { to: HA4.wood, time: 12 * SEC, if: led(3) },
+    ],
+  },
+  {
+    id: HA4.ravine,
+    name: 'Степовий байрак',
+    where: 'у байраку',
+    scene: 'willow',
+    pos: [6, 2],
+    visible: { all: [ch4, { flag: 'done:ph_s21' }] },
+    danger: 6,
+    ambush: 0.06,
+    refuge: HA4.camp,
+    foes: [{ enemy: HE4.wolf, n: [2, 3], w: 1 }],
+    desc: 'Глибока балка з терном і криницею на дні. Звідси до лісу — день ходу степом.',
+    links: [{ to: HA4.wood, time: 12 * SEC, if: led(3) }],
+  },
+  {
+    id: HA4.wood,
+    name: 'Ліс над шляхом',
+    where: 'у лісі над шляхом',
+    scene: 'grove',
+    pos: [2, 0],
+    visible: { all: [ch4, led(3)] },
+    danger: 6,
+    ambush: 0.05,
+    refuge: HA4.camp,
+    foes: [{ enemy: HE4.wolf, n: [2, 2], w: 1 }],
+    desc: 'Дуби й сосни. Під лісом — село з пасікою. На узліссі — старий дуб.',
+  },
+];
+
+export const locationsH4: LocationDef[] = [
+  {
+    id: HL4.camp,
+    name: 'Ночівля',
+    area: HA4.camp,
+    order: 1,
+    visible: ch4,
+    progress: { flag: 'ph_track', max: 6, label: 'Слід родини' },
+    desc: [
+      { if: { flag: 'ph_track', gte: 4 }, text: 'Слід за вами — як дорога. Хто вміє читати, прочитає.' },
+      { text: 'Курінь, вогонь у ямці. Петрусь питає, куди. Оленка спить у тебе на плечі.' },
+    ],
+    spots: [
+      { id: 'reeds', name: 'Очерет', x: 14, y: 22, icon: 'reed' },
+      { id: 'fire', name: 'Вогонь', x: 50, y: 24, icon: 'hearth' },
+      { id: 'water', name: 'Протока', x: 86, y: 22, icon: 'fish' },
+    ],
+  },
+  {
+    id: HL4.ridges,
+    name: 'Гриви',
+    area: HA4.ridges,
+    order: 1,
+    visible: ch4,
+    desc: 'Сухі пасма, між ними — вода. На мулі видно кожен крок.',
+    spots: [
+      { id: 'osier', name: 'Верболіз', x: 14, y: 24, icon: 'reed' },
+      { id: 'nests', name: 'Гнізда', x: 50, y: 20, icon: 'nest' },
+      { id: 'water', name: 'Протока', x: 86, y: 26, icon: 'fish' },
+      { id: 'tracks', name: 'Сліди', x: 12, y: 60, icon: 'tracks' },
+    ],
+  },
+  {
+    id: HL4.dam,
+    name: 'Гребля',
+    area: HA4.dam,
+    order: 1,
+    visible: { all: [ch4, led(1)] },
+    desc: 'Вал, зламаний шлюз, ставок за ним. Вода гуде в дірці під шлюзом.',
+    spots: [
+      { id: 'sluice', name: 'Шлюз', x: 50, y: 24, icon: 'sluice' },
+      { id: 'stone', name: 'Каміння', x: 12, y: 46, icon: 'stoneblock' },
+      { id: 'slope', name: 'Укіс', x: 12, y: 74, icon: 'grass' },
+    ],
+  },
+  {
+    id: HL4.ravine,
+    name: 'Байрак',
+    area: HA4.ravine,
+    order: 1,
+    visible: { all: [ch4, { flag: 'done:ph_s21' }] },
+    desc: 'Терен, глід, криниця. Внизу тихо, вітру нема.',
+    spots: [
+      { id: 'thorn', name: 'Терен', x: 14, y: 28, icon: 'sticks' },
+      { id: 'game', name: 'Звірина стежка', x: 86, y: 28, icon: 'stakes' },
+      { id: 'spring', name: 'Криниця', x: 88, y: 62, icon: 'fish' },
+    ],
+  },
+  {
+    id: HL4.wood,
+    name: 'Ліс',
+    area: HA4.wood,
+    order: 1,
+    visible: { all: [ch4, led(3)] },
+    desc: 'Між соснами — дим із села. Старий дуб на узліссі стоїть, як сторож.',
+    spots: [
+      { id: 'oak', name: 'Старий дуб', x: 50, y: 24, icon: 'log' },
+      { id: 'brush', name: 'Хмиз', x: 12, y: 62, icon: 'sticks' },
+      { id: 'village', name: 'Під лісом', x: 88, y: 60, icon: 'folk' },
+    ],
+  },
+];
+
+export const actionsH4: ActionDef[] = [
+  // ------------------------------------------------------------------ the family
+  {
+    id: 'ph_x53',
+    icon: 'food',
+    group: HL4.camp,
+    spot: 'fire',
+    label: 'Нагодувати родину',
+    visible: ch4,
+    cost: { [HR.food]: 3 },
+    effects: [{ inc: 'ph_fed4', max: 6 }],
+    cooldown: 5 * SEC,
+    recharge: 80 * SEC,
+    kind: 'trade',
+    gives: 'Родина сита',
+    busy: 'годує родину',
+    log: {
+      self: ['Горпина ділить рибу на чотири, тобі — найбільший шматок. Ти віддаєш його Петрусеві.', 'Оленка їсть і засинає з рибою в руці.', 'Петрусь питає, чи там, куди ви йдете, є хліб. Ти кажеш: є.'],
+      other: '{name} годує родину.',
+    },
+  },
+  {
+    id: 'ph_x54',
+    group: HL4.camp,
+    spot: 'water',
+    label: 'Ловити рибу в протоці',
+    visible: ch4,
+    yield: { [HR.food]: [2, 3] },
+    effects: [{ inc: 'ph_track', max: 6 }],
+    cooldown: 12 * SEC,
+    skill: 'gather',
+    knack: { role: 'hunter', x: 1.3 },
+    kind: 'gather',
+    busy: 'ловить рибу',
+    log: { self: ['Лин і два карасі. Мало, але на вечерю — досить.', 'Ти ловиш рукою, як учив Сидір. Петрусь дивиться, не дихаючи.'], other: '{name} ловить рибу.' },
+  },
+  {
+    id: 'ph_x55',
+    icon: 'spot:tracks',
+    group: HL4.camp,
+    spot: 'reeds',
+    label: 'Заплутати слід водою',
+    visible: ch4,
+    enabled: { flag: 'ph_track', gte: 1 },
+    effects: [{ inc: 'ph_track', by: -1 }],
+    cooldown: 10 * SEC,
+    kind: 'gather',
+    gives: 'Слід −1',
+    busy: 'плутає слід',
+    log: { self: ['Ти ведеш протокою туди й назад, по коліна. Мул затягує сліди сам.', 'Очерет, вода, знову очерет. Хто піде за вами — загубиться тут.'], other: '{name} плутає слід водою.' },
+  },
+  {
+    id: 'ph_x56',
+    group: HL4.ridges,
+    spot: 'nests',
+    label: 'Ставити силки на гривах',
+    visible: ch4,
+    yield: { [HR.food]: [2, 4] },
+    effects: [{ inc: 'ph_track', max: 6 }],
+    cooldown: 14 * SEC,
+    skill: 'gather',
+    knack: { role: 'hunter', x: 1.3 },
+    kind: 'gather',
+    busy: 'ставить силки',
+    log: { self: ['Дві качки, чирок. Силки з волосіні, як колись на острові.', 'Порожньо: лисиця тебе випередила. Ти посміхаєшся — нехай.'], other: '{name} ставить силки.' },
+  },
+  {
+    id: 'ph_x57',
+    icon: 'spot:footprints',
+    group: HL4.ridges,
+    spot: 'tracks',
+    label: 'Перевести родину гривами',
+    visible: { all: [ch4, { flag: 'ph_led4', lt: 1 }] },
+    enabled: { flag: 'ph_fed4', gte: 1 },
+    disabledHint: 'Спершу нагодувати родину на ночівлі.',
+    effects: [{ inc: 'ph_led4', max: 1 }, { inc: 'ph_track', by: 2, max: 6 }, { xp: 10, who: 'actor' }],
+    cooldown: 16 * SEC,
+    kind: 'gather',
+    gives: 'Далі на північ · слід +2',
+    busy: 'веде родину гривами',
+    log: { self: 'Ти йдеш {першим|першою}, Горпина — за тобою, слід у слід. Петрусь несе кожух Оленки. Позаду — довга смуга слідів на мулі.', other: '{name} веде родину гривами.' },
+  },
+  {
+    id: 'ph_x58',
+    icon: 'spot:tracks',
+    group: HL4.ridges,
+    spot: 'osier',
+    label: 'Пустити хибний слід — кожух на гілку',
+    visible: ch4,
+    enabled: { flag: 'ph_track', gte: 2 },
+    once: true,
+    effects: [{ inc: 'ph_track', by: -2 }],
+    cooldown: 10 * SEC,
+    kind: 'gather',
+    gives: 'Слід −2',
+    busy: 'кладе хибний слід',
+    log: { self: 'Петрусів кожух ти чіпляєш на гілку на краю гриви, що веде в трясовину. Слід туди — чіткий, глибокий. Назад — по воді.', other: '{name} кладе хибний слід.' },
+  },
+  {
+    id: 'ph_x59',
+    icon: 'spot:tracks',
+    group: HL4.dam,
+    spot: 'stone',
+    label: 'Розвідати греблю',
+    visible: { all: [ch4, led(1), { flag: 'ph_led4', lt: 2 }] },
+    effects: [{ inc: 'ph_led4', max: 2 }, { inc: 'ph_track', max: 6 }, { xp: 10, who: 'actor' }],
+    cooldown: 14 * SEC,
+    kind: 'gather',
+    gives: 'Дорога через греблю',
+    busy: 'розвідує греблю',
+    beats: [
+      {
+        log: { self: 'На укосі — свіжий слід. Чоботи, підбиті цвяхами, крок довгий, рівний. Іде туди, куди й ви. Не поспішає. Зупиняється там само, де {зупинився б|зупинилася б} ти.', other: '{name} довго дивиться на чийсь слід.', kind: 'story' },
+        effects: [{ clue: 'ph_c5' }],
+      },
+    ],
+    log: { self: 'Гребля тримає. Зламаний шлюз можна перейти по балці — якщо не боятися води внизу.', other: '{name} розвідує греблю.' },
+  },
+  {
+    id: 'ph_x60',
+    icon: 'spot:tracks',
+    group: HL4.dam,
+    spot: 'slope',
+    label: 'Пустити хибний слід — у ставок',
+    visible: { all: [ch4, led(1)] },
+    enabled: { flag: 'ph_track', gte: 2 },
+    once: true,
+    effects: [{ inc: 'ph_track', by: -2 }],
+    cooldown: 10 * SEC,
+    kind: 'gather',
+    gives: 'Слід −2',
+    busy: 'кладе хибний слід',
+    log: { self: 'Слід до самої води, ніби ви переплили ставок. А ви — назад, по каменю, де сліду не лишається.', other: '{name} кладе хибний слід.' },
+  },
+  {
+    id: 'ph_x61',
+    group: HL4.ravine,
+    spot: 'game',
+    label: 'Полювати на звіриній стежці',
+    visible: { all: [ch4, { flag: 'done:ph_s21' }] },
+    yield: { [HR.food]: [3, 4] },
+    chance: [{ p: 0.4, add: { [HR.hide]: 1 } }],
+    cooldown: 14 * SEC,
+    skill: 'gather',
+    knack: { role: 'hunter', x: 1.3 },
+    kind: 'gather',
+    busy: 'полює в байраку',
+    log: { self: ['Заєць, потім ще один. Лук Сидора б\'є рівно.', 'Козуля пішла. Ти не женешся: родині вистачить зайців.'], other: '{name} полює в байраку.' },
+  },
+  {
+    id: 'ph_x62',
+    icon: 'spot:footprints',
+    group: HL4.ravine,
+    spot: 'spring',
+    label: 'Перевести родину байраком до лісу',
+    visible: { all: [ch4, { flag: 'done:ph_s21' }, { flag: 'ph_led4', lt: 3 }] },
+    enabled: { flag: 'ph_fed4', gte: 4 },
+    disabledHint: 'Діти виснажені: нагодувати родину ще раз.',
+    effects: [{ inc: 'ph_led4', max: 3 }, { xp: 12, who: 'actor' }],
+    cooldown: 18 * SEC,
+    kind: 'gather',
+    gives: 'Ліс над шляхом',
+    busy: 'веде родину байраком',
+    log: { self: 'Дном байраку, повз криницю, нагору — і вже видно ліс, а під лісом — дими. Село. Горпина плаче й сміється разом.', other: '{name} веде родину байраком.' },
+  },
+];
+
+export const scenesH4: SceneDef[] = [
+  // ------------------------------------------------------------------ the ridges: chapter four begins
+  {
+    id: HS4.ridges,
+    title: 'Гриви',
+    group: HL.isle,
+    spot: 'hearth',
+    label: 'Вести останню родину на північ',
+    visible: { all: [{ flag: 'ph_ch3_done' }, { flag: 'main_act', gte: 4 }, { noFlag: 'ph_ch4' }] },
+    gives: 'Новий розділ',
+    start: 'n1',
+    nodes: {
+      n1: {
+        text: [
+          'Горпина не питає, куди. Петрусь питає щогодини. Оленка спить у тебе на спині, і від неї пахне димом острова.',
+          { if: { pflag: 'ph_bg_sat' }, text: 'У тебе за спиною — Сидорів лук. Він важчий, ніж здавався в його руках.' },
+        ],
+        effects: [{ startAct: 4 }, { set: 'ph_ch4' }, { meet: HN4.horpyna }],
+        next: 'n2',
+      },
+      n2: {
+        text: 'Ти знаєш: за вами підуть. Вербувальники ходять плавнями хутір за хутором. Кожен твій крок — слід. Тепер слід — твій, і його треба ховати так само вміло, як колись — читати чужі.',
+        effects: [{ moveTo: HA4.camp, who: 'actor' }, { checkpoint: 'ph4.start' }],
+        next: null,
+      },
+    },
+  },
+
+  // ------------------------------------------------------------------ the tracker on the dam
+  {
+    id: HS4.gnat,
+    title: 'Гнат',
+    group: HL4.dam,
+    spot: 'sluice',
+    label: 'Переводити родину через греблю',
+    visible: { all: [ch4, led(2)] },
+    enabled: { all: [{ flag: 'ph_fed4', gte: 3 }, { level: 6 }] },
+    disabledHint: 'Родина має бути сита — тричі нагодувати на ночівлі. І сили (рівень 6).',
+    gives: 'Зустріч · вибір',
+    start: 'n1',
+    nodes: {
+      n1: {
+        text: 'Він уже на греблі — сидить на балці зламаного шлюзу, курить, чекає. — Довго ти, — каже, не обертаючись. Чоловік років сорока, обвітрений, з луком, кращим за твій. — Я чекаю з ранку. Ти добре плутаєш. Сидорова наука, га? Я в нього теж учився. Давно.',
+        effects: [{ meet: HN4.gnat }],
+        next: 'n2',
+      },
+      n2: {
+        text: [
+          '— Мені треба троє, — каже Гнат. — Жінка й діти. За них полк платить, бо в книзі їх нема. Тобі — нічого. Іди собі. Ти ж не з них.',
+          { if: { flag: 'ph_guided_quiet' }, text: '— Ти колись {вів|вела} вози з товаром за срібло й не {зазирнув|зазирнула}. Я знаю. Ми з тобою одного ремесла.' },
+          { if: { flag: 'ph_looked' }, text: '— Ти тоді {зазирнув|зазирнула} під рогожу. Я бачив, як купець доклав тобі срібла. Тобі не сподобалось?' },
+          { if: { flag: 'ph_deserter_saved' }, text: 'На укосі з\'являється чоловік із вилами. Той утікач, якого ти колись {вивів|вивела} плавнями. — Тихі не винні, — каже він Гнатові. — І ці не винні.' },
+          { if: { flag: 'ph_deserter_given' }, text: 'За спиною Гната — полковий у синьому з перев\'язаною ногою. Ти його знаєш. Ти {сам|сама} {привів|привела} його на Брід.' },
+        ],
+        next: 'n3',
+      },
+      n3: {
+        type: 'choice',
+        mode: 'each',
+        text: 'Що ти робиш?',
+        options: [
+          { id: 'fight', label: 'Битися на греблі', effects: [{ set: 'ph_gnat_fought' }] },
+          {
+            id: 'bog',
+            label: 'Повести його слідом у трясовину',
+            enabled: { flag: 'ph_track', lt: 4 },
+            disabledHint: 'Твій слід надто видно: він не повірить хибному (слід родини — не більше 3).',
+            effects: [{ set: 'ph_gnat_bog' }],
+          },
+        ],
+        next: 'n4',
+      },
+      n4: {
+        goto: [
+          { if: { flag: 'ph_gnat_bog' }, next: 'bog' },
+          { if: { flag: 'ph_deserter_given' }, next: 'fightTwo' },
+        ],
+        next: 'fightOne',
+      },
+      fightOne: { type: 'fight', foes: [{ enemy: HE4.gnat }], win: 'won', lose: 'lost' },
+      fightTwo: { type: 'fight', foes: [{ enemy: HE4.gnat }, { enemy: HE4.rider }], win: 'won', lose: 'lost' },
+      lost: {
+        text: 'Гнат збиває тебе з балки у воду. Коли ти вибираєшся на берег, на греблі нікого нема. Горпина з дітьми встигла сховатися в очереті — вони чекають тебе. Ще не пізно.',
+        incomplete: true,
+        next: null,
+      },
+      won: {
+        text: 'Гнат лежить на греблі й дивиться в небо. — Добий, — каже. — Бо я вернусь.',
+        next: 'spare',
+      },
+      spare: {
+        type: 'choice',
+        mode: 'each',
+        text: 'Ти не вбиваєш переможених людей. Але що робиш?',
+        options: [
+          { id: 'spared', label: 'Забрати його лук і піти', effects: [{ set: 'ph_gnat_spared' }] },
+          { id: 'broken', label: 'Зламати йому лук об коліно й піти', effects: [{ set: 'ph_gnat_broken' }] },
+        ],
+        next: 'over',
+      },
+      bog: {
+        text: 'Ти ведеш родину по каменю, де сліду не лишається, а {сам|сама} вертаєшся й ідеш гривою до трясовини — глибоко, чітко, як ходить утомлена жінка з дитиною на плечах. Гнат іде за тобою. На краю трясовини ти звертаєш на кладку, що її видно тільки тобі. Він — ні. Вода бере його по груди.',
+        next: 'bogChoice',
+      },
+      bogChoice: {
+        type: 'choice',
+        mode: 'each',
+        text: 'Гнат грузне. Він не кричить — тільки дивиться на тебе.',
+        options: [
+          { id: 'pull', label: 'Простягнути йому жердину', effects: [{ set: 'ph_gnat_pulled' }] },
+          { id: 'leave', label: 'Піти. Він сам вибереться — або ні', effects: [{ set: 'ph_gnat_left' }] },
+        ],
+        next: 'over',
+      },
+      over: {
+        text: [
+          [
+            { if: { flag: 'ph_gnat_pulled' }, text: 'Ти витягаєш його на кладку. Він довго кашляє болотом. Потім каже: — Я скажу, що ви потонули. — І ти чомусь віриш.' },
+            { if: { flag: 'ph_gnat_left' }, text: 'Ти йдеш, не озираючись. Позаду чути, як він ламає очерет, вибираючись. Вибереться. Такі вибираються.' },
+            { if: { flag: 'ph_gnat_spared' }, text: 'Ти береш його лук. Він не просить назад.' },
+            { text: 'Лук тріщить, як суха гілка. Гнат дивиться на уламки, а не на тебе.' },
+          ],
+          'Горпина з дітьми чекає за шлюзом. Далі — степ, байрак, а за байраком — ліс.',
+        ],
+        effects: [{ xp: 30, who: 'actor' }, { clue: 'ph_c6' }],
+        next: null,
+      },
+    },
+  },
+
+  // ------------------------------------------------------------------ the village under the forest: the end of chapter four
+  {
+    id: HS4.village,
+    title: 'Село під лісом',
+    group: HL4.wood,
+    spot: 'village',
+    label: 'Довести родину до села',
+    visible: { all: [{ flag: 'done:ph_s21' }, led(3)] },
+    gives: 'Кінець розділу',
+    start: 'n1',
+    nodes: {
+      n1: {
+        text: 'Горпину бере до себе пасічниця з крайньої хати — сестра Горпининої матері. Вони довго стоять обнявшись на порозі, і ніхто нічого не каже. Петрусь уже біжить до вуликів.',
+        next: 'n2',
+      },
+      n2: {
+        text: 'Оленка тягне тебе за рукав, поки ти не присядеш. Розв\'язує свою стрічку й зав\'язує тобі на зап\'ясті. — Щоб ти не {загубився|загубилася}, — каже.',
+        next: 'n3',
+      },
+      n3: {
+        text: [
+          'Ти йдеш далі {сам|сама} — на північ, лісом над шляхом. Під ранок бачиш вози під рогожею, тихі, без пісні. Вони стоять біля старого дуба, де хтось спить, підклавши під голову торбу з інструментами. Хтось у сірому довго дивиться на сплячого. Віз рушає без нього.',
+          { if: { flag: 'ph_looked' }, text: 'Ти знаєш ці вози. Ти {бачив|бачила}, що під рогожею.' },
+        ],
+        next: 'n4',
+      },
+      n4: {
+        text: 'Під дубом хтось спить. Ти стоїш з луком, і не знаєш ще, що робитимеш.',
+        effects: [{ actDone: 4 }, { set: 'ph_ch4_done' }, { mystery: HM.carts, level: 5 }, { checkpoint: 'ph4.end' }],
+        next: null,
+      },
+    },
+  },
+];
+
+export const cluesH4: ClueDef[] = [
+  { id: 'ph_c5', to: 'hunter', mystery: HM.carts, title: 'Чужий ловець', text: 'Чоботи, підбиті цвяхами, крок довгий, рівний. Хтось іде твоїм слідом і читає його так само, як ти.' },
+  { id: 'ph_c6', to: 'hunter', mystery: HM.carts, title: 'Хто в книзі', text: 'Гнат: «За них полк платить, бо в книзі їх нема». Ловлять не винних, а незаписаних.' },
+];
+
+export const npcsH4 = [
+  { id: HN4.gnat, name: 'Гнат', desc: 'Слідопит полку. Учився в Сидора. Читає землю, як ти.' },
+  { id: HN4.horpyna, name: 'Горпина', desc: 'Вдова з плавнів. З нею — Петрусь (десять років) і Оленка (п\'ять).' },
+];
+
+export const goalsH4: GoalDef[] = [
+  { id: 'ph_goal40', text: 'Під дубом хтось спить. Далі — коли ви з напарником дійдете до цієї зустрічі обоє.', when: { flag: 'ph_ch4_done' } },
+  { id: 'ph_goal39', text: 'Довести родину до села під лісом.', when: { all: [{ flag: 'done:ph_s21' }, led(3)] } },
+  { id: 'ph_goal38', text: 'Байраком — до лісу. Нагодувати родину перед дорогою.', when: { flag: 'done:ph_s21' } },
+  { id: 'ph_goal37', text: 'Перевести родину через греблю. Хтось іде вашим слідом — ховати його: водою, хибними слідами.', when: led(2) },
+  { id: 'ph_goal36', text: 'Розвідати стару греблю — інакше тут не перейти.', when: led(1) },
+  { id: 'ph_goal35', text: 'Нагодувати родину й вести гривами на північ. Кожен крок — слід.', when: ch4 },
+  { id: 'ph_goal34', text: 'Острова більше нема. Вести останню родину на північ.', when: { all: [{ flag: 'ph_ch3_done' }, { flag: 'main_act', gte: 4 }] } },
+];

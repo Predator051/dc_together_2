@@ -467,6 +467,7 @@ export function validateContent(c: Content): Report {
   // Map
   for (const a of c.areas) {
     const w = `area ${a.id}`;
+    if (a.refuge && !areaIds.has(a.refuge)) err(`${w}: refuge is an unknown area ${a.refuge}`);
     for (const l of a.links ?? []) {
       if (!areaIds.has(l.to)) err(`${w}: link to unknown area ${l.to}`);
       if (!(l.time > 0)) err(`${w}: link time must be positive`);
@@ -484,10 +485,11 @@ export function validateContent(c: Content): Report {
     if (a.foes?.length && !a.ambush) warnings.push(`${w}: has foes but no ambush chance`);
   }
   if (c.areas.filter((a) => a.home).length > 1) err('map: only one home');
-  // every place is linked to the map
+  // every place is linked to the map — to home, or to a refuge (a region of its own, reached by a scene's move)
   if (c.areas.some((a) => a.pos)) {
-    const seenA = new Set<string>([c.areas[0]!.id]);
-    const st = [c.areas[0]!.id];
+    const roots = [c.areas[0]!.id, ...new Set(c.areas.flatMap((a) => (a.refuge ? [a.refuge] : [])))];
+    const seenA = new Set<string>(roots);
+    const st = [...roots];
     while (st.length) {
       const id = st.pop()!;
       for (const b of c.areas) {
