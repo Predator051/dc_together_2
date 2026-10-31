@@ -45,24 +45,31 @@ import { residents3 } from './a3/residents.js';
 import { resources3 } from './a3/resources.js';
 import { scenesA3 } from './a3/scenes.js';
 import { treks3 } from './a3/treks.js';
+import { actions4 } from './a4/actions.js';
+import { enemies4 } from './a4/enemies.js';
+import { clues4, goals4, mysteries4, npcs4 } from './a4/journal.js';
+import { areas4, locations4 } from './a4/places.js';
+import { resources4 } from './a4/resources.js';
+import { scenesA4 } from './a4/scenes.js';
+import { treks4 } from './a4/treks.js';
 
 /** Barrels at home keep more food and salted meat. */
 const withBarrels = (list: ResourceDef[]): ResourceDef[] =>
   list.map((r) => (r.id === R.food || r.id === R2.meat ? { ...r, capBonus: [...(r.capBonus ?? []), barrels] } : r));
 
 export const content: Content = {
-  areas: [...areas, ...areas2, ...areas3, ...sideAreas1],
-  resources: withBarrels([...resources, ...resources2, ...needs1Resources, ...needs2Resources, ...sideResources1, ...sideResources2, ...gardenResources, ...folkResources, ...resources3]),
-  actions: [...actions, ...actions2, ...actionsA2, ...needs1Actions, ...needs2Actions, ...sideActions1, ...sideActions2, ...gardenActions, ...folkActions, ...actions3, ...prepActions3],
+  areas: [...areas, ...areas2, ...areas3, ...areas4, ...sideAreas1],
+  resources: withBarrels([...resources, ...resources2, ...needs1Resources, ...needs2Resources, ...sideResources1, ...sideResources2, ...gardenResources, ...folkResources, ...resources3, ...resources4]),
+  actions: [...actions, ...actions2, ...actionsA2, ...needs1Actions, ...needs2Actions, ...sideActions1, ...sideActions2, ...gardenActions, ...folkActions, ...actions3, ...prepActions3, ...actions4],
   pools,
-  locations: [...locations, ...locations2, ...locations3, ...sideLocations1, ...sideLocations2, ...gardenLocations],
-  scenes: [...scenes1, ...scenes2, ...scenesA2, ...scenesA2b, ...suppersA2, ...sideScenes1, ...sideScenes2, ...scenesA3],
+  locations: [...locations, ...locations2, ...locations3, ...locations4, ...sideLocations1, ...sideLocations2, ...gardenLocations],
+  scenes: [...scenes1, ...scenes2, ...scenesA2, ...scenesA2b, ...suppersA2, ...sideScenes1, ...sideScenes2, ...scenesA3, ...scenesA4],
   encounters: [],
-  clues: [...clues, ...clues2, ...clues3, ...sideClues1, ...sideClues2],
-  mysteries: [...mysteries, ...mysteries2, ...mysteries3, ...sideMysteries],
-  goals: [...goals3, ...goals2, ...goals1, goalFallback],
-  npcs: [...npcs, ...npcs2, ...npcs3, ...sideNpcs1, ...sideNpcs2],
-  enemies: [...enemies, ...enemies2, ...enemies3, ...sideEnemies1, ...sideEnemies2],
+  clues: [...clues, ...clues2, ...clues3, ...clues4, ...sideClues1, ...sideClues2],
+  mysteries: [...mysteries, ...mysteries2, ...mysteries3, ...mysteries4, ...sideMysteries],
+  goals: [...goals4, ...goals3, ...goals2, ...goals1, goalFallback],
+  npcs: [...npcs, ...npcs2, ...npcs3, ...npcs4, ...sideNpcs1, ...sideNpcs2],
+  enemies: [...enemies, ...enemies2, ...enemies3, ...enemies4, ...sideEnemies1, ...sideEnemies2],
   residents: [...residents, ...residents2, ...residents3, ...sideResidents2],
   trades,
   perks,
@@ -80,8 +87,8 @@ export const content: Content = {
   events,
   garden,
   yard,
-  ambient: { ...ambient, areas: { ...ambient.areas, a_10: 'hill', a_11: 'river', a_12: 'marsh', a_13: 'river', a_14: 'grove', a_15: 'hill' }, actions: { ...ambient.actions, ...fx2, ...fx3, ...prepFx3, ...needs1Fx, ...needs2Fx, ...sideFx1, ...sideFx2, ...gardenFx } },
-  maps: [...treks3],
+  ambient: { ...ambient, areas: { ...ambient.areas, a_10: 'hill', a_11: 'river', a_12: 'marsh', a_13: 'river', a_14: 'grove', a_15: 'hill', a_16: 'marsh', a_17: 'river', a_18: 'hill', a_19: 'marsh' }, actions: { ...ambient.actions, ...fx2, ...fx3, ...prepFx3, ...needs1Fx, ...needs2Fx, ...sideFx1, ...sideFx2, ...gardenFx } },
+  maps: [...treks3, ...treks4],
   start: { resources: {}, hp: 22, area: A.shore },
   storyFlags: ['p2_', 'done:s_', 'legacy'],
   actEnd: {

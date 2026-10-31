@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { MapNodeView, PlayerView } from '../../shared/src/protocol.js';
 import { net } from './net.js';
 import { MapIcon } from './mapicons.js';
-import { LandMap, paintedFits, type RingItem } from './landmap.js';
+import { LandMap, paintedMap, type RingItem } from './landmap.js';
 import { duskOf } from './ambient.js';
 import { viewUrl } from './pictures.js';
 import { Portrait } from './portraits.js';
@@ -75,8 +75,9 @@ export function MapPanel({ v, locked, now, desktop }: { v: PlayerView; locked: b
     if (!sel) setInfo(false);
   }, [sel]);
   if (!m.nodes.length) return null;
-  // the painted land, when it holds every place shown; otherwise the drawn scheme
-  const painted = paintedFits(m);
+  // the painted land (the sheet where the hero is); otherwise the drawn scheme
+  const land = paintedMap(m);
+  const painted = !!land;
   const xs = m.nodes.map((n) => n.x);
   const ys = m.nodes.map((n) => n.y);
   const minX = Math.min(...xs);
@@ -192,7 +193,7 @@ export function MapPanel({ v, locked, now, desktop }: { v: PlayerView; locked: b
         </p>
       )}
       {painted ? (
-        <LandMap m={m} sel={sel} onPick={setSel} ring={ring} now={now} wayIds={way} dusk={duskOf(v.dayAt, now)} sky={v.ambient.sky ?? undefined} />
+        <LandMap m={land!} sel={sel} onPick={setSel} ring={ring} now={now} wayIds={way} dusk={duskOf(v.dayAt, now)} sky={v.ambient.sky ?? undefined} />
       ) : (
       <div
         class={`map-box ${w > width ? 'scrolls' : ''}`}

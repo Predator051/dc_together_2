@@ -201,6 +201,8 @@ const RECIPES: Record<SceneId | 'plain', { ground: string; strokes: Stroke[] }> 
   hutir: { ground: 'grass', strokes: [bank('pick', [1, 2]), fringe('reeds', 0.35), scatter('log', [0, 1]), scatter('crate', [0, 1])] },
   brid: { ground: 'mud', strokes: [bank('pick', [1, 2]), scatter('cart', [0, 1]), scatter('barrel', [1, 2]), fringe('reeds', 0.2)] },
   kryvets: { ground: 'cobble', strokes: [stretch('wall', [1, 2], [2, 3]), scatter('barrel', [1, 2]), scatter('cart', [0, 1]), scatter('crate', [1, 2])] },
+  ashtown: { ground: 'cobble', strokes: [stretch('wall', [1, 2], [1, 2]), scatter('log', [1, 2]), scatter('cart', [0, 1]), scatter('rock', [1, 2])] },
+  ashisle: { ground: 'grass', strokes: [bank('pick', [1, 2]), fringe('reeds', 0.35), scatter('log', [1, 2]), scatter('stump', [0, 1])] },
   quarry: { ground: 'sand', strokes: [scatter('rock', [2, 3]), scatter('cart', [0, 1]), scatter('crate', [1, 2]), stands('bush', [0, 1], [1, 2])] },
 };
 

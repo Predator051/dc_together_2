@@ -132,6 +132,8 @@ describe('act two has no dead ends when the stores are emptied', () => {
 });
 
 const ACT3 = (w: World) => !!w.state.flags['p2_act3_done'] && !w.state.scene;
+const ACT41 = (w: World) => !!w.state.flags['p2_kryvets'] && !!w.state.flags['p2_island'] && !w.state.scene;
+const STORY41 = ['s_120', 's_121', 's_122', 's_123'];
 const STORY3 = ['s_100', 's_101', 's_102', 's_103', 's_104', 's_105', 's_106', 's_107', 's_108', 's_109'];
 
 describe('two bots play act three to its end', () => {
@@ -154,6 +156,13 @@ describe('two bots play act three to its end', () => {
     expect(r.world.state.residents['h_15']).toBeDefined();
     // readying alone: some of it was done along the way
     expect(Object.keys(r.world.state.flags).filter((f) => f.startsWith('prep_')).length).toBeGreaterThanOrEqual(2);
+
+    // and on into act four, part one: the long road south, the hiding place, the ashes of two homes
+    const r4 = autoplay({}, {}, { from: r.world, until: ACT41, maxSteps: 120000, stallLimit: 15000 });
+    if (!r4.done) console.log(r4.reason, show(r4.world));
+    expect(r4.done).toBe(true);
+    for (const s of STORY41) expect(r4.world.state.flags[`done:${s}`], s).toBe(1);
+    expect(r4.world.state.meta.act).toBe(4);
 
     const nr = autoplay({ noPrep: true }, { noPrep: true }, { from: bare, until: ACT3, maxSteps: 200000, stallLimit: 20000 });
     if (!nr.done) console.log(nr.reason, show(nr.world));

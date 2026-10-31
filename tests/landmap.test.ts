@@ -5,41 +5,74 @@ import { pasts } from '../content/past/index.js';
 import map1 from '../client/src/art/map1.json';
 import map2 from '../client/src/art/map2.json';
 
-// The painted map shows a place only if the painting has a spot for it; otherwise the whole map
-// falls back to the drawn scheme. A new place or road needs its spot and its line on a sheet.
-// The story is on the northern sheet, both memories on the southern one.
-const SHEETS: Array<[string, Content, typeof map1]> = [
-  ['the story', content, map1],
-  ...Object.entries(pasts).map(([role, c]) => [`the ${role}'s memories`, c!, map2 as unknown as typeof map1] as [string, Content, typeof map1]),
+// The painted map shows the sheet where the hero stands: its own places and, at its edge, the places of
+// another sheet that a road leads to. A place without a spot on the painting sends the whole map back to the
+// drawn scheme, so a new place or road needs its spot and its line.
+// The story begins on the northern sheet and goes south onto the second; both memories are on the second.
+type Pt = [number, number];
+interface Sheet {
+  w: number;
+  h: number;
+  cols: number;
+  rows: number;
+  at: Record<string, Pt>;
+  edge?: Record<string, Pt>;
+  roads: Record<string, Pt[]>;
+  water: Record<string, Pt[]>;
+}
+const SHEETS: Record<string, Sheet> = { map1: map1 as unknown as Sheet, map2: map2 as unknown as Sheet };
+const USES: Array<[string, Content, string[]]> = [
+  ['the story', content, ['map1', 'map2']],
+  ...Object.entries(pasts).map(([role, c]) => [`the ${role}'s memories`, c!, ['map2']] as [string, Content, string[]]),
 ];
+const key = (a: string, b: string) => [a, b].sort().join('|');
 
-describe.each(SHEETS)('the painted map of %s', (_name, content, sheet) => {
-  const at = sheet.at as unknown as Record<string, [number, number]>;
-  const ways = { ...sheet.roads, ...sheet.water } as unknown as Record<string, Array<[number, number]>>;
-  const mine = (k: string) => k.split('|').every((id) => content.areas.some((a) => a.id === id));
-
-  it('has a spot for every place on the map, inside the painting', () => {
-    for (const a of content.areas.filter((x) => x.pos)) {
-      const p = at[a.id];
-      expect(p, a.id).toBeDefined();
-      expect(p![0]).toBeGreaterThan(0);
-      expect(p![0]).toBeLessThan(sheet.w);
-      expect(p![1]).toBeGreaterThan(0);
-      expect(p![1]).toBeLessThan(sheet.h);
+describe.each(USES)('the painted map of %s', (_name, c, sheets) => {
+  it('has a spot for every place, on exactly one of its sheets, inside the painting', () => {
+    for (const a of c.areas.filter((x) => x.pos)) {
+      const on = sheets.filter((s) => SHEETS[s]!.at[a.id]);
+      expect(on, a.id).toHaveLength(1);
+      const sh = SHEETS[on[0]!]!;
+      const p = sh.at[a.id]!;
+      expect(p[0]).toBeGreaterThan(0);
+      expect(p[0]).toBeLessThan(sh.w);
+      expect(p[1]).toBeGreaterThan(0);
+      expect(p[1]).toBeLessThan(sh.h);
     }
   });
 
-  it('draws every way between places, once', () => {
+  it('draws every way between places on each sheet that shows both ends', () => {
+    for (const a of c.areas) {
+      for (const l of a.links ?? []) {
+        const k = key(a.id, l.to);
+        const showing = sheets.filter((s) => {
+          const sh = SHEETS[s]!;
+          return (sh.at[a.id] || sh.edge?.[a.id]) && (sh.at[l.to] || sh.edge?.[l.to]);
+        });
+        expect(showing.length, k).toBeGreaterThan(0);
+        for (const s of showing) {
+          const sh = SHEETS[s]!;
+          const has = Object.keys({ ...sh.roads, ...sh.water }).some((x) => key(...(x.split('|') as [string, string])) === k);
+          expect(has, `${s}: ${k}`).toBe(true);
+        }
+      }
+    }
+  });
+});
+
+describe.each(Object.entries(SHEETS))('the sheet %s', (name, sh) => {
+  const users = USES.filter(([, , s]) => s.includes(name)).map(([, c]) => c);
+
+  it('draws only ways that some story walks, each once', () => {
     const want = new Set<string>();
-    for (const a of content.areas) for (const l of a.links ?? []) want.add([a.id, l.to].sort().join('|'));
-    const have = Object.keys(ways).filter(mine).map((k) => k.split('|').sort().join('|'));
-    expect(new Set(have).size).toBe(have.length);
-    expect([...want].filter((k) => !have.includes(k))).toEqual([]);
+    for (const c of users) for (const a of c.areas) for (const l of a.links ?? []) want.add(key(a.id, l.to));
+    const have = Object.keys({ ...sh.roads, ...sh.water }).map((x) => key(...(x.split('|') as [string, string])));
+    expect(new Set(have).size).toBe(Object.keys(sh.roads).length + Object.keys(sh.water).length);
     expect(have.filter((k) => !want.has(k))).toEqual([]);
   });
 
   it('cuts into whole tiles', () => {
-    expect(sheet.w % sheet.cols).toBe(0);
-    expect(sheet.h % sheet.rows).toBe(0);
+    expect(sh.w % sh.cols).toBe(0);
+    expect(sh.h % sh.rows).toBe(0);
   });
 });
