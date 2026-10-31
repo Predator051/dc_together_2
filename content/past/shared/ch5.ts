@@ -16,6 +16,7 @@ export const resourcesS5: ResourceDef[] = [
     name: 'Харчі',
     order: 1,
     kind: 'food',
+    meal: { hp: 2, minutes: 8 },
     cap: 30,
     weight: 0.5,
     use: { heal: 6, anywhere: true, label: 'Поїсти', log: { self: 'Хліб, дичина, монастирський мед. Їси мовчки, як усі на дорозі.', other: '{name} їсть.' } },

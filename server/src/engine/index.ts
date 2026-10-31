@@ -570,6 +570,8 @@ export class Game {
 
   stoveState(): 'never' | 'warm' | 'low' | 'cold' {
     const st = this.s.stove;
+    const kept = this.ix.c.stove.kept;
+    if (kept && this.test(kept)) return 'warm';
     if (!st.lit) return 'never';
     if (st.fuel <= 0) return 'cold';
     if (st.fuel <= this.ix.c.stove.low) return 'low';

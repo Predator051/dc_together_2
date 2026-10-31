@@ -7,12 +7,13 @@ import { actionsH1, cluesH1, goalsH1, mysteriesH, npcsH, scenesH1 } from './ch1.
 import { actionsH2, actionsH3, cluesH23, goalsH23, residentsH, scenesH23 } from './ch23.js';
 import { actionsH4, areasH4, cluesH4, enemiesH4, goalsH4, locationsH4, npcsH4, scenesH4 } from './ch4.js';
 import { HA, HR } from './ids.js';
+import { ambientH, eventsH, lifeActionsH, lifeResourcesH, needsH, weatherH } from './life.js';
 
 export const hunterPast: Content = {
   pastTitle: 'Спогади: плавні',
   areas: [...areasH, ...areasH4],
-  resources: resourcesH,
-  actions: [...actionsH1, ...actionsH2, ...actionsH3, ...actionsH4],
+  resources: [...resourcesH, ...lifeResourcesH],
+  actions: [...actionsH1, ...actionsH2, ...actionsH3, ...actionsH4, ...lifeActionsH],
   pools: [],
   locations: [...locationsH, ...locationsH4],
   scenes: [...scenesH1, ...scenesH23, ...scenesH4],
@@ -31,7 +32,12 @@ export const hunterPast: Content = {
   traits,
   hero: { ...hero, caps: { 1: 5, 2: 7, 3: 9, 4: 11 }, temperGift: { 1: { [HR.coin]: 4, [HR.osier]: 4 }, 2: { [HR.coin]: 5, [HR.hide]: 2 }, 3: { [HR.coin]: 6, [HR.hide]: 2 }, 4: { [HR.food]: 4, [HR.hide]: 2 } } },
   food: HR.food,
-  stove: { perWood: 4 * 60 * 1000, maxWood: 8, coldPenalty: 1.3, low: 60 * 1000 },
+  // Сидір keeps the fire while the island stands
+  stove: { kept: { all: [{ flag: 'ph_in' }, { noFlag: 'ph_ch3_done' }] }, perWood: 4 * 60 * 1000, maxWood: 8, coldPenalty: 1.3, low: 60 * 1000 },
+  needs: needsH,
+  weather: weatherH,
+  events: eventsH,
+  ambient: ambientH,
   start: { resources: {}, hp: 20, area: HA.isle },
   storyFlags: ['ph_', 'done:ph_'],
   actEnd: {

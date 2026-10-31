@@ -18,6 +18,7 @@ export const resourcesM: ResourceDef[] = [
     name: 'Харчі',
     order: 7,
     kind: 'food',
+    meal: { hp: 2, minutes: 8 },
     cap: 20,
     weight: 0.5,
     use: {

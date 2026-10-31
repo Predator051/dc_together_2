@@ -906,6 +906,8 @@ export function renewable(c: Content, reachableActions: Set<string>, reachableAr
 
 function simulate(c: Content) {
   const flags = new Set<string>(['built:none', 'bag_full']);
+  // a fire someone else keeps burns without anyone lighting it
+  if (c.stove.kept) flags.add('stove');
   const pflags = new Set<string>();
   const have = new Set<string>(Object.entries(c.start.resources).filter(([, n]) => n > 0).map(([k]) => k));
   const gotClues = new Set<string>();
