@@ -94,3 +94,6 @@
   заказы, поднимать счётчики, которых ждёт сцена (`raisesGate`).
 - Флаги для пересечений (шаг 8): `pm_tags`/`pm_tags_no`, `pm_yarema`, `pm_brand_spoiled`/`made`/`no`,
   `pm_tymko_saved`, `pm_hid_all`, `pm_refugees_fed`.
+
+## Дальше
+Главы 4–7 (дорога, встреча, Ясенець, перший сніг) — `pasts-later.md`.
