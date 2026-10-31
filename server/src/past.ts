@@ -63,6 +63,8 @@ export function enterPast(main: WorldState, pid: PlayerId, ix: ContentIndex, now
     p.gender = hero.gender;
     p.role = hero.role;
     p.stats = { ...ix.c.hero.base[hero.role!] };
+    // what the hero said of home in part one colours the memory
+    for (const [k, v] of Object.entries(hero.flags)) if (k.startsWith('bg_')) p.flags[k] = v;
     (main.past ??= {})[pid] = s;
     const g = new Game(ix, s, now);
     refreshHero(g, pid);

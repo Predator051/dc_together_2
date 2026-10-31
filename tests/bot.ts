@@ -133,8 +133,23 @@ export class Bot {
       if (pack) return pack;
     }
 
-    const trade = this.trade(v, g);
+    // alone, the story comes first: nobody else is waiting for the trade
+    const first = g.s.solo ? this.story(v, g) : null;
+    if (first) return first;
+    // (the money of the main story; a past buys its own way, below)
+    const trade = g.s.solo ? null : this.trade(v, g);
     if (trade) return trade;
+    // a thing made to order in the bag: carry it first
+    const carry = this.handOver(v, g);
+    if (carry) return carry;
+    // alone, having walked to the market: buy what the work waits for before going on
+    if (g.s.solo) {
+      const want = this.wanted(g);
+      const buy = v.groups
+        .flatMap((gr) => gr.entries)
+        .find((e) => e.kind === 'act' && e.enabled && !(e.readyAt && e.readyAt > v.now) && g.ix.actions.get(e.id)?.kind === 'trade' && Object.keys(g.ix.actions.get(e.id)?.yield ?? {}).some((r) => want.has(r)));
+      if (buy) return { c: 'act', id: buy.id };
+    }
     const story = this.story(v, g);
     if (story) return story;
     // waiting for the partner at the place of the story: work here, do not wander off
@@ -492,9 +507,11 @@ export class Bot {
       // the hunter leads: go only when the scene is worth walking to
       return this.goTowards(v, g, s.area);
     }
-    // both here? propose (the hunter proposes, the maker answers)
-    if (v.partner.area !== s.area || !v.partner.online) return null;
-    if (v.me.role !== 'hunter') return null;
+    // both here? propose (the hunter proposes, the maker answers); alone, just begin
+    if (!g.s.solo) {
+      if (v.partner.area !== s.area || !v.partner.online) return null;
+      if (v.me.role !== 'hunter') return null;
+    }
     const all = v.groups.flatMap((gr) => gr.entries);
     const e = all.find((x) => x.id === s.id);
     if (e?.enabled) {
@@ -698,6 +715,10 @@ export class Bot {
         const make = this.c.actions.find((a) => a.kind === 'craft' && a.yield?.[r] && (!a.visible || g.test(a.visible, this.pid)));
         if (make) add(make.cost);
       }
+    // alone in a past: what buys the wanted things is wanted too (money)
+    if (g.s.solo)
+      for (const a of this.c.actions)
+        if (a.kind === 'trade' && Object.keys(a.yield ?? {}).some((r) => out.has(r))) add(Object.fromEntries(Object.entries(a.cost ?? {}).map(([r, n]) => [r, n * 3])));
     // always keep some food, and wood for the hearth once it matters for warmth and rest
     if (g.stockAll(this.c.food!) < 6) out.set(this.c.food!, 6);
     const wood = g.ix.c.needs?.campWood;
@@ -753,6 +774,23 @@ export class Bot {
     });
   }
 
+  /** This action takes a thing made to order that the bot carries. */
+  private handsOver(a: ActionDef, v: PlayerView): boolean {
+    return Object.keys(a.cost ?? {}).some((r) => (this.c.resources.find((x) => x.id === r)?.carry && this.c.resources.find((x) => x.id === r)?.kind === 'tool') && (v.bag.items.some((i) => i.id === r) || (v.atHome && v.res.some((x) => x.id === r && x.n > 0))));
+  }
+
+  /** Carrying a thing made to order: walk to whoever waits for it. */
+  private handOver(v: PlayerView, g: Game): Command | null {
+    for (const a of this.c.actions) {
+      if (!this.handsOver(a, v)) continue;
+      if (a.visible && !g.test(a.visible, this.pid)) continue;
+      const area = g.ix.areaOf(a.group);
+      if (area === v.me.area) return null;
+      return this.goTowards(v, g, area);
+    }
+    return null;
+  }
+
   private work(v: PlayerView, g: Game, stay = false): Command | null {
     const want = this.wanted(g);
     const here = v.groups.flatMap((gr) => gr.entries).filter((e) => e.kind === 'act' && e.enabled && !(e.readyAt && e.readyAt > v.now));
@@ -762,6 +800,11 @@ export class Bot {
       if (a.quest && !this.o.side) return 0;
       // readying a together scene: done while here, unless told not to
       if (a.prep) return this.o.noPrep ? 0 : 70;
+      // a thing made to order (carried by itself): make it, then carry it (handOver)
+      if (a.kind === 'craft' && Object.keys(a.yield ?? {}).some((r) => this.c.resources.find((x) => x.id === r)?.carry)) return 90;
+      if (this.handsOver(a, v)) return 95;
+      // alone in a past: buy what the work waits for
+      if (g.s.solo && a.kind === 'trade' && Object.keys(a.yield ?? {}).some((r) => want.has(r))) return 55;
       // an errand's own step (a search, a count, a build away from home): do it while here
       if (a.quest && this.questStep(a, g)) return a.kind === 'build' || a.kind === 'craft' ? 90 : 45;
       if (this.o.careless) {
@@ -792,6 +835,13 @@ export class Bot {
     }
     const goods = v.bag.items.some((i) => i.kind !== 'use' && i.kind !== 'food');
     let target = this.whereToGather(v, g, want);
+    // alone in a past: what can only be bought, is bought where it is sold
+    if (!target && g.s.solo) {
+      const shop = this.c.actions.find(
+        (a) => a.kind === 'trade' && Object.keys(a.yield ?? {}).some((r) => want.has(r)) && (!a.visible || g.test(a.visible, this.pid)) && Object.entries(a.cost ?? {}).every(([r, n]) => g.stockAll(r) >= n),
+      );
+      if (shop) target = g.ix.areaOf(shop.group);
+    }
     // the story waits for strength: go where the fights are
     if (!target && this.levelGated(g)) target = this.huntingGround(v, g);
     if (!target && !v.atHome && this.levelGated(g) && (areaDef(g, v.me.area)?.danger ?? 0) > 0) {

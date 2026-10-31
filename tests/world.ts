@@ -1,7 +1,7 @@
 // Engine-level world for tests: two heroes, a clock, views and commands.
 
 import { content } from '../content/index.js';
-import type { PlayerId } from '../shared/src/content.js';
+import type { Content, PlayerId } from '../shared/src/content.js';
 import type { Command, PlayerView } from '../shared/src/protocol.js';
 import type { WorldState } from '../shared/src/state.js';
 import { ContentIndex, Game, newWorld } from '../server/src/engine/index.js';
@@ -13,12 +13,16 @@ export class World {
   now = 1_700_000_000_000;
   state: WorldState;
 
-  constructor(seed = 1) {
-    this.state = newWorld(content, seed, this.now);
+  /** The main story by default; a past (or any other content) when given. */
+  readonly ix: ContentIndex;
+
+  constructor(seed = 1, c?: Content) {
+    this.ix = c ? new ContentIndex(c) : ix;
+    this.state = newWorld(this.ix.c, seed, this.now);
   }
 
   g(): Game {
-    return new Game(ix, this.state, this.now);
+    return new Game(this.ix, this.state, this.now);
   }
 
   join(name: string, gender: 'm' | 'f', role: 'hunter' | 'maker'): PlayerId {

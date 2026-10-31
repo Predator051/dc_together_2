@@ -230,7 +230,8 @@ export function validateContent(c: Content): Report {
     for (const x of condsOf(cond)) {
       if ('flag' in x && !isWritten(x.flag)) err(`${where}: reads flag "${x.flag}" that is never set`);
       if ('noFlag' in x && !isWritten(x.noFlag)) err(`${where}: reads flag "${x.noFlag}" that is never set`);
-      if ('pflag' in x && !pwritten.has(x.pflag)) err(`${where}: reads personal flag "${x.pflag}" that is never set`);
+      // bg_*: what each hero said of home in part one (imported with the legacy, copied into a past)
+      if ('pflag' in x && !pwritten.has(x.pflag) && !x.pflag.startsWith('bg_')) err(`${where}: reads personal flag "${x.pflag}" that is never set`);
       if ('noPflag' in x && !pwritten.has(x.noPflag)) err(`${where}: reads personal flag "${x.noPflag}" that is never set`);
       if ('partnerPflag' in x && !pwritten.has(x.partnerPflag)) err(`${where}: reads personal flag "${x.partnerPflag}" that is never set`);
       if ('res' in x && !res.has(x.res)) err(`${where}: unknown resource ${x.res}`);

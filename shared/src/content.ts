@@ -153,6 +153,8 @@ export interface ResourceDef {
   ware?: Cond;
   /** Its small mark in lists (every visible thing has one). */
   icon?: ItemIcon;
+  /** Made to be carried to someone: taken from the store into the bag by itself whenever one leaves home. */
+  carry?: boolean;
   /** A dish: eaten, it fills one of the hero's meal slots for a while. */
   meal?: MealDef;
 }

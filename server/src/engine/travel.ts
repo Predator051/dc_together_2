@@ -2,7 +2,7 @@
 import { credit } from './asks.js';
 import type { AreaDef, PlayerId } from '../../../shared/src/content.js';
 import { PERK, travelMult } from '../../../shared/src/rules.js';
-import { bagCap, bagLoad, gainSkill, heroOf, skillOf, unloadBag } from './hero.js';
+import { addBag, bagCap, bagLoad, gainSkill, heroOf, skillOf, unloadBag } from './hero.js';
 import { startFight } from './fight.js';
 import { skyAt, weatherNow } from './weather.js';
 import { roadEvent } from './events.js';
@@ -123,6 +123,15 @@ export function go(g: Game, pid: PlayerId, to: string): Result {
   const block = goBlock(g, pid, to);
   if (block) return { ok: false, err: block };
   const p = g.p(pid);
+  // things to be carried to someone go along by themselves
+  if (p.at === g.ix.homeArea)
+    for (const r of g.ix.c.resources) {
+      const n = r.carry ? (g.s.res[r.id] ?? 0) : 0;
+      if (n > 0) {
+        g.s.res[r.id] = 0;
+        addBag(g, pid, r.id, n);
+      }
+    }
   const [first, ...rest] = routeLegs(g, pid, p.at, routeTo(g, p.at, to)!);
   const end = g.now + first![1] + rest.reduce((s, [, t]) => s + t, 0);
   p.travel = { from: p.at, to: first![0], since: g.now, until: g.now + first![1] };
