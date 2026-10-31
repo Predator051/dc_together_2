@@ -249,7 +249,7 @@ export const actions2: ActionDef[] = [
   },
   {
     id: 'x_32',
-    icon: 'oak',
+    icon: 'chest',
     group: L.yard,
     label: 'Добудувати комору',
     once: true,

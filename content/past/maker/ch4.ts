@@ -17,12 +17,12 @@ const ch4: Cond = { flag: 'pm_ch4' };
 const word = (n: number): Cond => ({ flag: 'pm_road', gte: n });
 
 export const resourcesM4: ResourceDef[] = [
-  { id: PR4.copper, icon: 'ore', name: 'Мідь', order: 9, cap: 10, weight: 0.5, desc: 'Старий дзвоник, мідний казанок, обрізки — на кружала.' },
-  { id: PT4.wheel, carry: true, icon: 'axle', name: 'Колесо', order: 34, kind: 'tool', weight: 3 },
-  { id: PT4.chain, carry: true, icon: 'grapnel', name: 'Ланцюг', order: 35, kind: 'tool', weight: 2 },
-  { id: PT4.lock, carry: true, icon: 'key', name: 'Замок до скрині', order: 36, kind: 'tool', weight: 1 },
+  { id: PR4.copper, icon: 'copper', name: 'Мідь', order: 9, cap: 10, weight: 0.5, desc: 'Старий дзвоник, мідний казанок, обрізки — на кружала.' },
+  { id: PT4.wheel, carry: true, icon: 'wheel', name: 'Колесо', order: 34, kind: 'tool', weight: 3 },
+  { id: PT4.chain, carry: true, icon: 'chain', name: 'Ланцюг', order: 35, kind: 'tool', weight: 2 },
+  { id: PT4.lock, carry: true, icon: 'padlock', name: 'Замок до скрині', order: 36, kind: 'tool', weight: 1 },
   { id: PT4.ladle, carry: true, icon: 'ladle', name: 'Черпак', order: 37, kind: 'tool', weight: 1 },
-  { id: PT4.shoe, carry: true, icon: 'iron', name: 'Підкова', order: 38, kind: 'tool', weight: 1 },
+  { id: PT4.shoe, carry: true, icon: 'horseshoe', name: 'Підкова', order: 38, kind: 'tool', weight: 1 },
 ];
 
 export const enemiesM4: EnemyDef[] = [
@@ -362,7 +362,7 @@ export const actionsM4: ActionDef[] = [
   // ------------------------------------------------------------------ names instead of numbers
   {
     id: 'pm_x89',
-    icon: 'mark',
+    icon: 'copper',
     group: PL4.camp,
     spot: 'bag',
     label: 'Вирізати мідне кружальце з іменем',

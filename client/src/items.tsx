@@ -608,6 +608,86 @@ const DRAW: Record<ItemIcon, () => JSX.Element> = {
       <path d="M16 4l5-1-1 5z" />
     </Ink>
   ),
+  // ----- made by hand: the maker's road, the ashes -----
+  wheel: () => (
+    <Ink>
+      <circle cx="12" cy="12" r="8" />
+      <circle cx="12" cy="12" r="1.5" />
+      <path d="M12 4v16M4 12h16M6.5 6.5l11 11M17.5 6.5l-11 11" />
+    </Ink>
+  ),
+  chain: () => (
+    <Ink>
+      <rect x="2.5" y="9" width="7" height="5" rx="2.5" />
+      <rect x="8.5" y="9" width="7" height="5" rx="2.5" />
+      <rect x="14.5" y="9" width="7" height="5" rx="2.5" />
+    </Ink>
+  ),
+  padlock: () => (
+    <Ink>
+      <rect x="6" y="11" width="12" height="9" rx="1.5" />
+      <path d="M9 11V8a3 3 0 0 1 6 0" />
+      <path d="M12 15v2" />
+    </Ink>
+  ),
+  charkey: () => (
+    <Ink>
+      <circle cx="7" cy="12" r="3.5" />
+      <path d="M10.5 12H21M18 12v3M15 12v2" />
+    </Ink>
+  ),
+  horseshoe: () => (
+    <Ink>
+      <path d="M7 20V11a5 5 0 0 1 10 0v9" />
+      <path d="M5.5 20h3M15.5 20h3" />
+    </Ink>
+  ),
+  copper: () => (
+    <Ink>
+      <path d="M5 16a4 4 0 0 1 8 0z" />
+      <path d="M9 12v-2" />
+      <path d="M14 19l6-3M15 14l4 1" />
+    </Ink>
+  ),
+  cradle: () => (
+    <Ink>
+      <path d="M5 9h14l-2 7H7z" />
+      <path d="M3 19c3 2 15 2 18 0" />
+      <path d="M7 16l-1 3M17 16l1 3" />
+    </Ink>
+  ),
+  chest: () => (
+    <Ink>
+      <rect x="3" y="9" width="18" height="10" rx="1" />
+      <path d="M3 9c0-3 3-5 9-5s9 2 9 5" />
+      <path d="M7 9v10M17 9v10M11 13h2" />
+    </Ink>
+  ),
+  hoops: () => (
+    <Ink>
+      <ellipse cx="12" cy="8" rx="7" ry="2.5" />
+      <ellipse cx="12" cy="12.5" rx="7" ry="2.5" />
+      <ellipse cx="12" cy="17" rx="7" ry="2.5" />
+    </Ink>
+  ),
+  hinges: () => (
+    <Ink>
+      <path d="M3 9h7v6H3zM14 9h7v6h-7z" />
+      <path d="M10 12h4" />
+    </Ink>
+  ),
+  stake: () => (
+    <Ink>
+      <path d="M10 3h4v14l-2 4-2-4z" />
+      <path d="M10 7h2M10 10h2M10 13h2" />
+    </Ink>
+  ),
+  bolt: () => (
+    <Ink>
+      <path d="M3 10h14v4H3z" />
+      <path d="M17 12h3M8 10V6" />
+    </Ink>
+  ),
   hoe: () => (
     <Ink>
       <path d="M17 3L7 17" />
