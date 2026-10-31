@@ -799,15 +799,15 @@ export class Bot {
   }
 
   /** This action raises a flag that a scene still to come waits for (and it is not there yet). */
-  private raisesGate(a: ActionDef, g: Game): boolean {
-    const incs = (a.effects ?? []).flatMap((e) => ('inc' in e ? [e.inc] : []));
+  private raisesGate(a: ActionDef, g: Game, deep = true): boolean {
+    // a count raised, or (a trail) a flag set that the next scene shows by
+    const incs = (a.effects ?? []).flatMap((e) => ('inc' in e ? [e.inc] : 'set' in e ? [e.set] : []));
     if (!incs.length) return false;
     const flat = (c: Cond | undefined): Cond[] => (!c ? [] : 'all' in c ? c.all.flatMap(flat) : 'any' in c ? c.any.flatMap(flat) : [c]);
-    return this.c.scenes.some(
-      (sc) =>
-        !g.flag(`done:${sc.id}`) &&
-        [...flat(sc.visible), ...flat(sc.enabled)].some((c) => 'flag' in c && c.gte !== undefined && incs.includes(c.flag) && g.flag(c.flag) < c.gte),
-    );
+    const short = (c: Cond) => 'flag' in c && incs.includes(c.flag) && (c.gte !== undefined ? g.flag(c.flag) < c.gte : c.lt === undefined && !g.flag(c.flag));
+    if (this.c.scenes.some((sc) => !g.flag(`done:${sc.id}`) && !sc.pool && [...flat(sc.visible), ...flat(sc.enabled)].some(short))) return true;
+    // one step further back: it shows a work that does (the first step of a trail)
+    return deep && this.c.actions.some((b) => b !== a && flat(b.visible).some(short) && this.raisesGate(b, g, false));
   }
 
   /** This action takes a thing made to order that the bot carries. */
