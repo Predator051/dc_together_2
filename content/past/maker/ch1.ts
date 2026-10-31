@@ -9,7 +9,7 @@ const fame = (n: number): Cond => ({ flag: 'pm_fame', gte: n });
  * An order on the board: take it (its flag), make the thing, hand it over (coins and fame).
  * The board shows what is open; what is taken waits in the workshop until it is made and carried.
  */
-function order(o: {
+export function order(o: {
   n: number;
   who: string;
   label: string;
@@ -60,7 +60,7 @@ function order(o: {
       enabled: { owns: o.make.thing },
       disabledHint: 'Спершу зробити в майстерні.',
       cost: { [o.make.thing]: 1 },
-      effects: [{ add: { [PR.coin]: o.give.pay } }, { inc: 'pm_fame', max: 8 }, { set: done }, { xp: 6, who: 'actor' }],
+      effects: [{ add: { [PR.coin]: o.give.pay } }, { inc: 'pm_fame', max: 14 }, { set: done }, { xp: 6, who: 'actor' }],
       cooldown: 5 * SEC,
       kind: 'trade',
       gives: `+${o.give.pay} шагів · слава`,
@@ -81,6 +81,7 @@ export const actionsM1: ActionDef[] = [
     cooldown: 10 * SEC,
     skill: 'gather',
     kind: 'gather',
+    job: { rate: 8 },
     busy: 'ріже лозу',
     log: { self: ['Гнучка, з червоною корою. Гордій каже: лоза — то половина колиски.', 'Пучок лози на плече. Руки пахнуть вербою.'], other: '{name} ріже лозу.' },
   },
@@ -93,6 +94,7 @@ export const actionsM1: ActionDef[] = [
     cooldown: 12 * SEC,
     skill: 'gather',
     kind: 'gather',
+    job: { rate: 5 },
     busy: 'копає глину',
     log: { self: 'Жовта, масна. Для горна — обмазати, щоб жар тримало.', other: '{name} копає глину.' },
   },
@@ -117,6 +119,7 @@ export const actionsM1: ActionDef[] = [
     cooldown: 18 * SEC,
     skill: 'gather',
     kind: 'gather',
+    job: { rate: 4 },
     busy: 'коле дуб',
     log: { self: ['Клин, молоток, ще клин. Дуб тріщить по волокну — рівно, як учив Гордій.', 'Дошка виходить крива. Ти пробуєш ще.'], other: '{name} коле дуб.' },
   },
@@ -129,6 +132,7 @@ export const actionsM1: ActionDef[] = [
     cooldown: 8 * SEC,
     skill: 'gather',
     kind: 'gather',
+    job: { rate: 5 },
     busy: 'збирає ожину',
     log: { self: 'Пальці сині, кишені повні. Явдоха зварить узвар.', other: '{name} збирає ожину.' },
   },
@@ -610,6 +614,8 @@ export const npcsM: NpcDef[] = [
   { id: PN.yavdokha, name: 'Явдоха', desc: 'Гордієва жінка. Сад, вареники, і все бачить.' },
   { id: PN.luka, name: 'Писар Лука', desc: 'Писар князівської казни. Ввічливий, платить сріблом.' },
   { id: PN.tymko, name: 'Тимко', desc: 'Хлопчик-сирота з-за річки. Не вписаний у жодну книгу.' },
+  { id: PN.yarema, name: 'Десятник Ярема', desc: 'Від полку. Молодий, чисто поголений, говорить рівно, як на плацу.' },
+  { id: PN.kindrat, name: 'Урядник Кіндрат', desc: 'Урядник вербувальника. Читає чужі книги вголос.' },
 ];
 
 export const goalsM1: GoalDef[] = [

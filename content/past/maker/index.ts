@@ -4,24 +4,29 @@ import { hero, perks, roleTitles, traits } from '../../core.js';
 import { ui } from '../../ui.js';
 import { areasM, enemiesM, locationsM, resourcesM } from './base.js';
 import { actionsM1, cluesM1, goalsM1, mysteriesM, npcsM, scenesM1, tagsM1 } from './ch1.js';
+import { actionsM2, cluesM2, goalsM2, residentsM, scenesM2 } from './ch2.js';
+import { actionsM3, cluesM3, goalsM3, scenesM3 } from './ch3.js';
 import { PA, PR } from './ids.js';
 
 export const makerPast: Content = {
   pastTitle: 'Спогади: Кривець',
   areas: areasM,
   resources: resourcesM,
-  actions: [...actionsM1, ...tagsM1],
+  actions: [...actionsM1, ...tagsM1, ...actionsM2, ...actionsM3],
   pools: [],
   locations: locationsM,
-  scenes: [...scenesM1],
+  scenes: [...scenesM1, ...scenesM2, ...scenesM3],
   encounters: [],
-  clues: [...cluesM1],
+  clues: [...cluesM1, ...cluesM2, ...cluesM3],
   mysteries: mysteriesM,
-  goals: [...goalsM1, { id: 'pm_goal0', text: 'Майстерня жде роботи.' }],
+  goals: [...goalsM3, ...goalsM2, ...goalsM1, { id: 'pm_goal0', text: 'Майстерня жде роботи.' }],
   npcs: npcsM,
   enemies: enemiesM,
-  residents: [],
-  trades: [],
+  residents: residentsM,
+  trades: [
+    { id: 'pm_wood', name: 'Лоза й дерево', teach: ['maker'], jobs: ['pm_x01', 'pm_x04'] },
+    { id: 'pm_earth', name: 'Глина й ягоди', teach: ['maker'], jobs: ['pm_x02', 'pm_x05'] },
+  ],
   perks,
   traits,
   // younger: the past has its own ceilings, by chapter
@@ -32,6 +37,8 @@ export const makerPast: Content = {
   storyFlags: ['pm_', 'done:pm_'],
   actEnd: {
     1: 'Кінець першого розділу спогадів. Далі буде — коли ви з напарником пройдете далі разом.',
+    2: 'Кінець другого розділу спогадів. Далі буде — коли ви з напарником пройдете далі разом.',
+    3: 'Кінець третього розділу спогадів. Дорога на північ — далі. Коли прийде час.',
   },
   roleTitles,
   ui,

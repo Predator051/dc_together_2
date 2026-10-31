@@ -906,7 +906,8 @@ function simulate(c: Content) {
     if ('all' in cond) return cond.all.every(ok);
     if ('any' in cond) return cond.any.some(ok);
     if ('not' in cond) return true;
-    if ('flag' in cond) return (cond.lt !== undefined && cond.gte === undefined) || flags.has(cond.flag);
+    // `main_act` comes from the main story into a past: any act is reached in time
+    if ('flag' in cond) return (cond.lt !== undefined && cond.gte === undefined) || flags.has(cond.flag) || cond.flag === 'main_act';
     if ('pflag' in cond) return pflags.has(cond.pflag);
     if ('partnerPflag' in cond) return pflags.has(cond.partnerPflag);
     if ('res' in cond) return cond.gte === undefined || cond.gte <= 0 || have.has(cond.res);

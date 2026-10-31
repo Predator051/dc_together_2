@@ -37,6 +37,12 @@ export const resourcesM: ResourceDef[] = [
   { id: PT.grate, carry: true, icon: 'iron', name: 'Ґрати на вікно', order: 25, kind: 'tool', weight: 3 },
   { id: PT.chest, carry: true, icon: 'block', name: 'Скриня', order: 26, kind: 'tool', weight: 4 },
   { id: PT.hinges, carry: true, icon: 'buckle', name: 'Завіси', order: 27, kind: 'tool', weight: 1 },
+  { id: PT.heads, carry: true, icon: 'spear', name: 'Наконечники', order: 28, kind: 'tool', weight: 2 },
+  { id: PT.axles, carry: true, icon: 'axle', name: 'Осі для возів', order: 29, kind: 'tool', weight: 3 },
+  { id: PT.shoes, carry: true, icon: 'iron', name: 'Підкови', order: 30, kind: 'tool', weight: 2 },
+  { id: PT.bars, carry: true, icon: 'block', name: 'Засуви для комор', order: 31, kind: 'tool', weight: 2 },
+  { id: PT.clamps, carry: true, icon: 'iron', name: 'Скоби для порому', order: 32, kind: 'tool', weight: 2 },
+  { id: PT.crates, carry: true, icon: 'block', name: 'Ящики для пороху', order: 33, kind: 'tool', weight: 4 },
   // the apprentice's own
   { id: PG.hammer, icon: 'club', name: 'Молоток', order: 40, kind: 'gear', weight: 1, gear: { slot: 'weapon', dmg: [2, 4], tags: ['blunt'] } },
   { id: PG.blade, icon: 'knife', name: 'Власний ніж', order: 41, kind: 'gear', weight: 0.5, gear: { slot: 'weapon', dmg: [3, 5], acc: 0.05, tools: ['blade'] } },
@@ -44,6 +50,78 @@ export const resourcesM: ResourceDef[] = [
 ];
 
 export const enemiesM: EnemyDef[] = [
+  {
+    id: PE.wolf,
+    icon: 'wolf',
+    name: 'Вовк',
+    acc: 'вовка',
+    gen: 'вовка',
+    verb: 'рве',
+    level: 4,
+    hp: 16,
+    dmg: [3, 5],
+    evade: 1,
+    morale: 12,
+    traits: ['pack', 'night'],
+    ai: [{ move: 'attack', w: 3 }, { move: 'grab', w: 1 }],
+    loot: { [PR.leather]: [0, 1] },
+    desc: 'Війна женуть із півдня не тільки людей. Вовки ідуть за обозами.',
+  },
+  {
+    id: PE.looter,
+    icon: 'snatcher',
+    name: 'Мародер',
+    acc: 'мародера',
+    gen: 'мародера',
+    verb: 'б\'є',
+    level: 4,
+    hp: 18,
+    dmg: [3, 5],
+    armor: 1,
+    morale: 12,
+    humane: true,
+    traits: [],
+    ai: [{ move: 'attack', w: 1 }],
+    loot: { [PR.coin]: [1, 3], [PR.iron]: [0, 1] },
+    desc: 'Дезертир чи просто злодій — тепер не розбереш. Знімає з убитих чоботи.',
+  },
+  {
+    id: PE.recruiter,
+    icon: 'rider',
+    name: 'Вербувальник',
+    acc: 'вербувальника',
+    gen: 'вербувальника',
+    verb: 'б\'є нагайкою',
+    level: 5,
+    hp: 22,
+    dmg: [3, 6],
+    armor: 2,
+    morale: 14,
+    humane: true,
+    traits: [],
+    ai: [{ move: 'attack', w: 2 }, { move: 'grab', w: 1 }],
+    loot: { [PR.coin]: [2, 4] },
+    desc: 'Списки в шапці, нагайка в руці. Шукає тих, кого нема в книгах.',
+  },
+  {
+    id: PE.sergeant,
+    icon: 'chief',
+    name: 'Урядник Кіндрат',
+    acc: 'Кіндрата',
+    gen: 'Кіндрата',
+    verb: 'рубає',
+    level: 6,
+    hp: 60,
+    dmg: [5, 8],
+    armor: 2,
+    humane: true,
+    traits: ['caller'],
+    calls: PE.recruiter,
+    ai: [{ move: 'attack', w: 3 }, { move: 'guard', w: 1 }],
+    phases: [{ below: 0.5, text: 'Кіндрат свистить. З-за возів — ще один, з нагайкою.', ai: [{ move: 'attack', w: 3 }], add: [{ enemy: PE.recruiter, n: 1 }] }],
+    loot: { [PR.coin]: [5, 8] },
+    desc: 'Урядник вербувальника. Рахує голови, як шаги, — пальцем у повітрі.',
+  },
   {
     id: PE.rat,
     icon: 'rat',
@@ -113,6 +191,9 @@ export const enemiesM: EnemyDef[] = [
   },
 ];
 
+const ch2 = { flag: 'pm_ch2' };
+const ch3 = { flag: 'pm_ch3' };
+
 export const areasM: AreaDef[] = [
   {
     id: PA.shop,
@@ -137,7 +218,13 @@ export const areasM: AreaDef[] = [
     pos: [4, 2],
     visible: inside,
     desc: 'Майдан біля церкви: ряди, вози, коні. Тут знають усіх, і всі знають, чий ти учень.',
-    links: [{ to: PA.bank, time: 8 * SEC }],
+    links: [
+      { to: PA.bank, time: 8 * SEC },
+      { to: PA.road, time: 12 * SEC, if: ch2 },
+    ],
+    // the recruiters walk the market in the last autumn
+    ambush: 0.05,
+    foes: [{ enemy: PE.recruiter, n: [1, 2], w: 1, if: { all: [ch3, { noFlag: 'pm_ch3_done' }] } }],
   },
   {
     id: PA.bank,
@@ -171,6 +258,22 @@ export const areasM: AreaDef[] = [
   },
 ];
 
+areasM.push({
+  id: PA.road,
+  name: 'Шлях на Брід',
+  where: 'на шляху',
+  scene: 'road',
+  pos: [6, 1],
+  danger: 4,
+  ambush: 0.1,
+  visible: ch2,
+  foes: [
+    { enemy: PE.looter, n: [1, 2], w: 2 },
+    { enemy: PE.wolf, n: [2, 3], w: 2 },
+  ],
+  desc: 'Битий шлях на південь, до броду. Вози туди — з хлібом, звідти — з пораненими.',
+});
+
 export const locationsM: LocationDef[] = [
   {
     id: PL.shop,
@@ -196,7 +299,7 @@ export const locationsM: LocationDef[] = [
     area: PA.market,
     order: 1,
     visible: inside,
-    progress: { flag: 'pm_fame', max: 8, label: 'Слава майстерні' },
+    progress: { flag: 'pm_fame', max: 14, label: 'Слава майстерні' },
     desc: 'Ряди під полотном, бочки, коні в оглоблях. Біля церкви — лавка, де сидять ті, кому щось треба зробити.',
     spots: [
       { id: 'stalls', name: 'Ряди', x: 14, y: 24, icon: 'scales' },
@@ -227,6 +330,18 @@ export const locationsM: LocationDef[] = [
     spots: [
       { id: 'oak', name: 'Повалений дуб', x: 14, y: 24, icon: 'log' },
       { id: 'berry', name: 'Ожина', x: 86, y: 26, icon: 'berry' },
+    ],
+  },
+  {
+    id: PL.road,
+    name: 'Шлях',
+    area: PA.road,
+    order: 1,
+    visible: ch2,
+    desc: 'Колії, кинуті колеса, вогнища обозників. Тут зупиняється ополчення на ночівлю.',
+    spots: [
+      { id: 'camp', name: 'Табір ополчення', x: 14, y: 24, icon: 'tents' },
+      { id: 'carts', name: 'Розбиті вози', x: 86, y: 26, icon: 'cart' },
     ],
   },
 ];

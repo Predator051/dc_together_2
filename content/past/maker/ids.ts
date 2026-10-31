@@ -1,8 +1,8 @@
 // Neutral ids of the maker's past (`.design/past-maker.md`). Every id begins with pm_: the main story's are
 // a_, r_, x_…, and the client keeps what it has seen by id.
 
-export const PA = { shop: 'pm_a1', market: 'pm_a2', bank: 'pm_a3', oaks: 'pm_a4' } as const;
-export const PL = { shop: 'pm_l1', market: 'pm_l2', bank: 'pm_l3', oaks: 'pm_l4' } as const;
+export const PA = { shop: 'pm_a1', market: 'pm_a2', bank: 'pm_a3', oaks: 'pm_a4', road: 'pm_a5' } as const;
+export const PL = { shop: 'pm_l1', market: 'pm_l2', bank: 'pm_l3', oaks: 'pm_l4', road: 'pm_l5' } as const;
 
 export const PR = {
   oak: 'pm_r1',
@@ -16,14 +16,16 @@ export const PR = {
 } as const;
 
 /** Things made to order (one each, handed over). */
-export const PT = { bolt: 'pm_t1', hoops: 'pm_t2', cradle: 'pm_t3', knife: 'pm_t4', key: 'pm_t5', grate: 'pm_t6', chest: 'pm_t7', hinges: 'pm_t8' } as const;
+export const PT = { bolt: 'pm_t1', hoops: 'pm_t2', cradle: 'pm_t3', knife: 'pm_t4', key: 'pm_t5', grate: 'pm_t6', chest: 'pm_t7', hinges: 'pm_t8', heads: 'pm_t9', axles: 'pm_t10', shoes: 'pm_t11', bars: 'pm_t12', clamps: 'pm_t13', crates: 'pm_t14' } as const;
 
 export const PG = { hammer: 'pm_g1', apron: 'pm_g2', blade: 'pm_g3' } as const;
 
-export const PE = { rat: 'pm_e1', dog: 'pm_e2', boar: 'pm_e3', tramp: 'pm_e4' } as const;
+export const PE = { rat: 'pm_e1', dog: 'pm_e2', boar: 'pm_e3', tramp: 'pm_e4', wolf: 'pm_e5', looter: 'pm_e6', recruiter: 'pm_e7', sergeant: 'pm_e8' } as const;
 
-export const PS = { gate: 'pm_s01', night: 'pm_s03', clerk: 'pm_s04', supper: 'pm_s05' } as const;
+export const PS = { gate: 'pm_s01', night: 'pm_s03', clerk: 'pm_s04', supper: 'pm_s05', horn: 'pm_s06', yarema: 'pm_s07', brand: 'pm_s08', refugees: 'pm_s09', recruit: 'pm_s10', tymko: 'pm_s11', fire: 'pm_s12' } as const;
 
-export const PN = { gordiy: 'pm_n1', yavdokha: 'pm_n2', luka: 'pm_n3', tymko: 'pm_n4' } as const;
+export const PN = { gordiy: 'pm_n1', yavdokha: 'pm_n2', luka: 'pm_n3', tymko: 'pm_n4', yarema: 'pm_n5', kindrat: 'pm_n6' } as const;
+
+export const PH = { tymko: 'pm_h1' } as const;
 
 export const PM = { numbers: 'pm_m1' } as const;

@@ -122,6 +122,26 @@ export class Bot {
     const needs = this.needs(v, g);
     if (needs) return needs;
 
+    // alone: a count the next scene waits for (people hidden, mouths fed) — go and raise it
+    if (g.s.solo) {
+      // payable where it is done: at home from the store, elsewhere from the store and the bag together
+      const payable = (a: ActionDef) =>
+        Object.entries(a.cost ?? {}).every(([r, n]) => (g.ix.areaOf(a.group) === g.ix.homeArea ? (g.s.res[r] ?? 0) + (v.atHome ? 0 : (g.p(this.pid).bag[r] ?? 0)) : g.stockAll(r)) >= n);
+      const raise = this.c.actions.find((a) => this.raisesGate(a, g) && (!a.visible || g.test(a.visible, this.pid)) && (!a.enabled || g.test(a.enabled, this.pid)) && payable(a));
+      if (raise) {
+        const area = g.ix.areaOf(raise.group);
+        if (area !== v.me.area) {
+          // what it costs is carried from home
+          if (v.atHome) {
+            const pack = Object.entries(raise.cost ?? {}).find(([r, n]) => (g.p(this.pid).bag[r] ?? 0) < n && (g.s.res[r] ?? 0) > 0);
+            if (pack) return { c: 'pack', id: pack[0], n: Math.min(g.s.res[pack[0]] ?? 0, pack[1] * 3) };
+          }
+          return this.goTowards(v, g, area);
+        }
+        const e = v.groups.flatMap((gr) => gr.entries).find((x) => x.id === raise.id);
+        if (e?.enabled && !(e.readyAt && e.readyAt > v.now)) return { c: 'act', id: raise.id };
+      }
+    }
     if (v.atHome) {
       // what did not fit into the store stays in the bag: throw it out (goods to sell excepted)
       const kept = this.packList(v, g);
@@ -715,6 +735,10 @@ export class Bot {
         const make = this.c.actions.find((a) => a.kind === 'craft' && a.yield?.[r] && (!a.visible || g.test(a.visible, this.pid)));
         if (make) add(make.cost);
       }
+    // alone in a past: what a count the story waits for costs (food for the hidden) is wanted
+    if (g.s.solo)
+      for (const a of this.c.actions)
+        if (this.raisesGate(a, g) && (!a.visible || g.test(a.visible, this.pid))) add(Object.fromEntries(Object.entries(a.cost ?? {}).map(([r, n]) => [r, n * 2])));
     // alone in a past: what buys the wanted things is wanted too (money)
     if (g.s.solo)
       for (const a of this.c.actions)
@@ -772,6 +796,18 @@ export class Bot {
       const def = g.ix.res.get(id);
       return def?.kind === 'gear' || (g.s.res[id] ?? 0) < Math.min(10, g.cap(id));
     });
+  }
+
+  /** This action raises a flag that a scene still to come waits for (and it is not there yet). */
+  private raisesGate(a: ActionDef, g: Game): boolean {
+    const incs = (a.effects ?? []).flatMap((e) => ('inc' in e ? [e.inc] : []));
+    if (!incs.length) return false;
+    const flat = (c: Cond | undefined): Cond[] => (!c ? [] : 'all' in c ? c.all.flatMap(flat) : 'any' in c ? c.any.flatMap(flat) : [c]);
+    return this.c.scenes.some(
+      (sc) =>
+        !g.flag(`done:${sc.id}`) &&
+        [...flat(sc.visible), ...flat(sc.enabled)].some((c) => 'flag' in c && c.gte !== undefined && incs.includes(c.flag) && g.flag(c.flag) < c.gte),
+    );
   }
 
   /** This action takes a thing made to order that the bot carries. */
