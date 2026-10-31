@@ -1,7 +1,7 @@
 // Two bots play the game: they see only their views (and plan with what the world offers).
 
 import { content } from '../content/index.js';
-import type { PlayerId } from '../shared/src/content.js';
+import type { Content, PlayerId, Role } from '../shared/src/content.js';
 import { Bot, type BotOptions } from './bot.js';
 import { World } from './world.js';
 
@@ -23,16 +23,23 @@ export interface AutoplayResult {
 export function autoplay(
   a: BotOptions,
   b: BotOptions,
-  opts: { seed?: number; maxSteps?: number; until?: (w: World) => boolean; stallLimit?: number; from?: World } = {},
+  opts: { seed?: number; maxSteps?: number; until?: (w: World) => boolean; stallLimit?: number; from?: World; solo?: { content: Content; role: Role } } = {},
 ): AutoplayResult {
-  const w = opts.from ?? new World(opts.seed ?? 7);
+  // alone in a past: one hero of that role, nobody to wait for
+  const w = opts.from ?? new World(opts.seed ?? 7, opts.solo?.content);
   if (!opts.from) {
-    w.join('Марко', 'm', 'hunter');
-    w.join('Оксана', 'f', 'maker');
+    if (opts.solo) {
+      w.state.solo = true;
+      w.join('Оксана', 'f', opts.solo.role);
+    } else {
+      w.join('Марко', 'm', 'hunter');
+      w.join('Оксана', 'f', 'maker');
+    }
   }
-  w.online('p1');
-  w.online('p2');
-  const bots: Record<PlayerId, Bot> = { p1: new Bot('p1', content, a), p2: new Bot('p2', content, b) };
+  const players = (['p1', 'p2'] as PlayerId[]).filter((pid) => w.state.players[pid].joined);
+  for (const pid of players) w.online(pid);
+  const c = opts.solo?.content ?? content;
+  const bots: Record<PlayerId, Bot> = { p1: new Bot('p1', c, a), p2: new Bot('p2', c, b) };
   const until = opts.until ?? ((x: World) => !!x.state.flags['p2_act1_done'] && !x.state.scene);
   const maxSteps = opts.maxSteps ?? 60000;
   const stallLimit = opts.stallLimit ?? 6000;
@@ -50,7 +57,7 @@ export function autoplay(
   for (let step = 0; step < maxSteps; step++) {
     if (until(w)) return { done: true, steps: step, world: w, rejected, scenes, gameTimeMs: w.now - start, defeats, fights, timeline };
     let acted = false;
-    for (const pid of ['p1', 'p2'] as PlayerId[]) {
+    for (const pid of players) {
       const g = w.g();
       const v = w.view(pid);
       const cmd = bots[pid].decide(v, g);

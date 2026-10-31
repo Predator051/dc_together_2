@@ -23,11 +23,12 @@ import type {
 import type { FightState } from '../../../shared/src/state.js';
 import type { Game } from './index.js';
 import { questProgress } from './index.js';
+import { hardView } from './hard.js';
 import { resolveParas } from './text.js';
 import { SKILLS, SLOTS, STATS, type SkillId } from '../../../shared/src/content.js';
-import type { BagView, BeastView, EntrySort, FightView, HeroView, LarderView, MapView, ResidentView, WeatherView, YardPieceView } from '../../../shared/src/protocol.js';
-import { perkState, skillLevel, skillXpFor, xpForLevel } from '../../../shared/src/rules.js';
-import { bagCap, bagLoad, gearNote, heroOf, ownsCount, perkTree, useNote } from './hero.js';
+import type { BagView, BeastView, EntrySort, PrepView, FightView, HeroView, LarderView, MapView, ResidentView, WeatherView, YardPieceView } from '../../../shared/src/protocol.js';
+import { TEMPER, perkState, skillLevel, skillXpFor, temperCost, xpForLevel, type TemperKind } from '../../../shared/src/rules.js';
+import { bagCap, bagLoad, gearNote, heroOf, levelCap, ownsCount, perkTree, useNote } from './hero.js';
 import { HERO_AP, activeFoes, activeId, eliteMark, enemyOf, fid, fightMoves, fightOf, holder, moraleOf, walkable } from './fight.js';
 import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, routeLegs, routeTo, travelTime, walkOf } from './travel.js';
 import { foodOf, garmentOf, jobYield, larder, rankIn, residentJobs, stateOf, teachBlock, tradeOf, workMult, workingAt } from './household.js';
@@ -80,6 +81,8 @@ function actionGains(g: Game, a: ActionDef, pid: PlayerId): GainView[] {
     return def && !def.hidden ? def : null;
   };
   if (a.gives) out.push({ text: g.render(a.gives, pid) });
+  const prep = a.prep ? g.ix.preps.get(a.prep) : undefined;
+  if (prep) out.push({ text: `${g.ix.ui('prep_for')} «${g.ix.scenes.get(prep.scene)?.title ?? ''}»` });
   for (const [r, y] of Object.entries(a.yield ?? {})) {
     const def = visibleRes(r);
     if (!def) continue;
@@ -149,10 +152,11 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         reason: shownReason(g, reason),
         cost: costView(g, sc.cost),
         gain: sceneGains(g, sc, pid),
-        together: true,
+        together: !g.s.solo,
         sort: 'pair',
         ...(sc.spot ? { spot: sc.spot } : {}),
         ...(sc.quest ? { quest: true } : {}),
+        ...readiedOf(g, sc.id),
       });
     }
     for (const pool of g.ix.c.pools) {
@@ -168,7 +172,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         hint: pool.hint ? g.render(pool.hint, pid) : undefined,
         cost: costView(g, pool.cost),
         gain: sceneGains(g, pool, pid),
-        together: true,
+        together: !g.s.solo,
         sort: 'pair',
         ...(pool.spot ? { spot: pool.spot } : {}),
       });
@@ -193,6 +197,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         ...(actionIcon(g, a) ? { icon: actionIcon(g, a) } : {}),
         ...(a.spot ? { spot: a.spot } : {}),
         ...(a.quest ? { quest: true } : {}),
+        ...(a.prep ? { prep: true } : {}),
       });
     }
     const partner = mateEntries(g, pid, loc.id);
@@ -277,7 +282,7 @@ function pathEntries(g: Game, pid: PlayerId): EntryView[] {
         reason: shownReason(g, reason),
         cost: costView(g, sc.cost),
         gain: sceneGains(g, sc, pid),
-        together: true,
+        together: !g.s.solo,
       });
     }
   }
@@ -620,6 +625,32 @@ function skillText(g: Game, id: SkillId, lv: number): string {
   return out.join(', ');
 }
 
+/** The act's level ceiling, temper past it, and catch-up experience. */
+function capView(g: Game, pid: PlayerId): Pick<HeroView, 'cap' | 'temper' | 'catchUp'> {
+  const p = g.p(pid);
+  const cap = levelCap(g);
+  const out: Pick<HeroView, 'cap' | 'temper' | 'catchUp'> = {};
+  if (cap !== undefined) out.cap = { level: cap, reached: p.level >= cap };
+  const t = p.temper;
+  if (t && cap !== undefined) {
+    out.temper = {
+      rank: t.rank,
+      points: t.points,
+      xp: t.xp,
+      next: temperCost(cap, t.rank + 1),
+      kinds: (Object.keys(TEMPER.kinds) as TemperKind[]).map((k) => ({
+        id: k,
+        name: g.ix.ui(`temper_${k}`),
+        text: g.ix.ui(`temper_${k}_text`),
+        taken: t.spent[k] ?? 0,
+        most: Number.isFinite(TEMPER.kinds[k].most) ? TEMPER.kinds[k].most : null,
+      })),
+    };
+  }
+  if (p.catchUp) out.catchUp = p.catchUp;
+  return out;
+}
+
 function heroView(g: Game, pid: PlayerId): HeroView {
   const p = g.p(pid);
   const d = heroOf(g, pid);
@@ -689,6 +720,7 @@ function heroView(g: Game, pid: PlayerId): HeroView {
       items: Object.values(p.sets[name] ?? {}).map((id) => g.ix.res.get(id!)?.name ?? id!),
     })),
     canChange: atHome && p.fight === null,
+    ...capView(g, pid),
   };
 }
 
@@ -1287,6 +1319,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
       role: o.role,
       roleTitle: o.joined ? g.roleTitle(other) : '',
       online: o.joined && o.online,
+      ...(o.remembering ? { remembering: true } : {}),
       area: o.at,
       where: g.ix.areaWhere(o.at),
       busy: partnerBusy,
@@ -1304,7 +1337,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     proposal,
     scene: sceneView(g, pid),
     log,
-    journal: { clues, questions, people, quests: questsView(g, pid) },
+    journal: { clues, questions, people, quests: questsView(g, pid), preps: prepsView(g, pid) },
     actDone,
     busyUntil: me.busy && me.busy.until > g.now ? me.busy.until : 0,
     busyFrom: busyFrom(g, pid),
@@ -1323,6 +1356,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     residents: residentsView(g, pid),
     larder: larderView(g),
     asks: asksView(g, pid),
+    hard: hardView(g, pid),
     bestiary: bestiaryView(g, pid),
     tabs: tabsOf(g, pid),
     atHome: g.atHome(pid),
@@ -1517,6 +1551,40 @@ function needsView(g: Game, pid: PlayerId): NeedsView | null {
     rest: { can: !restB, ...(restB ? { reason: restB } : {}), minutes: restLength(g, pid) },
     comfort: home ? comfortOf(g, pid).filter((x) => x.on).map((x) => x.name) : [],
   };
+}
+
+/** How far a together scene is readied (on its button), when it can be. */
+function readiedOf(g: Game, scene: string): { readied?: { n: number; of: number } } {
+  const ps = (g.ix.c.preps ?? []).filter((p) => p.scene === scene && g.prepOpen(p));
+  return ps.length ? { readied: { n: ps.filter((p) => g.flag(p.id)).length, of: ps.length } } : {};
+}
+
+/** What can be readied alone, scene by scene; the viewer's own first. */
+function prepsView(g: Game, pid: PlayerId): PrepView[] {
+  const role = g.p(pid).role;
+  const out = new Map<string, PrepView>();
+  for (const p of g.ix.c.preps ?? []) {
+    if (!g.prepOpen(p)) continue;
+    let v = out.get(p.scene);
+    if (!v) {
+      const sc = g.ix.scenes.get(p.scene)!;
+      const area = sc.group ? g.ix.areaOf(sc.group) : sc.pool ? g.ix.homeArea : g.ix.scoutOf.get(sc.id);
+      const name = area ? g.ix.c.areas.find((a) => a.id === area)?.name : undefined;
+      v = { scene: sc.id, title: sc.title, ...(name ? { where: name } : {}), items: [] };
+      out.set(p.scene, v);
+    }
+    const done = !!g.flag(p.id);
+    v.items.push({
+      id: p.id,
+      text: g.render(p.text, pid),
+      ...(p.role ? { role: p.role } : {}),
+      mine: !p.role || p.role === role,
+      done,
+      ...(done ? { gives: g.render(p.gives, pid) } : {}),
+    });
+  }
+  for (const v of out.values()) v.items.sort((a, b) => Number(b.mine) - Number(a.mine));
+  return [...out.values()];
 }
 
 function questsView(g: Game, pid: PlayerId): QuestView[] {

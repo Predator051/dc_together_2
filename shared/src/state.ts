@@ -1,4 +1,5 @@
 import type { Field } from './field.js';
+import type { TemperState } from './rules.js';
 import type { Gender, PlayerId, Role, LogKind, Slot, StatId, SkillId } from './content.js';
 
 /**
@@ -23,6 +24,8 @@ export interface PlayerState {
   busy: { action: string; until: number } | null;
   /** Runtime only; reset to false on load. */
   online: boolean;
+  /** In the hero's own past (`.design/personal.md` §3): sitting by the fire at home, needs held. */
+  remembering?: boolean;
   lastSeen: number;
   /** What the world looked like when this player left (v3). */
   away: Snapshot | null;
@@ -40,6 +43,10 @@ export interface PlayerState {
   perks: string[];
   /** Unspent perk points (one per level from the second, v13). */
   perkPoints: number;
+  /** Past the act's level ceiling. */
+  temper?: TemperState;
+  /** Experience still to be doubled: the one behind, back after being away. */
+  catchUp?: number;
   /** Skill experience. */
   skills: Record<SkillId, number>;
   /** Worn things (item ids). */
@@ -280,6 +287,8 @@ export interface FightState {
   aim?: PlayerId[];
   /** Foes already made tougher for two heroes. */
   duo?: boolean;
+  /** Fought on the hard road. */
+  hard?: boolean;
   /** The latest beats (numbered). */
   events?: FightEvent[];
   seq?: number;
@@ -386,6 +395,8 @@ export interface WorldState {
   goal: string | null;
   /** Side errands: begun, done, or closed another way. */
   quests?: Record<string, 'on' | 'done' | 'closed'>;
+  /** What was already told of preparations: `open:<scene>` (it can be readied), `<prep id>` (readied). */
+  preps?: Record<string, 1>;
   stats: Stats;
 
   // ----- part two -----
@@ -407,5 +418,15 @@ export interface WorldState {
   afterFight?: Partial<Record<PlayerId, { at: number; how: 'win' | 'lose' | 'fled'; fight: FightState; loot?: Record<string, number> }>>;
   /** What one hero has asked the other to bring home (the asks board); counted as the other brings it. */
   asks?: AskState[];
+  /** A world for one hero (the past): scenes start at once, nobody waits for a partner. */
+  solo?: boolean;
+  /** In a past: the main story's flags as they were when the hero came in (what the past may reflect). */
+  mainFlags?: Record<string, number>;
+  /** The heroes' pasts, one world each (only in the main world). */
+  past?: Partial<Record<PlayerId, WorldState>>;
+  /** The hard road is on (both agreed). */
+  hard?: boolean;
+  /** One proposed the hard road; the other has not answered yet. */
+  hardAsk?: { by: PlayerId; at: number } | null;
   nextAskId?: number;
 }

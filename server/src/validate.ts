@@ -224,12 +224,14 @@ export function validateContent(c: Content): Report {
   }
 
   // flags of the legacy are written by the server when part one is carried over
-  const isWritten = (f: string) => written.has(f) || f.startsWith('legacy');
+  // `main_act` is written into a past by the server (`server/src/past.ts`)
+  const isWritten = (f: string) => written.has(f) || f.startsWith('legacy') || f === 'main_act';
   const checkCond = (where: string, cond: Cond | undefined) => {
     for (const x of condsOf(cond)) {
       if ('flag' in x && !isWritten(x.flag)) err(`${where}: reads flag "${x.flag}" that is never set`);
       if ('noFlag' in x && !isWritten(x.noFlag)) err(`${where}: reads flag "${x.noFlag}" that is never set`);
-      if ('pflag' in x && !pwritten.has(x.pflag)) err(`${where}: reads personal flag "${x.pflag}" that is never set`);
+      // bg_*: what each hero said of home in part one (imported with the legacy, copied into a past)
+      if ('pflag' in x && !pwritten.has(x.pflag) && !x.pflag.startsWith('bg_')) err(`${where}: reads personal flag "${x.pflag}" that is never set`);
       if ('noPflag' in x && !pwritten.has(x.noPflag)) err(`${where}: reads personal flag "${x.noPflag}" that is never set`);
       if ('partnerPflag' in x && !pwritten.has(x.partnerPflag)) err(`${where}: reads personal flag "${x.partnerPflag}" that is never set`);
       if ('res' in x && !res.has(x.res)) err(`${where}: unknown resource ${x.res}`);
@@ -245,6 +247,7 @@ export function validateContent(c: Content): Report {
       if ('weather' in x && !c.weather?.kinds.some((k) => k.id === x.weather)) err(`${where}: unknown weather ${x.weather}`);
       if ('resident' in x && !residentIds.has(x.resident)) err(`${where}: unknown resident ${x.resident}`);
       if ('seen' in x && !res.has(x.seen)) err(`${where}: unknown resource ${x.seen}`);
+      if ('past' in x && !/^p[hm]_/.test(x.past)) err(`${where}: a past's flag is named ph_… (the hunter's) or pm_… (the maker's): ${x.past}`);
     }
   };
   const checkEffects = (where: string, effs: Effect[], inScene: boolean) => {
@@ -592,6 +595,9 @@ export function validateContent(c: Content): Report {
           checkCond(nw, o.visible);
           checkCond(nw, o.enabled);
           if (n.mode === 'joint' && o.role) err(`${nw}: joint choice option ${o.id} limited to a role can never be agreed on`);
+          // one remembers, the other does not: such an option can only be someone's own pick
+          if (n.mode === 'joint' && condsOf(o.visible).some((x) => 'past' in x && (x.who ?? 'me') !== 'either' && x.who !== 'both'))
+            err(`${nw}: joint choice option ${o.id} seen by one who remembers can never be agreed on (use each/any)`);
           if (n.mode === 'each' && o.next !== undefined) warnings.push(`${nw}: option next ignored in 'each' mode`);
         }
         if (n.mode === 'joint' && !n.mismatch) err(`${nw}: joint choice needs a mismatch node`);
@@ -747,6 +753,26 @@ export function validateContent(c: Content): Report {
   }
   for (const s of c.scenes) if (s.quest && !questIds.has(s.quest)) err(`scene ${s.id}: unknown quest ${s.quest}`);
   for (const a of c.actions) if (a.quest && !questIds.has(a.quest)) err(`action ${a.id}: unknown quest ${a.quest}`);
+
+  // preparations: each readies a together scene that reads its flag, and is done by something
+  const prepIds = new Set<string>();
+  for (const p of c.preps ?? []) {
+    if (prepIds.has(p.id)) err(`prep ${p.id}: duplicate id`);
+    prepIds.add(p.id);
+    if (!p.id.startsWith('prep_')) err(`prep ${p.id}: its flag must start with prep_ (not a story flag)`);
+    const sc = c.scenes.find((x) => x.id === p.scene);
+    if (!sc) {
+      err(`prep ${p.id}: unknown scene ${p.scene}`);
+      continue;
+    }
+    if (p.open) checkCond(`prep ${p.id} open`, p.open);
+    if (p.done) checkCond(`prep ${p.id} done`, p.done);
+    const maps = (c.maps ?? []).filter((m) => JSON.stringify(sc).includes(`"${m.id}"`));
+    if (![sc, ...maps].some((x) => JSON.stringify(x).includes(`"${p.id}"`))) err(`prep ${p.id}: scene ${p.scene} never reads it`);
+    const setters = c.actions.filter((a) => a.prep === p.id && JSON.stringify(a.effects ?? []).includes(`"${p.id}"`));
+    if (!p.done && !setters.length) err(`prep ${p.id}: nothing does it`);
+  }
+  for (const a of c.actions) if (a.prep && !prepIds.has(a.prep)) err(`action ${a.id}: unknown prep ${a.prep}`);
   // every job of residents stands in exactly one trade, and a trade holds only jobs
   for (const a of c.actions) {
     if (!a.job) continue;
@@ -880,7 +906,8 @@ function simulate(c: Content) {
     if ('all' in cond) return cond.all.every(ok);
     if ('any' in cond) return cond.any.some(ok);
     if ('not' in cond) return true;
-    if ('flag' in cond) return (cond.lt !== undefined && cond.gte === undefined) || flags.has(cond.flag);
+    // `main_act` comes from the main story into a past: any act is reached in time
+    if ('flag' in cond) return (cond.lt !== undefined && cond.gte === undefined) || flags.has(cond.flag) || cond.flag === 'main_act';
     if ('pflag' in cond) return pflags.has(cond.pflag);
     if ('partnerPflag' in cond) return pflags.has(cond.partnerPflag);
     if ('res' in cond) return cond.gte === undefined || cond.gte <= 0 || have.has(cond.res);

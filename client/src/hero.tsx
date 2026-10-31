@@ -180,8 +180,33 @@ function HeroCard({ v, onGrowth }: { v: PlayerView; onGrowth: () => void }) {
             <Bar n={v.me.hp} max={d.hpMax} cls="hp mine" />
           </span>
           <small class="hero-xp">
-            {T.xp} {h.xp} / {h.xpNext}
+            {h.cap?.reached ? (
+              <>
+                {T.capReached} {h.cap.level}
+                {h.temper && (
+                  <>
+                    {' · '}
+                    {T.temper} {h.temper.rank} ({h.temper.xp}/{h.temper.next})
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                {T.xp} {h.xp} / {h.xpNext}
+                {h.cap && (
+                  <>
+                    {' · '}
+                    {T.capOf} {h.cap.level}
+                  </>
+                )}
+              </>
+            )}
           </small>
+          {!!h.catchUp && (
+            <small class="hero-catch">
+              {T.catchUp} {h.catchUp}
+            </small>
+          )}
         </div>
       </div>
       <dl class="hero-nums">
@@ -210,6 +235,8 @@ function HeroCard({ v, onGrowth }: { v: PlayerView; onGrowth: () => void }) {
           )}
         </p>
       )}
+      {h.temper && <TemperBox t={h.temper} />}
+      {v.hard && <HardBox h={v.hard} />}
       {(h.points > 0 || h.perkPoints > 0) && (
         <button type="button" class="hero-call" onClick={onGrowth}>
           <span class="hero-call-dot" />
@@ -218,6 +245,63 @@ function HeroCard({ v, onGrowth }: { v: PlayerView; onGrowth: () => void }) {
         </button>
       )}
     </section>
+  );
+}
+
+/** The hard road: proposed by one, agreed by the other; either turns it off. */
+function HardBox({ h }: { h: NonNullable<PlayerView['hard']> }) {
+  const note = h.on ? T.hardOn : h.asked === 'me' ? T.hardAskedMe : h.asked === 'mate' ? T.hardAskedMate : T.hardOff;
+  return (
+    <div class={`hard ${h.on ? 'on' : ''} ${h.asked === 'mate' ? 'asked' : ''}`}>
+      <p class="hard-head">
+        <b>{T.hard}</b> {note}
+      </p>
+      <p class="hard-text">{T.hardText}</p>
+      <div class="hard-btns">
+        {h.on ? (
+          <button type="button" class="btn small" onClick={() => net.send({ c: 'hard', on: false })}>
+            {T.hardTurnOff}
+          </button>
+        ) : h.asked === 'me' ? (
+          <button type="button" class="btn small" onClick={() => net.send({ c: 'hard', on: false })}>
+            {T.hardTakeBack}
+          </button>
+        ) : (
+          <button type="button" class="btn small" onClick={() => net.send({ c: 'hard', on: true })}>
+            {h.asked === 'mate' ? T.hardAgree : T.hardPropose}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Past the act's ceiling: ranks of temper to spend, a little at a time. */
+function TemperBox({ t }: { t: NonNullable<PlayerView['hero']['temper']> }) {
+  return (
+    <div class="temper">
+      <p class="temper-head">
+        <b>{T.temper}</b> {t.points > 0 ? `${T.temperFree}: ${t.points}` : T.temperNone}
+      </p>
+      <div class="temper-kinds">
+        {t.kinds.map((k) => {
+          const full = k.most !== null && k.taken >= k.most;
+          return (
+            <button
+              type="button"
+              class={`temper-kind ${full ? 'full' : ''}`}
+              disabled={t.points <= 0 || full}
+              title={k.text}
+              onClick={() => net.send({ c: 'temper', id: k.id })}
+            >
+              <span class="temper-name">{k.name}</span>
+              <span class="temper-n">{k.most !== null ? `${k.taken}/${k.most}` : k.taken > 0 ? `×${k.taken}` : ''}</span>
+              <span class="temper-text">{k.text}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

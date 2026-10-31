@@ -140,6 +140,10 @@ describe('two bots play act three to its end', () => {
     const a2 = autoplay({}, {}, { from: a1.world, until: ACT2, maxSteps: 150000, stallLimit: 15000 });
     expect(a2.done).toBe(true);
     const start = a2.world.now;
+    // the same evening, played by bots who never ready a scene alone: the act goes without it
+    const bare = new World(1);
+    bare.state = structuredClone(a2.world.state);
+    bare.now = a2.world.now;
     const r = autoplay({}, {}, { from: a2.world, until: ACT3, maxSteps: 200000, stallLimit: 20000 });
     if (!r.done) console.log(r.reason, show(r.world));
     expect(r.done).toBe(true);
@@ -148,5 +152,12 @@ describe('two bots play act three to its end', () => {
     expect(minutes).toBeGreaterThan(30);
     expect(r.world.state.meta.actDone).toBe(3);
     expect(r.world.state.residents['h_15']).toBeDefined();
+    // readying alone: some of it was done along the way
+    expect(Object.keys(r.world.state.flags).filter((f) => f.startsWith('prep_')).length).toBeGreaterThanOrEqual(2);
+
+    const nr = autoplay({ noPrep: true }, { noPrep: true }, { from: bare, until: ACT3, maxSteps: 200000, stallLimit: 20000 });
+    if (!nr.done) console.log(nr.reason, show(nr.world));
+    expect(nr.done).toBe(true);
+    expect(Object.keys(nr.world.state.flags).filter((f) => f.startsWith('prep_'))).toEqual([]);
   });
 });

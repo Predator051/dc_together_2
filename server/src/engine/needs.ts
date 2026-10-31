@@ -140,7 +140,7 @@ export function settleNeeds(g: Game): boolean {
     const n = p.needs;
     const dt = Math.max(0, g.now - n.at);
     n.at = g.now;
-    if (!p.online || scene || dt <= 0) {
+    if (!p.online || p.remembering || scene || dt <= 0) {
       n.bite = g.now;
       continue;
     }

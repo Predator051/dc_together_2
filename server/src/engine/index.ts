@@ -1,4 +1,5 @@
 import type { QuestDef,
+  PrepDef,
   ActionDef,
   ChoiceNode,
   CombatNode,
@@ -53,9 +54,13 @@ import {
   settleHealth,
   skillOf,
   spendPoint,
+  spendTemper,
+  catchUp,
+  temperPace,
 } from './hero.js';
 import { activeFoes, dropFight, fightChoose, fightOf, help, maybeResolve, startFight, takeLoot } from './fight.js';
 import { ask, credit, unask } from './asks.js';
+import { setHard } from './hard.js';
 import { fieldFrom } from './terrain.js';
 import { ambush, areaDef, areaKnown, go, linkTime, settleTravel } from './travel.js';
 import { folkGear, setFeed, setJob, settleWork, teach } from './household.js';
@@ -94,6 +99,7 @@ export class ContentIndex {
   readonly goals = new Map<string, Content['goals'][number]>();
   readonly npcs = new Map<string, Content['npcs'][number]>();
   readonly maps = new Map<string, DelveMapDef>();
+  readonly preps = new Map<string, PrepDef>();
   readonly enemies = new Map<string, EnemyDef>();
   /** Scouting scene → the place it explores. */
   readonly scoutOf = new Map<string, string>();
@@ -112,6 +118,7 @@ export class ContentIndex {
     for (const g of c.goals) this.goals.set(g.id, g);
     for (const n of c.npcs) this.npcs.set(n.id, n);
     for (const m of c.maps ?? []) this.maps.set(m.id, m);
+    for (const p of c.preps ?? []) this.preps.set(p.id, p);
   }
 
   entry(id: string): Entry | null {
@@ -177,6 +184,7 @@ export class Game {
     if (!this.s.scene && this.chain.length) this.startScene(this.chain.shift()!);
     this.updateGoal();
     this.updateQuests();
+    this.updatePreps();
     this.s.meta.rng = this.rng.state;
   }
 
@@ -227,6 +235,38 @@ export class Game {
     }
   }
 
+  /** A preparation is listed while its scene can still come and it is open. */
+  prepOpen(p: PrepDef): boolean {
+    const sc = this.ix.scenes.get(p.scene);
+    if (!sc || this.flag(`done:${sc.id}`)) return false;
+    const open = p.open ?? sc.visible;
+    return !open || this.test(open);
+  }
+
+  /** Preparations come to be done; both hear when a scene can first be readied, and when a step of it is. */
+  private updatePreps(): void {
+    const ps = this.ix.c.preps;
+    if (!ps?.length) return;
+    const told = (this.s.preps ??= {});
+    for (const p of ps) {
+      if (!this.prepOpen(p)) continue;
+      if (!this.flag(p.id) && p.done && this.test(p.done)) this.s.flags[p.id] = 1;
+      const title = quoted(this.ix.scenes.get(p.scene)!.title);
+      if (!told[`open:${p.scene}`]) {
+        told[`open:${p.scene}`] = 1;
+        const out: Partial<Record<PlayerId, string>> = {};
+        for (const pid of this.joinedIds()) out[pid] = `${title} — ${this.ix.ui('prep_open')}`;
+        this.logRaw('find', out);
+      }
+      if (this.flag(p.id) && !told[p.id]) {
+        told[p.id] = 1;
+        const out: Partial<Record<PlayerId, string>> = {};
+        for (const pid of this.joinedIds()) out[pid] = `${title}: ${this.ix.ui('prep_done')} ${this.render(p.gives, pid)}`;
+        this.logRaw('find', out);
+      }
+    }
+  }
+
   fail(key: string): Result {
     return { ok: false, err: this.ix.ui(key) };
   }
@@ -252,6 +292,7 @@ export class Game {
   }
 
   bothOnline(): boolean {
+    if (this.s.solo) return this.joinedIds().every((pid) => this.p(pid).online);
     return PLAYER_IDS.every((pid) => this.p(pid).joined && this.p(pid).online);
   }
 
@@ -358,6 +399,18 @@ export class Game {
     if ('weather' in c) return weatherNow(this)?.id === c.weather;
     if ('resident' in c) return !!this.s.residents[c.resident];
     if ('seen' in c) return !!this.s.seenRes[c.seen];
+    if ('past' in c) {
+      const has = (x: PlayerId) => !!this.s.past?.[x]?.flags[c.past];
+      const who = c.who ?? 'me';
+      if (who === 'either') return PLAYER_IDS.some(has);
+      if (who === 'both') return PLAYER_IDS.every(has);
+      if (!pid) return false;
+      return has(who === 'me' ? pid : this.other(pid));
+    }
+    if ('mainFlag' in c) {
+      const v = this.s.mainFlags?.[c.mainFlag] ?? 0;
+      return c.gte === undefined ? v !== 0 : v >= c.gte;
+    }
     return false;
   }
 
@@ -750,6 +803,10 @@ export class Game {
     if (a.once && this.flag(`built:${a.id}`)) return false;
     if (a.oncePerPlayer && this.p(pid).flags[`built:${a.id}`]) return false;
     if (a.visible && !this.test(a.visible, pid)) return false;
+    if (a.prep) {
+      const p = this.ix.preps.get(a.prep);
+      if (!p || this.flag(p.id) || !this.prepOpen(p)) return false;
+    }
     if (this.atLimit(a)) return false;
     return true;
   }
@@ -766,7 +823,7 @@ export class Game {
 
   /** How long the action keeps this hero busy. */
   actionTime(a: ActionDef, pid: PlayerId): number {
-    let t = a.cooldown * this.cooldownMult(this.ix.areaOf(a.group)) * paceOf(this, pid) * (skyFor(this, pid)?.pace ?? 1);
+    let t = a.cooldown * this.cooldownMult(this.ix.areaOf(a.group)) * paceOf(this, pid) * temperPace(this, pid) * (skyFor(this, pid)?.pace ?? 1);
     if (a.skill) {
       const h = heroOf(this, pid);
       const knack = a.knack && a.knack.role === this.p(pid).role ? a.knack.x : 1;
@@ -943,14 +1000,25 @@ export class Game {
   }
 
   proposalBlock(def: SceneDef | PoolActionDef, pid: PlayerId): string | null {
+    if (this.s.solo) return this.soloBlock(def, pid);
     const o = this.p(this.other(pid));
     if (!o.joined || !o.online) return this.ix.ui('err_need_both');
+    if (o.remembering) return this.render(this.ix.ui('partner_remembering'), pid);
     const area = this.proposalArea(def, pid);
     if (o.travel) return `${this.render(this.ix.ui('partner_on_way'), pid)}`;
     if (o.at !== area) return `${this.render(this.ix.ui('partner_now'), pid)} ${this.ix.areaWhere(o.at)}.`;
     if (this.p(pid).fight !== null || o.fight !== null) return this.ix.ui('err_in_fight');
     if (this.s.scene) return this.s.scene.paused ? this.ix.ui('err_scene_paused') : this.ix.ui('err_in_scene');
     if (this.s.proposal) return this.ix.ui('err_proposal_pending');
+    if (def.enabled && !this.test(def.enabled, pid)) return def.disabledHint ? this.render(def.disabledHint, pid) : this.ix.ui('err_not_now');
+    if (!this.hasCostAll(def.cost)) return this.ix.ui('err_cost');
+    return null;
+  }
+
+  /** In a world for one: only one's own state stands in the way. */
+  private soloBlock(def: SceneDef | PoolActionDef, pid: PlayerId): string | null {
+    if (this.p(pid).fight !== null) return this.ix.ui('err_in_fight');
+    if (this.s.scene) return this.ix.ui('err_in_scene');
     if (def.enabled && !this.test(def.enabled, pid)) return def.disabledHint ? this.render(def.disabledHint, pid) : this.ix.ui('err_not_now');
     if (!this.hasCostAll(def.cost)) return this.ix.ui('err_cost');
     return null;
@@ -985,12 +1053,14 @@ export class Game {
     const scene = entry.kind === 'scene' ? entry.def : this.pickFromPool(entry.def.pool);
     if (!scene) return this.fail('err_not_now');
     this.s.proposal = { scene: scene.id, via: def.id, by: pid, at: this.now };
+    // alone, nobody to agree: it begins at once
+    if (this.s.solo) return this.accept(pid);
     return OK;
   }
 
   accept(pid: PlayerId): Result {
     const pr = this.s.proposal;
-    if (!pr || pr.by === pid) return this.fail('err_not_now');
+    if (!pr || (pr.by === pid && !this.s.solo)) return this.fail('err_not_now');
     if (!this.bothOnline()) return this.fail('err_need_both');
     const via = this.ix.entry(pr.via);
     const area = via && via.kind !== 'act' ? this.proposalArea(via.def, pr.by) : this.ix.homeArea;
@@ -1607,6 +1677,9 @@ export class Game {
       case 'perk':
         r = pickPerk(this, pid, cmd.id);
         break;
+      case 'temper':
+        r = spendTemper(this, pid, cmd.id);
+        break;
       case 'fight':
         r = fightChoose(this, pid, cmd.id);
         break;
@@ -1648,6 +1721,9 @@ export class Game {
         break;
       case 'ask':
         r = ask(this, pid, cmd.res, cmd.n);
+        break;
+      case 'hard':
+        r = setHard(this, pid, cmd.on);
         break;
       case 'unask':
         r = unask(this, pid, cmd.id);
@@ -1703,6 +1779,7 @@ export class Game {
     } else if (p.away) {
       // a real absence (not a dropped connection) earns a "while you were away" summary
       if (this.now - p.away.at >= WELCOME_AFTER) p.welcome = p.away;
+      catchUp(this, pid, this.now - p.away.at);
       p.away = null;
     }
     if (!online) {

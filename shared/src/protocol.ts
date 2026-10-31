@@ -31,6 +31,8 @@ export type Command =
   /** Spend a stat point / pick a perk. */
   | { c: 'stat'; id: string }
   | { c: 'perk'; id: string }
+  /** Spend a rank of temper (past the act's level ceiling): hp, carry, pace or gift. */
+  | { c: 'temper'; id: string }
   /** A move in a fight: hit:<uid>, shoot:<uid>, guard, cover, free, lift, use:<item>, flee. */
   | { c: 'fight'; id: string }
   /** Join a fight going on where you stand. */
@@ -55,6 +57,10 @@ export type Command =
   | { c: 'harvest'; bed: number }
   /** The asks board: ask the other to bring n of a thing home; take an ask of mine back. */
   | { c: 'ask'; res: string; n: number }
+  /** Go into one's own past (memories) from the fire at home, or come back. */
+  | { c: 'remember'; on: boolean }
+  /** Propose / agree to the hard road, or turn it off. */
+  | { c: 'hard'; on: boolean }
   | { c: 'unask'; id: number };
 
 export type ClientMsg =
@@ -130,6 +136,10 @@ export interface EntryView {
   spot?: string;
   /** Part of a side errand. */
   quest?: boolean;
+  /** Readies a together scene. */
+  prep?: boolean;
+  /** A together scene that can be readied: how much of it is. */
+  readied?: { n: number; of: number };
   /** What it is for, so a long workplace can be laid out in sections: done together, upkeep, or what it makes. */
   sort?: EntrySort;
   /** The mark for its button: a thing's icon, `spot:` + a spot icon, or (a way out) `@` + the scene it leads to. */
@@ -185,6 +195,8 @@ export interface PartnerView {
   role: Role | null;
   roleTitle: string;
   online: boolean;
+  /** In their own past (memories). */
+  remembering?: boolean;
   area: string;
   where: string;
   busy: { text: string; from: number; until: number } | null;
@@ -423,6 +435,18 @@ export interface HeroView {
   outfits: Array<{ name: string; items: string[] }>;
   /** Gear can be changed only at home. */
   canChange: boolean;
+  /** The highest level of this act (when there is one) and whether it is reached. */
+  cap?: { level: number; reached: boolean };
+  /** Past the ceiling: ranks, experience toward the next, what each kind gives and how much of it is taken. */
+  temper?: {
+    rank: number;
+    points: number;
+    xp: number;
+    next: number;
+    kinds: Array<{ id: string; name: string; text: string; taken: number; most: number | null }>;
+  };
+  /** Experience still counted double (the one behind, back after being away). */
+  catchUp?: number;
 }
 
 export interface BagView {
@@ -474,6 +498,20 @@ export interface QuestView {
   now: string | null;
   /** What came of it (done or closed). */
   outcome?: string;
+}
+
+/** What can be done alone before a together scene (the journal, «До зустрічі»). */
+export interface PrepView {
+  scene: string;
+  title: string;
+  /** Where the scene is begun (a place name), when it has one. */
+  where?: string;
+  items: Array<{ id: string; text: string; role?: Role; mine: boolean; done: boolean; gives?: string }>;
+}
+
+export interface HardView {
+  on: boolean;
+  asked: 'me' | 'mate' | null;
 }
 
 export interface MapNodeView {
@@ -847,6 +885,10 @@ export interface WeatherView {
 
 export interface PlayerView {
   now: number;
+  /** In the main world: whether one can go into one's past now (absent: there is no past for this hero). */
+  memories?: { can: boolean; reason?: string };
+  /** In one's past: its name (the screen is the same, the world is another). */
+  past?: { title: string };
   me: MeView;
   partner: PartnerView;
   day: number;
@@ -861,7 +903,7 @@ export interface PlayerView {
   proposal: ProposalView | null;
   scene: SceneView | null;
   log: LogView[];
-  journal: { clues: ClueView[]; questions: QuestionView[]; people: PersonView[]; quests: QuestView[] };
+  journal: { clues: ClueView[]; questions: QuestionView[]; people: PersonView[]; quests: QuestView[]; preps: PrepView[] };
   actDone: { act: number; text: string } | null;
   welcome: WelcomeView | null;
   summary: SummaryView | null;
@@ -886,6 +928,8 @@ export interface PlayerView {
   larder: LarderView | null;
   /** The asks board: what each asked the other to bring. */
   asks: AskView[];
+  /** The hard road: on, and who proposed it if it waits for an answer (null before the partner joins). */
+  hard: HardView | null;
   bestiary: BeastView[];
   /** Panels opened so far (the interface grows with the game). */
   tabs: string[];

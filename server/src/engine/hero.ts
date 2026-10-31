@@ -1,7 +1,7 @@
 // The hero: levels, skills, gear, the bag. Functions over a Game (they read and change its world).
 import type { GearDef, PlayerId, SkillId, Slot, StatId } from '../../../shared/src/content.js';
 import { SKILLS, SLOTS, STATS } from '../../../shared/src/content.js';
-import { PERK, derive, levelFromXp, perkState, skillLevel, type Derived } from '../../../shared/src/rules.js';
+import { CATCH, PERK, TEMPER, derive, levelFromXp, perkState, skillLevel, temperCost, xpForLevel, type Derived, type TemperKind, type TemperState } from '../../../shared/src/rules.js';
 import type { PlayerState } from '../../../shared/src/state.js';
 import type { Game, Result } from './index.js';
 import { bodyOf, learnOf, regenOf } from './needs.js';
@@ -38,11 +38,34 @@ export function gainSkill(g: Game, pid: PlayerId, s: SkillId, n = 1): void {
   }
 }
 
+/** The highest level of the act the story is in (none: no ceiling). */
+export function levelCap(g: Game): number | undefined {
+  return g.ix.c.hero.caps?.[g.s.meta.act];
+}
+
+/** All experience a hero has earned: levels and temper. */
+export function xpTotal(g: Game, pid: PlayerId): number {
+  const p = g.p(pid);
+  return p.xp + (p.temper?.total ?? 0);
+}
+
 export function gainXp(g: Game, pid: PlayerId, n: number): void {
   const p = g.p(pid);
   if (!p.joined || n <= 0) return;
+  // the one behind, back after being away, learns twice as fast for a while
+  const extra = Math.min(n, p.catchUp ?? 0);
+  if (extra > 0) {
+    p.catchUp = (p.catchUp ?? 0) - extra;
+    n += extra;
+  }
+  // past the ceiling of the act it tempers instead
+  const cap = levelCap(g);
+  const room = cap === undefined ? n : Math.max(0, xpForLevel(cap + 1) - 1 - p.xp);
+  const add = Math.min(n, room);
+  if (n > add) temper(g, pid, n - add, cap!);
+  if (add <= 0) return;
   const before = p.level;
-  p.xp += n;
+  p.xp += add;
   const after = levelFromXp(p.xp);
   if (after <= before) return;
   for (let lv = before + 1; lv <= after; lv++) {
@@ -56,6 +79,63 @@ export function gainXp(g: Game, pid: PlayerId, n: number): void {
   g.logRaw('find', { [pid]: `${g.ix.ui('level_up')} ${after}.` }, pid);
   const other = g.other(pid);
   if (g.p(other).joined) g.logRaw('system', { [other]: g.render(g.ix.ui('level_up_other'), other, pid).replace('{n}', String(after)) }, pid);
+  if (after === cap) g.logRaw('find', { [pid]: g.ix.ui('level_cap') }, pid);
+}
+
+function temper(g: Game, pid: PlayerId, n: number, cap: number): void {
+  const p = g.p(pid);
+  const t: TemperState = (p.temper ??= { xp: 0, total: 0, rank: 0, points: 0, spent: {} });
+  t.xp += n;
+  t.total += n;
+  while (t.xp >= temperCost(cap, t.rank + 1)) {
+    t.xp -= temperCost(cap, t.rank + 1);
+    t.rank += 1;
+    t.points += 1;
+    g.logRaw('find', { [pid]: `${g.ix.ui('temper_up')} ${t.rank}.` }, pid);
+  }
+}
+
+/** A rank of temper spent: a little more health, load or speed (each to its end), or the act's materials. */
+export function spendTemper(g: Game, pid: PlayerId, kind: string): Result {
+  const p = g.p(pid);
+  const t = p.temper;
+  const def = TEMPER.kinds[kind as TemperKind];
+  if (!def || !t || t.points <= 0) return g.fail('err_not_now');
+  const k = kind as TemperKind;
+  if ((t.spent[k] ?? 0) >= def.most) return g.fail('err_not_now');
+  if (k === 'gift') {
+    const gift = g.ix.c.hero.temperGift?.[g.s.meta.act];
+    if (!gift) return g.fail('err_not_now');
+    for (const [r, n] of Object.entries(gift)) g.s.res[r] = Math.min(g.cap(r), (g.s.res[r] ?? 0) + n);
+  }
+  t.spent[k] = (t.spent[k] ?? 0) + 1;
+  t.points -= 1;
+  const oldMax = p.hpMax;
+  refreshHero(g, pid);
+  if (p.hpMax > oldMax) p.hp += p.hpMax - oldMax;
+  return { ok: true };
+}
+
+/** Work time of a tempered hero. */
+export function temperPace(g: Game, pid: PlayerId): number {
+  return 1 - (g.p(pid).temper?.spent.pace ?? 0) * (TEMPER.kinds.pace.by ?? 0);
+}
+
+/**
+ * Back after being away, behind the partner: experience counts double until the gap closes
+ * (CATCH.perHour for each hour away, CATCH.most at once, never past the gap).
+ */
+export function catchUp(g: Game, pid: PlayerId, awayMs: number): void {
+  const p = g.p(pid);
+  const o = g.p(g.other(pid));
+  if (!o.joined) return;
+  const gap = xpTotal(g, g.other(pid)) - xpTotal(g, pid);
+  if (gap <= 0) return;
+  const earned = Math.floor((awayMs / 3_600_000) * CATCH.perHour);
+  const now = Math.min(gap, CATCH.most, (p.catchUp ?? 0) + earned);
+  if (now <= (p.catchUp ?? 0)) return;
+  p.catchUp = now;
+  g.logRaw('find', { [pid]: g.render(g.ix.ui('catch_up'), pid).replace('{n}', String(now)) }, pid);
 }
 
 export function spendPoint(g: Game, pid: PlayerId, stat: string): Result {

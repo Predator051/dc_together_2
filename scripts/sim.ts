@@ -151,6 +151,7 @@ export function simulate(foes: Array<{ enemy: string; n?: number }>, stage: stri
     const party = (['p1', 'p2'] as PlayerId[]).filter((pid) => g.s.players[pid].online);
     lastResult = null;
     const fld = drawn ? fieldFrom(drawn.rows, drawn.ground) : null;
+    if (process.env.HARD) g.s.hard = true;
     const f = startFight(g, 'a_02', foes, { party, scene: true, ...(fld ? { field: fld.field, starts: { heroes: fld.heroes, foes: fld.foes } } : {}) });
     if (elite) makeElite(g, f, f.foes[0]!);
     const bots = { p1: new Bot('p1', content, { seed: i }), p2: new Bot('p2', content, { seed: i + 1 }) };
@@ -205,6 +206,9 @@ const TABLE: Array<{ name: string; foes: Array<{ enemy: string; n?: number }>; s
   { name: '✦ Хапун', foes: [{ enemy: E2.snatcher }], stages: ['E5', 'E6'], who: ['both', 'maker'], elite: true },
   { name: 'Вершники ×2', foes: [{ enemy: E3.rider, n: 2 }], stages: ['E7', 'E8'], who: ['both', 'hunter'] },
   { name: 'Ярема + вершник', foes: [{ enemy: E3.captain }, { enemy: E3.rider }], stages: ['E7', 'E8'], who: ['both'] },
+  // readied alone beforehand (`prep_*`): the ford with one rider, the mound with two wolves, the captain without his rider
+  { name: 'Вершник ×1 (підг.)', foes: [{ enemy: E3.rider, n: 1 }], stages: ['E7'], who: ['both'] },
+  { name: 'Ярема сам (підг.)', foes: [{ enemy: E3.captain }], stages: ['E7', 'E8'], who: ['both'] },
   { name: 'Гак + хапун', foes: [{ enemy: E2.hook }, { enemy: E2.snatcher, n: 1 }], stages: ['E5', 'E6', 'E7'], who: ['both'] },
 ];
 

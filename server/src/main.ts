@@ -1,6 +1,6 @@
 import { createServer, type Server } from 'node:http';
 import { WebSocketServer, type WebSocket } from 'ws';
-import type { Content } from '../../shared/src/content.js';
+import type { Content, Role } from '../../shared/src/content.js';
 import type { ServerMsg } from '../../shared/src/protocol.js';
 import { GameServer, type Conn } from './game-server.js';
 import { staticHandler } from './http.js';
@@ -20,6 +20,8 @@ export interface StartOptions {
   /** A part-one world (raw JSON) to carry over when the world is new. */
   legacy?: unknown;
   log?: (msg: string) => void;
+  /** The heroes' pasts, by role. */
+  pasts?: Partial<Record<Role, Content>>;
 }
 
 export interface Running {
@@ -46,6 +48,7 @@ export async function startServer(o: StartOptions): Promise<Running> {
     seed: o.seed,
     log: o.log,
     legacy: o.legacy,
+    pasts: o.pasts,
   });
 
   const http = createServer(staticHandler(o.clientDir));

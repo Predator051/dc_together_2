@@ -464,6 +464,12 @@ b {
 .pill.errand {
   color: var(--verdigris);
 }
+.pill.prep {
+  color: var(--ochre-ink);
+}
+.pill.prep.full {
+  color: var(--verdigris);
+}
 .pill.new {
   color: var(--cinnabar-ink);
   font-weight: 600;
@@ -1421,6 +1427,89 @@ img.plant-pic {
   font-size: 0.9rem;
 }
 
+/* memories: the way in (at home) and the bar while in them */
+.remember-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--rule-2);
+  border-radius: 10px;
+  background: linear-gradient(90deg, rgba(196, 154, 69, 0.12), transparent 70%);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.remember-btn:not(:disabled):hover {
+  border-color: var(--ochre);
+}
+.remember-btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.remember-btn svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: var(--ochre-ink);
+}
+.remember-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.remember-text small {
+  color: var(--faded);
+  font-size: 0.8rem;
+}
+.top .past-bar {
+  grid-column: 1 / -1;
+}
+.past-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px solid rgba(196, 154, 69, 0.35);
+  border-radius: 8px;
+  background: rgba(196, 154, 69, 0.1);
+}
+.past-title {
+  color: var(--ochre-ink);
+  font-style: italic;
+  letter-spacing: 0.04em;
+}
+.past-back {
+  flex: none;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border: 1px solid var(--ochre);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.past-back:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* the past is seen through a warm haze at the edges */
+.game.in-past::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(70, 45, 15, 0.42) 100%);
+}
+
 /* partner */
 .mate {
   display: flex;
@@ -2186,6 +2275,55 @@ img.plant-pic {
 }
 .quest .quest-outcome {
   color: var(--ink);
+}
+/* preparation: what one can do alone before a together scene */
+.prep-steps {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.prep-steps li {
+  position: relative;
+  padding: 3px 0 3px 1.3em;
+  color: var(--ink-2);
+  font-size: 0.97rem;
+  line-height: 1.55;
+}
+.prep-steps li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 0.62em;
+  height: 0.62em;
+  border: 1.5px solid var(--ochre-ink);
+  border-radius: 2px;
+}
+.prep-steps li.did::before {
+  background: var(--verdigris);
+  border-color: var(--verdigris);
+}
+.prep-steps li.did {
+  color: var(--faded);
+}
+.prep-steps li.prep-mate:not(.did) {
+  color: var(--faded);
+}
+.prep-who {
+  margin-right: 4px;
+  color: var(--ochre-ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.prep-steps li.did .prep-who {
+  color: var(--faded);
+}
+.prep-gives {
+  display: block;
+  color: var(--verdigris);
+  font-style: italic;
 }
 .pill.done {
   color: var(--verdigris);

@@ -224,3 +224,22 @@ Row 2: <5–8>. Row 3: <9–12>. Style: <хвост стиля из bible.md>
 a dark folk-tale survival game: <описание>. The main subject sits in the middle horizontal band (the top and
 bottom fifth will be cropped). No faces shown: people only as small distant figures or seen from behind.»
 + хвост стиля.
+
+## Спогади Майстра (2026-10-31) — проект «Ілюстрації»
+
+Грунты `workshop`, `kryvets` (шаблон шага 4, описания — `grounds.json`), виды `workshop`, `kryvets`
+(шаблон видов, `views.json`), знаки карты — лист marks 7 (`@workshop`, `@kryvets`, остальное пусто),
+лица — лист folk 6 (`pm_h1` + три запасных лица: майстер, господиня, писар — не жители, отброшены).
+Все шесть приняты с первого раза. Сборка запросов — тем же хвостом стиля, что в `bible.md`.
+
+## Спогади Ловця (2026-10-31) — проект «Ілюстрації»
+
+Грунты `hutir`, `brid`, виды `hutir`, `brid`, знаки — лист marks 8 (`@hutir`, `@brid`), лица — folk 7 (`ph_h1` + три
+запасных: поромник, купець, молодий солдат — не жители). Все шесть с первого раза. План острова лёг иначе,
+чем в запросе (хата правее и выше) — точки места подвинуты под рисунок.
+
+## Моменты спогадів (2026-10-31) — проект «Ілюстрації»
+
+Шаблон «Моменты» без изменений, описания — `moments.json` (`pm_s01`, `pm_s08`, `pm_s12`, `ph_s06`, `ph_s12`, `ph_s15`).
+Отправка: поле ввода теперь `div.ProseMirror[contenteditable]` (не `#prompt-textarea`), кнопка «Send» — кликом по ref.
+Шесть чатов параллельно в разных вкладках, скачивание тем же приёмником (`scratchpad/tools/receiver.mjs`).

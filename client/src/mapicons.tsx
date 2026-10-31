@@ -80,6 +80,36 @@ const DRAW: Record<SceneId, () => JSX.Element> = {
       <path class="thin" d="M3 9h18" />
     </>
   ),
+  workshop: () => (
+    <>
+      <path d="M3 20V11l9-6 9 6v9" />
+      <path d="M2.5 20h19" />
+      <path d="M8 20v-4h8v4" />
+      <path class="thin" d="M12 7.5v3M10.5 10.5h3" />
+    </>
+  ),
+  hutir: () => (
+    <>
+      <path d="M2.5 17c3-1.5 6-1.5 9.5 0s6.5 1.5 9.5 0" />
+      <path d="M7 15v-4.5l5-4 5 4V15" />
+      <path class="thin" d="M3 20c2.5-1 4.5-1 7 0M14 20c2.5-1 4.5-1 7 0" />
+    </>
+  ),
+  brid: () => (
+    <>
+      <path d="M2.5 12h19" />
+      <path d="M5 15h14l-1.5 2.5h-11z" />
+      <path class="thin" d="M3 20c3-1 6-1 9 0s6 1 9 0M8 15v-3M16 15v-3" />
+    </>
+  ),
+  kryvets: () => (
+    <>
+      <path d="M4 20v-6l3-2.5 3 2.5v6M13 20V11l3.5-3 3.5 3v9" />
+      <path d="M16.5 8V4.5" />
+      <circle class="thin" cx="16.5" cy="4" r="1.2" />
+      <path d="M2.5 20h19" />
+    </>
+  ),
   town: () => (
     <>
       <path d="M3 20V12.5l4-3 4 3V20" />

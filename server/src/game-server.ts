@@ -2,7 +2,7 @@ import { randomBytes, randomInt } from 'node:crypto';
 import type { WebSocket } from 'ws';
 import type { Content, Gender, PlayerId, Role } from '../../shared/src/content.js';
 import { PLAYER_IDS } from '../../shared/src/content.js';
-import type { ClientMsg, Command, DeltaItem, ErrCode, LobbySlot, ServerMsg } from '../../shared/src/protocol.js';
+import type { ClientMsg, Command, DeltaItem, ErrCode, LobbySlot, PlayerView, ServerMsg } from '../../shared/src/protocol.js';
 import { seedFrom } from '../../shared/src/rng.js';
 import type { WorldState } from '../../shared/src/state.js';
 import { STATE_VERSION } from '../../shared/src/state.js';
@@ -12,6 +12,7 @@ import { buildView } from './engine/view.js';
 import { DEFAULT_LEGACY, extractLegacy, isPartOneWorld, legacyFlags } from './legacy.js';
 import { migrateState, type Migration } from './migrations.js';
 import type { Storage } from './storage.js';
+import { enterPast, leavePast, loadPasts, pastIndex, pastOf, rememberBlock, type Pasts } from './past.js';
 import type { Legacy } from '../../shared/src/state.js';
 
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -44,6 +45,8 @@ export interface GameServerOptions {
   migrations?: Record<number, Migration>;
   /** A part-one world (raw JSON) to carry over into a new world. */
   legacy?: unknown;
+  /** The heroes' pasts, by role (`.design/personal.md` §3). */
+  pasts?: Partial<Record<Role, Content>>;
 }
 
 const ERR_TEXT: Record<ErrCode, string> = {
@@ -59,6 +62,7 @@ const ERR_TEXT: Record<ErrCode, string> = {
 /** Authoritative game room: one world, two player slots, any number of sockets. */
 export class GameServer {
   readonly ix: ContentIndex;
+  readonly pasts: Pasts;
   state: WorldState;
   readonly inviteCode: string;
   private conns = new Set<Conn>();
@@ -71,6 +75,7 @@ export class GameServer {
 
   constructor(private readonly opts: GameServerOptions) {
     this.ix = new ContentIndex(opts.content);
+    this.pasts = pastIndex(opts.pasts);
     this.clock = opts.clock ?? Date.now;
     this.logFn = opts.log ?? (() => {});
     const st = opts.storage;
@@ -100,6 +105,7 @@ export class GameServer {
         this.logFn(`World migrated from version ${from} to ${STATE_VERSION}`);
       }
       this.state = state;
+      loadPasts(this.state, this.pasts, now);
       this.save();
     } else {
       const seed = opts.seed ?? seedFrom(randomBytes(4).toString('hex'));
@@ -155,13 +161,62 @@ export class GameServer {
     return new Game(this.ix, this.state, this.clock());
   }
 
+  /** The world this hero is in now: the main one, or their past. */
+  private gameOf(pid: PlayerId): Game {
+    const ix = this.state.players[pid].remembering ? pastOf(this.pasts, this.state, pid) : undefined;
+    const s = ix ? this.state.past?.[pid] : undefined;
+    return ix && s ? new Game(ix, s, this.clock()) : this.game();
+  }
+
+  private inPast(pid: PlayerId): boolean {
+    return this.gameOf(pid).s !== this.state;
+  }
+
   tick(): void {
     const g = this.game();
-    if (g.tick()) {
-      this.keepCheckpoints(g);
+    let changed = g.tick();
+    if (changed) this.keepCheckpoints(g);
+    for (const pid of PLAYER_IDS) {
+      if (!this.inPast(pid)) continue;
+      if (this.gameOf(pid).tick()) changed = true;
+    }
+    if (changed) {
       this.dirty = true;
       this.broadcast();
     }
+  }
+
+  /** The view of this hero, in whichever world they are, with the way into (or out of) the past. */
+  private viewOf(pid: PlayerId): PlayerView {
+    const g = this.gameOf(pid);
+    const v = buildView(g, pid);
+    if (g.s !== this.state) {
+      v.past = { title: g.ix.c.pastTitle ?? this.ix.ui('past_title') };
+    } else if (pastOf(this.pasts, this.state, pid)) {
+      const block = rememberBlock(g, pid, this.pasts);
+      v.memories = block ? { can: false, reason: g.render(g.ix.ui(block), pid) } : { can: true };
+    }
+    return v;
+  }
+
+  /** Into one's past from the fire, or back. */
+  private remember(pid: PlayerId, on: boolean): string | null {
+    const g = this.game();
+    const ix = pastOf(this.pasts, this.state, pid);
+    const other = g.other(pid);
+    if (on) {
+      const block = rememberBlock(g, pid, this.pasts);
+      if (block) return block;
+      enterPast(this.state, pid, ix!, this.clock(), this.ix.c.storyFlags);
+      g.logRaw('system', { [other]: g.render(g.ix.ui('mate_remembers'), other, pid) }, pid);
+    } else {
+      if (!this.state.players[pid].remembering) return 'err_not_now';
+      const err = leavePast(this.state, pid, ix, this.clock());
+      if (err) return err;
+      g.logRaw('system', { [other]: g.render(g.ix.ui('mate_back_from_past'), other, pid) }, pid);
+    }
+    g.commit();
+    return null;
   }
 
   private changed(): void {
@@ -177,7 +232,7 @@ export class GameServer {
       if (!c.pid || !this.state.players[c.pid].joined) continue;
       let msg = views.get(c.pid);
       if (!msg) {
-        msg = { t: 'view', v: buildView(g, c.pid), rev: this.rev };
+        msg = { t: 'view', v: this.viewOf(c.pid), rev: this.rev };
         views.set(c.pid, msg);
       }
       c.send(msg);
@@ -185,27 +240,29 @@ export class GameServer {
   }
 
   /** Tell everyone what this command added or spent (visible resources only). */
-  private sendDelta(by: PlayerId, before: Record<string, number>, together: boolean): void {
+  private sendDelta(by: PlayerId, before: Record<string, number>, together: boolean, past?: Game): void {
     const items: DeltaItem[] = [];
-    for (const r of this.opts.content.resources) {
+    const s = past?.s ?? this.state;
+    for (const r of (past?.ix.c ?? this.opts.content).resources) {
       if (r.hidden) continue;
-      const n = (this.state.res[r.id] ?? 0) - (before[r.id] ?? 0);
+      const n = (s.res[r.id] ?? 0) - (before[r.id] ?? 0);
       if (n !== 0) items.push({ id: r.id, name: r.name, n, icon: r.icon });
     }
     if (!items.length) return;
     items.sort((a, b) => b.n - a.n);
     const msg: ServerMsg = { t: 'delta', by, together, items };
-    for (const conn of this.conns) if (conn.pid) conn.send(msg);
+    // what moves in a past is seen only by the one remembering
+    for (const conn of this.conns) if (conn.pid && (!past || conn.pid === by)) conn.send(msg);
   }
 
   /** What went into (or out of) the actor's own bag: shown only to them. */
-  private sendBagDelta(_c: Conn, pid: PlayerId, before: Record<string, number>): void {
-    const after = this.state.players[pid].bag;
+  private sendBagDelta(_c: Conn, pid: PlayerId, before: Record<string, number>, past?: Game): void {
+    const after = (past?.s ?? this.state).players[pid].bag;
     const items: DeltaItem[] = [];
     for (const id of new Set([...Object.keys(before), ...Object.keys(after)])) {
       const n = (after[id] ?? 0) - (before[id] ?? 0);
       if (!n) continue;
-      const def = this.opts.content.resources.find((r) => r.id === id);
+      const def = (past?.ix.c ?? this.opts.content).resources.find((r) => r.id === id);
       if (!def || def.hidden) continue;
       items.push({ id, name: def.name, n, icon: def.icon });
     }
@@ -223,7 +280,7 @@ export class GameServer {
 
   private sendView(c: Conn): void {
     if (!c.pid) return;
-    c.send({ t: 'view', v: buildView(this.game(), c.pid), rev: this.rev });
+    c.send({ t: 'view', v: this.viewOf(c.pid), rev: this.rev });
   }
 
   // ----- connections ---------------------------------------------------------
@@ -247,6 +304,8 @@ export class GameServer {
     const online = this.socketsOf(pid) > 0;
     if (this.state.players[pid].online === online) return;
     this.game().setOnline(pid, online);
+    const past = this.state.players[pid].remembering ? pastOf(this.pasts, this.state, pid) : undefined;
+    if (past && this.state.past?.[pid]) new Game(past, this.state.past[pid]!, this.clock()).setOnline(pid, online);
     this.changed();
   }
 
@@ -361,16 +420,24 @@ export class GameServer {
         if (!c.pid) return this.err(c, 'not_authed');
         const cmd = validCommand(msg.cmd);
         if (!cmd) return;
-        const before = { ...this.state.res };
-        const bagBefore = { ...this.state.players[c.pid].bag };
-        const inScene = !!this.state.scene || cmd.c === 'accept';
-        const g = this.game();
+        if (cmd.c === 'remember') {
+          const err = this.remember(c.pid, cmd.on);
+          if (!err) this.changed();
+          const text = err ? this.game().render(this.ix.ui(err), c.pid) : undefined;
+          c.send({ t: 'ack', seq: msg.seq, ok: !err, text, rev: this.rev });
+          return;
+        }
+        const g = this.gameOf(c.pid);
+        const past = g.s !== this.state;
+        const before = { ...g.s.res };
+        const bagBefore = { ...g.s.players[c.pid].bag };
+        const inScene = !!g.s.scene || cmd.c === 'accept';
         const r = g.command(c.pid, cmd);
         this.keepCheckpoints(g);
         if (r.ok) {
           this.changed();
-          this.sendDelta(c.pid, before, inScene || !!this.state.scene);
-          if (cmd.c !== 'pack' && cmd.c !== 'drop') this.sendBagDelta(c, c.pid, bagBefore);
+          this.sendDelta(c.pid, before, inScene || !!g.s.scene, past ? g : undefined);
+          if (cmd.c !== 'pack' && cmd.c !== 'drop') this.sendBagDelta(c, c.pid, bagBefore, past ? g : undefined);
         }
         c.send({ t: 'ack', seq: msg.seq, ok: r.ok, text: r.err, rev: this.rev });
         return;
@@ -431,6 +498,7 @@ function validCommand(cmd: unknown): Command | null {
     case 'eat':
     case 'stat':
     case 'perk':
+    case 'temper':
     case 'fight':
       return typeof c.id === 'string' && c.id.length < 64 ? ({ c: c.c, id: c.id } as Command) : null;
     case 'help':
@@ -450,6 +518,14 @@ function validCommand(cmd: unknown): Command | null {
       const x = cmd as { res?: unknown; n?: unknown };
       if (typeof x.res !== 'string' || x.res.length > 64 || typeof x.n !== 'number' || !Number.isInteger(x.n) || x.n < 1 || x.n > 99) return null;
       return { c: 'ask', res: x.res, n: x.n };
+    }
+    case 'remember': {
+      const x = cmd as { on?: unknown };
+      return typeof x.on === 'boolean' ? { c: 'remember', on: x.on } : null;
+    }
+    case 'hard': {
+      const x = cmd as { on?: unknown };
+      return typeof x.on === 'boolean' ? { c: 'hard', on: x.on } : null;
     }
     case 'unask': {
       const x = cmd as { id?: unknown };
