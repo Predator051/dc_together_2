@@ -1,6 +1,6 @@
 import type { FightEvent } from './state.js';
 import type { Field } from './field.js';
-import type { AmbientKind, SkyKind, FxKind, Gender, PlayerId, Role, LogKind } from './content.js';
+import type { AmbientKind, SkyKind, Season, FxKind, Gender, PlayerId, Role, LogKind } from './content.js';
 import type { CropLook } from './pictures.js';
 
 // ---------- Client -> server ----------
@@ -811,6 +811,12 @@ export interface AmbientView {
   kind: AmbientKind;
   /** The weather over the place (null under a roof or before the weather begins). */
   sky: SkyKind | null;
+  /** The weather now wherever the hero is ('clear' for a plain sky; null before the weather begins). */
+  weather: SkyKind | 'clear' | null;
+  /** Under a roof, in a cave or a cellar: the weather is heard through the walls. */
+  under: boolean;
+  /** The time of year, which living things are heard (null before the weather begins: none). */
+  season: Season | null;
   fire: 'none' | 'warm' | 'low' | 'cold';
   /** Accent of this player's running action. */
   fx: FxKind | null;

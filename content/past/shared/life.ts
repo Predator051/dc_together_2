@@ -77,6 +77,7 @@ export const needsS: NeedsDef = {
 
 export const weatherS: WeatherSetDef = {
   from: met,
+  seasons: [{ season: 'autumn' }],
   span: [15 * MIN, 25 * MIN],
   first: 'ps_w1',
   kinds: [

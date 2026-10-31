@@ -33,7 +33,7 @@ import { HERO_AP, activeFoes, activeId, eliteMark, enemyOf, fid, fightMoves, fig
 import { areaDef, areaKnown, areaOnMap, goBlock, linkTime, routeLegs, routeTo, travelTime, walkOf } from './travel.js';
 import { foodOf, garmentOf, jobYield, larder, rankIn, residentJobs, stateOf, teachBlock, tradeOf, workMult, workingAt } from './household.js';
 import { byFire, campBlock, chillRate, comfortOf, dryOf, eatBlock, restBlock, restLength, tired } from './needs.js';
-import { outside, weatherNow } from './weather.js';
+import { outside, seasonNow, weatherNow } from './weather.js';
 import { eventsView } from './events.js';
 import { asksView } from './asks.js';
 import { bedCount, gardenView } from './garden.js';
@@ -1245,6 +1245,9 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
   const ambient: PlayerView['ambient'] = {
     kind: ambKind,
     sky: roofed ? null : (weatherNow(g)?.sky ?? null),
+    weather: weatherNow(g) ? (weatherNow(g)!.sky ?? 'clear') : null,
+    under: roofed,
+    season: seasonNow(g),
     fire,
     fx,
     partnerFx,

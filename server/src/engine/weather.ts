@@ -1,12 +1,19 @@
 // The weather: one sky over both heroes, turning every quarter of an hour or so of play.
 // Its effects are trade-offs and count only outside: away from home and not under a roof.
-import type { PlayerId, WeatherDef } from '../../../shared/src/content.js';
+import type { PlayerId, Season, WeatherDef } from '../../../shared/src/content.js';
 import type { Game } from './index.js';
 import { areaDef } from './travel.js';
 
 export function weatherOn(g: Game): boolean {
   const w = g.ix.c.weather;
   return !!w && g.test(w.from);
+}
+
+/** The time of year (null before the weather begins). */
+export function seasonNow(g: Game): Season | null {
+  const w = g.ix.c.weather;
+  if (!w || !weatherOn(g)) return null;
+  return (w.seasons ?? []).find((x) => !x.if || g.test(x.if))?.season ?? 'spring';
 }
 
 function kindOf(g: Game, id: string): WeatherDef | undefined {

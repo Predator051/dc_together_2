@@ -87,7 +87,7 @@ class Engine {
   private sky: P[] = [];
   private flash = 0;
   private front: P[] = [];
-  private s: State = { kind: 'snow', sky: null, fire: 'none', fx: null, partnerFx: null, fxUntil: 0, partnerFxUntil: 0, paused: true };
+  private s: State = { kind: 'snow', sky: null, weather: null, under: false, season: null, fire: 'none', fx: null, partnerFx: null, fxUntil: 0, partnerFxUntil: 0, paused: true };
   private raf = 0;
   private last = 0;
   /** Seconds until the next emission, per emitter key. */
@@ -490,6 +490,35 @@ class Engine {
   }
 }
 
+/**
+ * For listening tests only: `?hear=grove,clear,spring,0.8` puts the sound into that place, weather, season
+ * and evening whatever the game says, and `&life=1.5` turns the living things up or down.
+ */
+type Hear = Partial<AmbientView> & { dusk?: number };
+function hearOf(h: string | null): Hear {
+  if (!h) return {};
+  const [kind, weather, season, dusk] = h.split(',');
+  return { kind, weather, season, under: false, fire: 'none', ...(dusk ? { dusk: Number(dusk) } : {}) } as Hear;
+}
+let HEAR: Hear = {};
+let heard: Parameters<typeof sound.set>[0] | null = null;
+try {
+  const q = new URLSearchParams(location.search);
+  const life = Number(q.get('life'));
+  if (life > 0) sound.lifeLevel = life;
+  if (q.has('hear')) {
+    HEAR = hearOf(q.get('hear'));
+    // switch without reloading: bezgominHear('marsh,rain,spring,0', 1.5)
+    (window as unknown as { bezgominHear: (h: string, life?: number) => void }).bezgominHear = (h, life) => {
+      HEAR = hearOf(h);
+      if (life) sound.lifeLevel = life;
+      if (heard) sound.set({ ...heard, ...HEAR });
+    };
+  }
+} catch {
+  /* no listening test */
+}
+
 function reducedMotion(): boolean {
   try {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -538,8 +567,9 @@ export function Ambient({
 
   useEffect(() => {
     engine.current?.set({ ...a, paused });
-    sound.set({ ...a, scene: paused, mood, dusk });
-  }, [a.kind, a.sky, a.fire, a.fx, a.partnerFx, paused, mood, Math.round(dusk * 10)]);
+    heard = { ...a, scene: paused, mood, dusk };
+    sound.set({ ...heard, ...HEAR });
+  }, [a.kind, a.sky, a.weather, a.under, a.season, a.fire, a.fx, a.partnerFx, paused, mood, Math.round(dusk * 10)]);
 
   return (
     <>

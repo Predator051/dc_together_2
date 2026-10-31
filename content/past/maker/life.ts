@@ -106,6 +106,7 @@ export const bedM: ActionDef = {
 
 export const weatherM: WeatherSetDef = {
   from: inside,
+  seasons: [{ if: spring, season: 'spring' }, { season: 'autumn' }],
   span: [15 * MIN, 25 * MIN],
   first: 'pm_w1',
   kinds: [
