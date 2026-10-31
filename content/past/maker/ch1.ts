@@ -100,6 +100,7 @@ export const actionsM1: ActionDef[] = [
   },
   {
     id: 'pm_x03',
+    icon: 'driedfish',
     group: PL.bank,
     spot: 'fish',
     label: 'Вудити з кладок',
@@ -125,6 +126,7 @@ export const actionsM1: ActionDef[] = [
   },
   {
     id: 'pm_x05',
+    icon: 'food',
     group: PL.oaks,
     spot: 'berry',
     label: 'Збирати ожину',
@@ -199,13 +201,13 @@ export const actionsM1: ActionDef[] = [
     icon: 'coin',
     group: PL.market,
     spot: 'stalls',
-    label: 'Продати рибу',
+    label: 'Продати харчі перекупці',
     cost: { [PR.food]: 3 },
     yield: { [PR.coin]: 1 },
     cooldown: 4 * SEC,
     kind: 'trade',
-    busy: 'продає рибу',
-    log: { self: 'Перекупка дає мало, зате одразу.', other: '{name} продає рибу.' },
+    busy: 'продає харчі',
+    log: { self: 'Перекупка дає мало, зате одразу.', other: '{name} продає харчі.' },
   },
   // ------------------------------------------------------------------ the workshop
   {

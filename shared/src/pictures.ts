@@ -90,5 +90,6 @@ export const ITEM_ICONS = [
   'garlic', 'beet', 'seeds', 'flax', 'pumpkin', 'borscht',
   'billhook', 'mattock', 'rake', 'weir', 'sickle', 'hoe',
   'hay', 'axle', 'wagon', 'oxen', 'burka', 'pike',
+  'wheel', 'chain', 'padlock', 'charkey', 'horseshoe', 'copper', 'cradle', 'chest', 'hoops', 'hinges', 'stake', 'bolt',
 ] as const;
 export type ItemIcon = (typeof ITEM_ICONS)[number];
