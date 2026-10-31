@@ -2,14 +2,14 @@
 // the client must draw every one of them (its tables are typed by these lists).
 
 /** Grounds of the drawn plans of places. */
-export const SCENES = ['yard', 'shore', 'reeds', 'saltflat', 'brine', 'grove', 'dyke', 'causeway', 'road', 'town', 'bog', 'isle', 'willow', 'quarry'] as const;
+export const SCENES = ['yard', 'shore', 'reeds', 'saltflat', 'brine', 'grove', 'dyke', 'causeway', 'road', 'town', 'bog', 'isle', 'willow', 'quarry', 'workshop', 'kryvets'] as const;
 export type SceneId = (typeof SCENES)[number];
 
 /** The heroes as the players see them: role and gender (a look for each pair the game may meet). */
 export const HEROES = ['maker-m', 'hunter-f', 'maker-f', 'hunter-m'] as const;
 
 /** Residents with a painted face, in the order of their pictures. */
-export const FOLK = ['h_01', 'h_02', 'h_03', 'h_04', 'h_05', 'h_06', 'h_07', 'h_08', 'h_09', 'h_10', 'h_11', 'h_12', 'h_13', 'h_14', 'h_15', 'h_16'] as const;
+export const FOLK = ['h_01', 'h_02', 'h_03', 'h_04', 'h_05', 'h_06', 'h_07', 'h_08', 'h_09', 'h_10', 'h_11', 'h_12', 'h_13', 'h_14', 'h_15', 'h_16', 'pm_h1'] as const;
 
 /** Key shared scenes with a painting of their own moment (no faces: places, things, figures from afar). */
 export const MOMENTS = ['s_01', 's_06', 's_07', 's_15', 's_16', 's_31', 's_37', 's_42', 's_47', 's_104', 's_108'] as const;

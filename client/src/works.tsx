@@ -161,7 +161,7 @@ const SORTS: Array<[EntrySort, string]> = [
 /** The mark of a work: what it gives, the place a way leads to, two for a joint one, else the place's. */
 function workMark(e: EntryView, place: string): JSX.Element {
   if (e.icon) return markOf(e.icon) ?? <Thing icon={e.icon} />;
-  return e.kind === 'scene' || e.kind === 'pool' ? <IconPair /> : picture(place);
+  return (e.kind === 'scene' || e.kind === 'pool') && e.together ? <IconPair /> : picture(place);
 }
 
 /** Stacks on a crowded painting come in the order of the list's sections. */

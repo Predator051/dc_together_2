@@ -99,7 +99,7 @@ export function groupSpots(groups: GroupView[], body: (g: GroupView) => JSX.Elem
       name: g.name,
       ...at,
       ready: g.id === 'paths' ? 0 : g.entries.filter((e) => e.enabled && e.kind !== 'go').length,
-      together: g.entries.some((e) => e.enabled && (e.kind === 'scene' || e.kind === 'pool')),
+      together: g.entries.some((e) => e.enabled && !!e.together && (e.kind === 'scene' || e.kind === 'pool')),
       keys: [g.id, ...g.entries.filter((e) => e.kind !== 'go').map((e) => `${g.id}:${e.id}`)],
       ...(g.progress ? { progress: { n: g.progress.n, max: g.progress.max } } : {}),
       body: () => body(g),

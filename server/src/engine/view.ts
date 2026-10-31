@@ -152,7 +152,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         reason: shownReason(g, reason),
         cost: costView(g, sc.cost),
         gain: sceneGains(g, sc, pid),
-        together: true,
+        together: !g.s.solo,
         sort: 'pair',
         ...(sc.spot ? { spot: sc.spot } : {}),
         ...(sc.quest ? { quest: true } : {}),
@@ -172,7 +172,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
         hint: pool.hint ? g.render(pool.hint, pid) : undefined,
         cost: costView(g, pool.cost),
         gain: sceneGains(g, pool, pid),
-        together: true,
+        together: !g.s.solo,
         sort: 'pair',
         ...(pool.spot ? { spot: pool.spot } : {}),
       });
@@ -282,7 +282,7 @@ function pathEntries(g: Game, pid: PlayerId): EntryView[] {
         reason: shownReason(g, reason),
         cost: costView(g, sc.cost),
         gain: sceneGains(g, sc, pid),
-        together: true,
+        together: !g.s.solo,
       });
     }
   }

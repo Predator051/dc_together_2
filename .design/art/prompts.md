@@ -224,3 +224,10 @@ Row 2: <5–8>. Row 3: <9–12>. Style: <хвост стиля из bible.md>
 a dark folk-tale survival game: <описание>. The main subject sits in the middle horizontal band (the top and
 bottom fifth will be cropped). No faces shown: people only as small distant figures or seen from behind.»
 + хвост стиля.
+
+## Спогади Майстра (2026-10-31) — проект «Ілюстрації»
+
+Грунты `workshop`, `kryvets` (шаблон шага 4, описания — `grounds.json`), виды `workshop`, `kryvets`
+(шаблон видов, `views.json`), знаки карты — лист marks 7 (`@workshop`, `@kryvets`, остальное пусто),
+лица — лист folk 6 (`pm_h1` + три запасных лица: майстер, господиня, писар — не жители, отброшены).
+Все шесть приняты с первого раза. Сборка запросов — тем же хвостом стиля, что в `bible.md`.

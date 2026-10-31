@@ -197,6 +197,8 @@ const RECIPES: Record<SceneId | 'plain', { ground: string; strokes: Stroke[] }> 
   isle: { ground: 'grass', strokes: [bank('left', [0, 1], 0.1), bank('right', [0, 1], 0.1), stands('tree', [1, 2], [2, 3]), stands('bush', [1, 1], [1, 2])] },
   willow: { ground: 'grass', strokes: [stream(), fringe('reeds', 0.25), fringe('tree', 0.12)] },
   plain: { ground: 'grass', strokes: [scatter('rock', [1, 2]), stands('bush', [1, 2], [1, 2])] },
+  workshop: { ground: 'grass', strokes: [stretch('fence', [1, 2], [2, 3]), scatter('log', [1, 2]), scatter('crate', [0, 1]), scatter('tree', [0, 1])] },
+  kryvets: { ground: 'cobble', strokes: [stretch('wall', [1, 2], [2, 3]), scatter('barrel', [1, 2]), scatter('cart', [0, 1]), scatter('crate', [1, 2])] },
   quarry: { ground: 'sand', strokes: [scatter('rock', [2, 3]), scatter('cart', [0, 1]), scatter('crate', [1, 2]), stands('bush', [0, 1], [1, 2])] },
 };
 
