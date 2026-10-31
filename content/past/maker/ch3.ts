@@ -55,7 +55,7 @@ export const actionsM3: ActionDef[] = [
   },
   {
     id: 'pm_x72',
-    icon: 'driedfish',
+    icon: 'food',
     group: PL.shop,
     spot: 'hearth',
     label: 'Носити їжу в схованку',

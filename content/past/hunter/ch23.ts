@@ -149,7 +149,7 @@ export const actionsH3: ActionDef[] = [
 
 actionsH3.push({
   id: 'ph_x52',
-  icon: 'driedfish',
+  icon: 'food',
   group: HL.reeds,
   spot: 'osier',
   label: 'Носити їжу тим, хто ховається на гривах',

@@ -273,6 +273,7 @@ export const actionsH4: ActionDef[] = [
   },
   {
     id: 'ph_x56',
+    icon: 'osier',
     group: HL4.ridges,
     spot: 'nests',
     label: 'Ставити силки на гривах',
@@ -356,6 +357,7 @@ export const actionsH4: ActionDef[] = [
   },
   {
     id: 'ph_x61',
+    icon: 'bow',
     group: HL4.ravine,
     spot: 'game',
     label: 'Полювати на звіриній стежці',

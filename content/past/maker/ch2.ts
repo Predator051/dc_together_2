@@ -46,7 +46,7 @@ export const actionsM2: ActionDef[] = [
     cooldown: 6 * SEC,
     kind: 'trade',
     busy: 'міняється з обозниками',
-    log: { self: 'Обозники віддають вугілля за рибу: вугілля в них повно, а їсти нема чого.', other: '{name} міняється з обозниками.' },
+    log: { self: 'Обозники віддають вугілля за харчі: вугілля в них повно, а їсти нема чого.', other: '{name} міняється з обозниками.' },
   },
   ...order({
     n: 9,
@@ -234,7 +234,7 @@ export const scenesM2: SceneDef[] = [
         mode: 'each',
         text: 'Біженці стоять біля церкви, і ніхто не знає, куди їх діти.',
         options: [
-          { id: 'feed', label: 'Віддати їм свою рибу й привести до Явдохи', enabled: { res: PR.food, gte: 4 }, disabledHint: 'Треба хоч чотири рибини.', effects: [{ take: { [PR.food]: 4 } }, { set: 'pm_refugees_fed' }] },
+          { id: 'feed', label: 'Віддати їм свої харчі й привести до Явдохи', enabled: { res: PR.food, gte: 4 }, disabledHint: 'Треба хоч чотири рибини.', effects: [{ take: { [PR.food]: 4 } }, { set: 'pm_refugees_fed' }] },
           { id: 'tell', label: 'Сказати, де пристань: там ще годують', effects: [{ set: 'pm_refugees_told' }] },
         ],
         next: 'n5',

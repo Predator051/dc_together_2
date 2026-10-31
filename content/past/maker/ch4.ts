@@ -475,6 +475,7 @@ export const actionsM4: ActionDef[] = [
   },
   {
     id: 'pm_x95',
+    icon: 'honey',
     group: PL4.bees,
     spot: 'hives',
     label: 'Брати мед із покинутих вуликів',
