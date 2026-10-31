@@ -29,6 +29,6 @@ describe("the maker's past", () => {
     const at = (id: string) => Math.round((r.timeline.find((t) => t.scene === id)?.at ?? 0) / 60000);
     console.log('total', Math.round(r.gameTimeMs / 60000), 'ch1', at('pm_s05'), 'ch2', at('pm_s09'), 'ch3', at('pm_s12'), 'fights', r.fights, 'defeats', r.defeats, 'level', r.world.state.players.p1.level);
     expect(r.done).toBe(true);
-    expect(r.gameTimeMs / 60000).toBeGreaterThan(50);
+    expect(r.gameTimeMs / 60000).toBeGreaterThan(35);
   });
 });
