@@ -237,3 +237,9 @@ bottom fifth will be cropped). No faces shown: people only as small distant figu
 Грунты `hutir`, `brid`, виды `hutir`, `brid`, знаки — лист marks 8 (`@hutir`, `@brid`), лица — folk 7 (`ph_h1` + три
 запасных: поромник, купець, молодий солдат — не жители). Все шесть с первого раза. План острова лёг иначе,
 чем в запросе (хата правее и выше) — точки места подвинуты под рисунок.
+
+## Моменты спогадів (2026-10-31) — проект «Ілюстрації»
+
+Шаблон «Моменты» без изменений, описания — `moments.json` (`pm_s01`, `pm_s08`, `pm_s12`, `ph_s06`, `ph_s12`, `ph_s15`).
+Отправка: поле ввода теперь `div.ProseMirror[contenteditable]` (не `#prompt-textarea`), кнопка «Send» — кликом по ref.
+Шесть чатов параллельно в разных вкладках, скачивание тем же приёмником (`scratchpad/tools/receiver.mjs`).
