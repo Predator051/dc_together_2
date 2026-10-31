@@ -15,7 +15,9 @@ describe("the hunter's past", () => {
     console.log('minutes', Math.round(r.gameTimeMs / 60000), 'fights', r.fights, 'defeats', r.defeats, 'level', r.world.state.players.p1.level, 'scenes', r.scenes.join(' '));
     expect(r.done).toBe(true);
     // the bots' busy time; a person takes about two and a half times longer, and reads the scenes
-    expect(r.gameTimeMs / 60000).toBeGreaterThan(12);
+    // with the needs a rested hero works a tenth faster and a fed one loses fewer fights: the bots' busy
+    // time is shorter, while a person spends more (eating, cooking, resting, the events' cards)
+    expect(r.gameTimeMs / 60000).toBeGreaterThan(10);
     expect(r.gameTimeMs / 60000).toBeLessThan(45);
   });
 
@@ -29,7 +31,9 @@ describe("the hunter's past", () => {
     const at = (id: string) => Math.round((r.timeline.find((t) => t.scene === id)?.at ?? 0) / 60000);
     console.log('total', Math.round(r.gameTimeMs / 60000), 'ch1', at('ph_s07'), 'ch2', at('ph_s12'), 'ch3', at('ph_s15'), 'fights', r.fights, 'defeats', r.defeats, 'level', r.world.state.players.p1.level);
     expect(r.done).toBe(true);
-    expect(r.gameTimeMs / 60000).toBeGreaterThan(30);
+    // with the needs a rested hero works a tenth faster and a fed one loses fewer fights: the bots' busy
+    // time is shorter, while a person spends more (eating, cooking, resting, the events' cards)
+    expect(r.gameTimeMs / 60000).toBeGreaterThan(25);
   });
   it('chapter four, after the first three, when the story is at act four: the road north', { timeout: 600_000 }, () => {
     const w = new World(1, hunterPast);

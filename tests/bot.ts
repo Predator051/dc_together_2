@@ -825,7 +825,8 @@ export class Bot {
     const y = Object.keys(a.yield ?? {});
     for (const id of y) {
       const def = g.ix.res.get(id);
-      if (def?.kind === 'use') return (g.s.res[id] ?? 0) < 4;
+      // what is carried counts too: dishes cooked away from home go into the bag
+      if (def?.kind === 'use') return g.stockAll(id) < 4;
     }
     if (!y.length) return true;
     return y.some((id) => {

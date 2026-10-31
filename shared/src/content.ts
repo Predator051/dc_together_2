@@ -914,6 +914,8 @@ export interface NeedsDef {
   /** Burnt for a campfire away from home (from the bag), and what lights it (owned). */
   campWood: string;
   campLight?: string;
+  /** Places away from home where a fire stands by itself while the condition holds (a camp of others). */
+  fires?: Record<string, Cond>;
 }
 
 /**
@@ -1063,6 +1065,8 @@ export interface WeatherSetDef {
 }
 
 export interface StoveDef {
+  /** While this holds someone else keeps the home fire burning (a household in a memory): always warm. */
+  kept?: Cond;
   /** Burn time of one log, ms. */
   perWood: number;
   maxWood: number;

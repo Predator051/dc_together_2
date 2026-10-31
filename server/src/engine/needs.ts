@@ -82,6 +82,8 @@ export function byFire(g: Game, pid: PlayerId): 'home' | 'low' | 'camp' | null {
     const st = g.stoveState();
     return st === 'warm' ? 'home' : st === 'low' ? 'low' : null;
   }
+  const stands = g.ix.c.needs?.fires?.[p.at];
+  if (stands && g.test(stands, pid)) return 'camp';
   return (g.s.fires?.[p.at] ?? 0) > g.now ? 'camp' : null;
 }
 

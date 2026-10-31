@@ -15,6 +15,7 @@ export const resourcesH: ResourceDef[] = [
     name: 'Риба й дичина',
     order: 3,
     kind: 'food',
+    meal: { hp: 2, minutes: 8 },
     cap: 24,
     weight: 0.5,
     use: { heal: 5, anywhere: true, label: 'Поїсти', log: { self: 'Копчена риба з Сидорової коптильні. Солона, тверда, добра.', other: '{name} їсть.' } },

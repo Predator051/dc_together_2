@@ -43,7 +43,9 @@ describe("the maker's past", () => {
     console.log('chapter four', Math.round(ch4), 'defeats', r.defeats, 'level', r.world.state.players.p1.level);
     expect(r.done).toBe(true);
     // about an hour for a person: the bots' busy time is two and a half times shorter
-    expect(ch4).toBeGreaterThan(12);
+    // with the needs a rested hero works a tenth faster and a fed one loses fewer fights: the bots' busy
+    // time is shorter, while a person spends more (eating, cooking, resting, the events' cards)
+    expect(ch4).toBeGreaterThan(10);
     expect(ch4).toBeLessThan(60);
     // the road leaves home behind: the hero ends far from it, on the third sheet of the map
     expect(r.world.state.players.p1.at).not.toBe('pm_a1');
