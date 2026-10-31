@@ -490,6 +490,21 @@ export function Game({ s }: { s: NetState }) {
           </span>
         </button>
       )}
+      {v.together && v.atHome && !v.past && (
+        <button
+          type="button"
+          class="remember-btn together"
+          disabled={locked || !v.together.can}
+          title={v.together.reason}
+          onClick={() => net.send({ c: 'remember', on: true, together: true })}
+        >
+          <IconFlame />
+          <span class="remember-text">
+            <b>{T.rememberTogether}</b>
+            <small>{v.together.can ? (v.together.mateIn ? T.rememberTogetherMate.replace('{name}', v.partner.name) : T.rememberTogetherHint) : v.together.reason}</small>
+          </span>
+        </button>
+      )}
       {!v.past && <AsksStrip v={v} locked={locked} desktop={desktop} />}
       {v.needs && <NeedsBar v={v} offset={s.offset} open={needsShown} onOpen={() => setNeedsOpen(!needsOpen)} />}
       {needsShown && <NeedsSheet v={v} offset={s.offset} desktop={desktop} locked={locked} onClose={() => setNeedsOpen(false)} />}
@@ -571,7 +586,7 @@ export function Game({ s }: { s: NetState }) {
           <SoundToggle />
           <span class={`net ${s.connected ? 'ok' : 'bad'}`} title={s.connected ? T.onlineDot : T.offlineDot} />
         </div>
-        {!v.past && <Partner v={v} now={now} offset={s.offset} />}
+        {(!v.past || v.past.shared) && <Partner v={v} now={now} offset={s.offset} />}
         {!s.connected && s.lost && <div class="warn-bar">{T.reconnecting}</div>}
         {v.past && (
           <div class="past-bar">

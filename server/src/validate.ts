@@ -92,6 +92,8 @@ function nodeEffects(n: SceneNode): Effect[] {
       for (const a of r.acts ?? []) list.push(...(a.effects ?? []));
     }
   if (n.type === 'choice') for (const o of n.options) list.push(...(o.effects ?? []));
+  // posts held are written by the squad itself
+  if (n.type === 'squad') for (const p of n.posts) list.push({ set: `post_${p.id}` }, { set: `post_${p.id}_good` });
   return effectsOf(list);
 }
 
@@ -225,7 +227,8 @@ export function validateContent(c: Content): Report {
 
   // flags of the legacy are written by the server when part one is carried over
   // `main_act` is written into a past by the server (`server/src/past.ts`)
-  const isWritten = (f: string) => written.has(f) || f.startsWith('legacy') || f === 'main_act';
+  // in a shared past, what each hero lived through alone (ph_…, pm_…) is copied in by the server
+  const isWritten = (f: string) => written.has(f) || f.startsWith('legacy') || f === 'main_act' || (!!c.sharedOpens && /^p[hm]_/.test(f));
   const checkCond = (where: string, cond: Cond | undefined) => {
     for (const x of condsOf(cond)) {
       if ('flag' in x && !isWritten(x.flag)) err(`${where}: reads flag "${x.flag}" that is never set`);
@@ -247,7 +250,7 @@ export function validateContent(c: Content): Report {
       if ('weather' in x && !c.weather?.kinds.some((k) => k.id === x.weather)) err(`${where}: unknown weather ${x.weather}`);
       if ('resident' in x && !residentIds.has(x.resident)) err(`${where}: unknown resident ${x.resident}`);
       if ('seen' in x && !res.has(x.seen)) err(`${where}: unknown resource ${x.seen}`);
-      if ('past' in x && !/^p[hm]_/.test(x.past)) err(`${where}: a past's flag is named ph_… (the hunter's) or pm_… (the maker's): ${x.past}`);
+      if ('past' in x && !/^p[hms]_/.test(x.past)) err(`${where}: a past's flag is named ph_… (the hunter's), pm_… (the maker's) or ps_… (the shared): ${x.past}`);
     }
   };
   const checkEffects = (where: string, effs: Effect[], inScene: boolean) => {
@@ -257,6 +260,8 @@ export function validateContent(c: Content): Report {
       if ('take' in e) checkRes(where, e.take);
       if ('clue' in e && !clues.has(e.clue)) err(`${where}: unknown clue ${e.clue}`);
       if ('mystery' in e && !mysteries.has(e.mystery)) err(`${where}: unknown mystery ${e.mystery}`);
+      // a mystery has words for levels 0–4 (ui level_N)
+      if ('mystery' in e && (e.level < 0 || !c.ui[`level_${e.level}`])) err(`${where}: no words for mystery level ${e.level}`);
       if ('moveTo' in e && !areas.has(e.moveTo)) err(`${where}: unknown area ${e.moveTo}`);
       if (('rel' in e && !npcs.has(e.rel)) || ('meet' in e && !npcs.has(e.meet))) err(`${where}: unknown npc`);
       if ('scene' in e) {
@@ -467,6 +472,7 @@ export function validateContent(c: Content): Report {
   // Map
   for (const a of c.areas) {
     const w = `area ${a.id}`;
+    if (a.refuge && !areaIds.has(a.refuge)) err(`${w}: refuge is an unknown area ${a.refuge}`);
     for (const l of a.links ?? []) {
       if (!areaIds.has(l.to)) err(`${w}: link to unknown area ${l.to}`);
       if (!(l.time > 0)) err(`${w}: link time must be positive`);
@@ -484,10 +490,11 @@ export function validateContent(c: Content): Report {
     if (a.foes?.length && !a.ambush) warnings.push(`${w}: has foes but no ambush chance`);
   }
   if (c.areas.filter((a) => a.home).length > 1) err('map: only one home');
-  // every place is linked to the map
+  // every place is linked to the map — to home, or to a refuge (a region of its own, reached by a scene's move)
   if (c.areas.some((a) => a.pos)) {
-    const seenA = new Set<string>([c.areas[0]!.id]);
-    const st = [c.areas[0]!.id];
+    const roots = [c.areas[0]!.id, ...new Set(c.areas.flatMap((a) => (a.refuge ? [a.refuge] : [])))];
+    const seenA = new Set<string>(roots);
+    const st = [...roots];
     while (st.length) {
       const id = st.pop()!;
       for (const b of c.areas) {
@@ -683,6 +690,16 @@ export function validateContent(c: Content): Report {
         for (const b of n.bonus ?? []) checkCond(nw, b.if);
         if (n.light < 1) err(`${nw}: no light to start with`);
       }
+      if (n.type === 'squad') {
+        if (!n.posts.length) err(`${nw}: no posts`);
+        const postIds = new Set<string>();
+        for (const p of n.posts) {
+          if (postIds.has(p.id)) err(`${nw}: duplicate post ${p.id}`);
+          postIds.add(p.id);
+          for (const r of p.good ?? []) if (!c.residents.some((x) => x.id === r)) err(`${nw}: unknown resident ${r}`);
+        }
+      }
+      if (n.type === 'fight') for (const a of n.aid ?? []) checkCond(nw, a.if);
       if (n.type === 'operation') {
         const ids = new Set(n.tracks.map((t) => t.id));
         const known = (k: string) => ids.has(k) || err(`${nw}: unknown track ${k}`);

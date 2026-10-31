@@ -58,7 +58,7 @@ export type Command =
   /** The asks board: ask the other to bring n of a thing home; take an ask of mine back. */
   | { c: 'ask'; res: string; n: number }
   /** Go into one's own past (memories) from the fire at home, or come back. */
-  | { c: 'remember'; on: boolean }
+  | { c: 'remember'; on: boolean; together?: boolean }
   /** Propose / agree to the hard road, or turn it off. */
   | { c: 'hard'; on: boolean }
   | { c: 'unask'; id: number };
@@ -197,6 +197,8 @@ export interface PartnerView {
   online: boolean;
   /** In their own past (memories). */
   remembering?: boolean;
+  /** In the past the two share. */
+  together?: boolean;
   area: string;
   where: string;
   busy: { text: string; from: number; until: number } | null;
@@ -243,7 +245,7 @@ export interface SceneView {
   paused: boolean;
   pausedText?: string;
   blocks: SceneBlock[];
-  kind: 'text' | 'choice' | 'combat' | 'delve' | 'stealth' | 'operation' | 'fight';
+  kind: 'text' | 'choice' | 'combat' | 'delve' | 'stealth' | 'operation' | 'fight' | 'squad';
   mode?: 'joint' | 'each' | 'any';
   button?: string;
   options?: OptionView[];
@@ -266,6 +268,7 @@ export interface SceneView {
   delve?: DelveView;
   stealth?: StealthView;
   operation?: OperationView;
+  squad?: SquadView;
   /** Hand signs: mine and the partner's latest. */
   signs?: { mine?: string; partner?: string; fresh: boolean };
 }
@@ -309,6 +312,13 @@ export interface DelveView {
   acts: Array<{ id: string; label: string; light: number; enabled: boolean; reason?: string; gives?: string }>;
   canLeave: boolean;
   lines: string[];
+}
+
+export interface SquadView {
+  posts: Array<{ id: string; label: string; text: string; who?: string }>;
+  folk: Array<{ id: string; name: string; post?: string; good: string[]; hurt: boolean }>;
+  myReady: boolean;
+  partnerReady: boolean;
 }
 
 export interface OperationView {
@@ -887,8 +897,10 @@ export interface PlayerView {
   now: number;
   /** In the main world: whether one can go into one's past now (absent: there is no past for this hero). */
   memories?: { can: boolean; reason?: string };
+  /** In the main world: whether the two can go into the past they share (absent: not open yet). */
+  together?: { can: boolean; reason?: string; mateIn: boolean };
   /** In one's past: its name (the screen is the same, the world is another). */
-  past?: { title: string };
+  past?: { title: string; shared?: boolean };
   me: MeView;
   partner: PartnerView;
   day: number;

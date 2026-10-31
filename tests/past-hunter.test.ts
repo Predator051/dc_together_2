@@ -31,4 +31,21 @@ describe("the hunter's past", () => {
     expect(r.done).toBe(true);
     expect(r.gameTimeMs / 60000).toBeGreaterThan(30);
   });
+  it('chapter four, after the first three, when the story is at act four: the road north', { timeout: 600_000 }, () => {
+    const w = new World(1, hunterPast);
+    w.state.solo = true;
+    w.join('Оксана', 'f', 'hunter');
+    w.state.flags.main_act = 4;
+    const r = autoplay({}, {}, { from: w, solo: { content: hunterPast, role: 'hunter' }, until: (x) => !!x.state.flags.ph_ch4_done && !x.state.scene, maxSteps: 160000, stallLimit: 8000 });
+    if (!r.done) console.log(r.reason, show(r.world));
+    const at = (id: string) => (r.timeline.find((t) => t.scene === id)?.at ?? 0) / 60000;
+    const ch4 = r.gameTimeMs / 60000 - at('ph_s15');
+    console.log('chapter four', Math.round(ch4), 'defeats', r.defeats, 'level', r.world.state.players.p1.level);
+    expect(r.done).toBe(true);
+    // about an hour for a person: the bots' busy time is two and a half times shorter
+    expect(ch4).toBeGreaterThan(12);
+    expect(ch4).toBeLessThan(60);
+    // the road leaves home behind: the hero ends far from it, on the third sheet of the map
+    expect(r.world.state.players.p1.at).not.toBe('ph_a1');
+  });
 });

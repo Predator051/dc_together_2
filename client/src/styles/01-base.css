@@ -3706,3 +3706,90 @@ mark {
     font-size: 1.1rem;
   }
 }
+
+/* ---------- the household goes along: posts ---------- */
+.squad {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.squad-post {
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: rgba(230, 217, 188, 0.03);
+}
+.squad-post.held {
+  border-color: rgba(196, 154, 69, 0.45);
+  background: var(--ochre-wash);
+}
+.squad-post-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+  font-family: var(--sans);
+}
+.squad-post-head b {
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+.squad-post-head span {
+  font-size: 0.82rem;
+  color: var(--faded);
+}
+.squad-folk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.squad-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 3px 10px 3px 3px;
+  border: 1px solid var(--rule-2);
+  border-radius: 999px;
+  background: var(--leaf);
+  color: var(--ink-2);
+  font: 500 0.85rem/1 var(--sans);
+  cursor: pointer;
+}
+.squad-chip.on {
+  border-color: var(--ochre);
+  background: var(--leaf-2);
+  color: var(--ink);
+}
+.squad-chip.elsewhere {
+  opacity: 0.55;
+}
+.squad-chip:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.squad-face {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--page);
+  font: 600 0.95rem/1 var(--serif);
+  color: var(--ink-2);
+}
+.squad-face.painted {
+  background-position: center 30%;
+  background-size: cover;
+}
+.squad-good {
+  font-style: normal;
+  color: var(--ochre-ink);
+}
+.squad-note {
+  margin: 0;
+  font: 0.82rem/1.4 var(--sans);
+  color: var(--faded);
+}

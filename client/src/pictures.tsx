@@ -852,6 +852,8 @@ const GROUNDS: Record<SceneId, (p: { warm: boolean }) => JSX.Element> = {
   kryvets: Town,
   hutir: Isle,
   brid: Shore,
+  ashtown: Town,
+  ashisle: Isle,
   bog: Bog,
   isle: Isle,
   willow: Willow,
@@ -903,6 +905,9 @@ const LIFE: Record<SceneId, Life[]> = {
   kryvets: [{ kind: 'smoke', x: 30, y: 8 }, { kind: 'smoke', x: 70, y: 70 }, { kind: 'birds', y: 10 }],
   hutir: [{ kind: 'smoke', x: 50, y: 16, warm: true }, { kind: 'water', x: 0, y: 80, w: 100, h: 20 }, { kind: 'birds', y: 8 }],
   brid: [{ kind: 'water', x: 66, y: 0, w: 34, h: 100 }, { kind: 'smoke', x: 50, y: 12 }, { kind: 'birds', y: 10 }],
+  // ashes: a thin smoke from what still smoulders, no birds
+  ashtown: [{ kind: 'smoke', x: 22, y: 30 }, { kind: 'smoke', x: 64, y: 22 }],
+  ashisle: [{ kind: 'smoke', x: 52, y: 18 }, { kind: 'water', x: 0, y: 80, w: 100, h: 20 }],
 };
 
 function LifeLayer({ scene, warm }: { scene: string; warm: boolean }) {

@@ -1,11 +1,11 @@
 // A test player: looks at its own view (and, for planning, at what the world offers) and sends
 // commands like a person would. Two of them play act one together.
 
-import type { ActionDef, Cond, Content, PlayerId, Role, SceneDef } from '../shared/src/content.js';
+import type { ActionDef, Cond, Content, Effect, PlayerId, Role, SceneDef } from '../shared/src/content.js';
 import type { Command, PlayerView } from '../shared/src/protocol.js';
 import { Rng } from '../shared/src/rng.js';
 import type { Game } from '../server/src/engine/index.js';
-import { areaDef, areaKnown, linkTime } from '../server/src/engine/travel.js';
+import { areaDef, areaKnown, linkTime, routeTo } from '../server/src/engine/travel.js';
 import { heroOf, ownsCount } from '../server/src/engine/hero.js';
 import { sees } from '../shared/src/field.js';
 
@@ -111,7 +111,7 @@ export class Bot {
       const edible = (id: string) => !g.ix.res.get(id)?.meal || !!v.needs?.edible.find((f) => f.id === id)?.can;
       const band = v.bag.items.find((i) => i.usable && i.id !== this.c.food && edible(i.id));
       if (band) return { c: 'use', id: band.id };
-      if (!v.atHome) return this.goTowards(v, g, g.ix.homeArea);
+      if (!v.atHome && this.base(v, g) !== v.me.area) return this.goTowards(v, g, this.base(v, g));
       // at home: get the strength back before going out again (unless the cold keeps wounds open)
       if (v.needs && v.needs.level !== 'frozen') {
         if (v.needs.rest.can && v.needs.rested <= 0) return { c: 'rest' };
@@ -122,11 +122,22 @@ export class Bot {
     const needs = this.needs(v, g);
     if (needs) return needs;
 
+    // a scene waits for a count to come down (a trail swept away): do what brings it down
+    const lower = this.c.actions.find(
+      (a) => (!a.role || a.role === v.me.role) && this.lowersGate(a, g) && (!a.visible || g.test(a.visible, this.pid)) && (!a.enabled || g.test(a.enabled, this.pid)),
+    );
+    if (lower) {
+      const area = g.ix.areaOf(lower.group);
+      if (area !== v.me.area) return this.goTowards(v, g, area);
+      const e = v.groups.flatMap((gr) => gr.entries).find((x) => x.id === lower.id);
+      if (e?.enabled && !(e.readyAt && e.readyAt > v.now)) return { c: 'act', id: lower.id };
+    }
+
     // alone: a count the next scene waits for (people hidden, mouths fed) — go and raise it
     if (g.s.solo) {
       // payable where it is done: at home from the store, elsewhere from the store and the bag together
       const payable = (a: ActionDef) =>
-        Object.entries(a.cost ?? {}).every(([r, n]) => (g.ix.areaOf(a.group) === g.ix.homeArea ? (g.s.res[r] ?? 0) + (v.atHome ? 0 : (g.p(this.pid).bag[r] ?? 0)) : g.stockAll(r)) >= n);
+        Object.entries(a.cost ?? {}).every(([r, n]) => (g.ix.areaOf(a.group) === g.ix.homeArea ? (g.s.res[r] ?? 0) + (v.atHome ? 0 : (g.p(this.pid).bag[r] ?? 0)) : this.stock(g, r)) >= n);
       const raise = this.c.actions.find((a) => this.raisesGate(a, g) && (!a.visible || g.test(a.visible, this.pid)) && (!a.enabled || g.test(a.enabled, this.pid)) && payable(a));
       if (raise) {
         const area = g.ix.areaOf(raise.group);
@@ -354,6 +365,7 @@ export class Bot {
     if (sc.kind === 'stealth' && sc.stealth) return this.stealth(v);
     if (sc.kind === 'operation' && sc.operation) return this.operation(v);
     if (sc.kind === 'delve' && sc.delve) return this.delve(v);
+    if (sc.kind === 'squad' && sc.squad) return this.squad(v);
     if (sc.kind === 'choice' && sc.options) {
       if (sc.myPick) return null;
       const opts = sc.options.filter((o) => o.enabled);
@@ -425,6 +437,25 @@ export class Bot {
     return { c: 'choose', id: loose ? 'sneak' : 'step' };
   }
   private lastSign = '';
+
+  /** Posts: the hunter sets them (who is good at a post first), then both say they are ready. */
+  private squad(v: PlayerView): Command | null {
+    const sq = v.scene!.squad!;
+    if (sq.myReady) return null;
+    const free = sq.folk.filter((r) => !r.hurt && !r.post);
+    if (v.me.role === 'hunter' && free.length) {
+      const open = sq.posts.filter((p) => !p.who);
+      for (const p of open) {
+        const r = free.find((x) => x.good.includes(p.id)) ?? (open.length >= free.length ? free[0] : undefined);
+        if (r) return { c: 'choose', id: `set:${p.id}:${r.id}` };
+      }
+      // more posts than hands: the rest go where nobody good stands
+      if (open.length) return { c: 'choose', id: `set:${open[0]!.id}:${free[0]!.id}` };
+    }
+    // the maker waits for the hunter's posts
+    if (v.me.role !== 'hunter' && !sq.partnerReady) return null;
+    return { c: 'choose', id: 'ready' };
+  }
 
   /**
    * Two fronts: push the win bar (directly or by moving people onto it), feed what feeds it, and
@@ -703,13 +734,18 @@ export class Bot {
     const out = new Map<string, number>();
     const add = (cost: Record<string, number> | undefined) => {
       for (const [r, n] of Object.entries(cost ?? {})) {
-        const short = n - g.stockAll(r);
+        const short = n - this.stock(g, r);
         if (short > 0) out.set(r, Math.max(out.get(r) ?? 0, short));
       }
     };
     for (const a of this.c.actions) {
       if (a.kind !== 'craft' && a.kind !== 'build') continue;
       if (a.quest && !this.o.side) continue;
+      // readying a scene: only while it is listed (not for a scene acts away)
+      if (a.prep) {
+        const p = g.ix.preps.get(a.prep);
+        if (this.o.noPrep || !p || g.flag(p.id) || !g.prepOpen(p)) continue;
+      }
       if (!this.worthMaking(a, g)) continue;
       if (a.visible && !g.test(a.visible, this.pid) && !g.test(a.visible, g.other(this.pid))) continue;
       if (a.once && g.flag(`built:${a.id}`)) continue;
@@ -799,6 +835,32 @@ export class Bot {
   }
 
   /** This action raises a flag that a scene still to come waits for (and it is not there yet). */
+  /** It brings down a count that a scene waits to see low (`enabled: { flag, lt }`). */
+  private lowersGate(a: ActionDef, g: Game): boolean {
+    const down = new Set<string>();
+    const scan = (effs: Effect[] | undefined) => {
+      for (const e of effs ?? []) {
+        if ('inc' in e && (e.by ?? 1) < 0) down.add(e.inc);
+        if ('set' in e && (e.value ?? 1) === 0) down.add(e.set);
+        if ('unset' in e) down.add(e.unset);
+        if ('if' in e) {
+          scan(e.then);
+          scan(e.else);
+        }
+      }
+    };
+    scan(a.effects);
+    if (!down.size) return false;
+    const flat = (c: Cond | undefined): Cond[] => (!c ? [] : 'all' in c ? c.all.flatMap(flat) : [c]);
+    return this.c.scenes.some(
+      (sc) =>
+        !g.flag(`done:${sc.id}`) &&
+        !sc.pool &&
+        (!sc.visible || g.test(sc.visible, this.pid)) &&
+        flat(sc.enabled).some((c) => 'flag' in c && c.lt !== undefined && down.has(c.flag) && g.flag(c.flag) >= c.lt),
+    );
+  }
+
   private raisesGate(a: ActionDef, g: Game, deep = true): boolean {
     // a count raised, or (a trail) a flag set that the next scene shows by
     const incs = (a.effects ?? []).flatMap((e) => ('inc' in e ? [e.inc] : 'set' in e ? [e.set] : []));
@@ -807,7 +869,8 @@ export class Bot {
     const short = (c: Cond) => 'flag' in c && incs.includes(c.flag) && (c.gte !== undefined ? g.flag(c.flag) < c.gte : c.lt === undefined && !g.flag(c.flag));
     if (this.c.scenes.some((sc) => !g.flag(`done:${sc.id}`) && !sc.pool && [...flat(sc.visible), ...flat(sc.enabled)].some(short))) return true;
     // one step further back: it shows a work that does (the first step of a trail)
-    return deep && this.c.actions.some((b) => b !== a && flat(b.visible).some(short) && this.raisesGate(b, g, false));
+    // (or enables one: the next step of a walk waits until the people are fed)
+    return deep && this.c.actions.some((b) => b !== a && [...flat(b.visible), ...flat(b.enabled)].some(short) && this.raisesGate(b, g, false));
   }
 
   /** This action takes a thing made to order that the bot carries. */
@@ -825,6 +888,23 @@ export class Bot {
       return this.goTowards(v, g, area);
     }
     return null;
+  }
+
+  /** Far from home with no road back (a road the story led to): only what is in the bag counts. */
+  private roaming(g: Game): boolean {
+    const at = g.p(this.pid).at;
+    return at !== g.ix.homeArea && !routeTo(g, at, g.ix.homeArea);
+  }
+
+  private stock(g: Game, r: string): number {
+    return this.roaming(g) ? (g.p(this.pid).bag[r] ?? 0) : g.stockAll(r);
+  }
+
+  /** Where the bot goes back to: home, or — on a road the story led it to, far from home — the refuge there. */
+  private base(v: PlayerView, g: Game): string {
+    const here = v.me.area;
+    if (routeTo(g, here, g.ix.homeArea)) return g.ix.homeArea;
+    return areaDef(g, here)?.refuge ?? (g.ix.c.areas.some((a) => a.refuge === here) ? here : g.ix.homeArea);
   }
 
   private work(v: PlayerView, g: Game, stay = false): Command | null {
@@ -857,7 +937,8 @@ export class Bot {
       let s = 0;
       for (const [r] of Object.entries(a.yield ?? {})) {
         if (want.has(r)) s += 60;
-        else if ((g.s.res[r] ?? 0) < g.cap(r) * 0.5) s += 8;
+        // stocking up only where there is a store to keep it in
+        else if (!this.roaming(g) && (g.s.res[r] ?? 0) < g.cap(r) * 0.5) s += 8;
       }
       for (const ch of a.chance ?? []) for (const r of Object.keys(ch.add ?? {})) if (want.has(r)) s += 40;
       if (a.effects?.length && !a.yield) s += 20;
@@ -886,15 +967,17 @@ export class Bot {
     }
     // away: carry home when full; go on to where the wanted things are; home when the trip is done
     if (!v.atHome) {
-      if (v.bag.load >= v.bag.cap * 0.8) return this.goTowards(v, g, g.ix.homeArea);
+      const base = this.base(v, g);
+      // a full bag is emptied only at home (a road's refuge keeps no store)
+      if (v.bag.load >= v.bag.cap * 0.8 && base === g.ix.homeArea) return this.goTowards(v, g, base);
       const best = ranked[0];
       // a careless player, having walked somewhere, mostly does something there
       if (this.o.careless && best && this.rng.next() < 0.7) return { c: 'act', id: best.e.id };
       if (best && best.s >= 40) return { c: 'act', id: best.e.id };
-      if (target && target !== v.me.area) return this.goTowards(v, g, target) ?? this.goTowards(v, g, g.ix.homeArea);
-      if (goods) return this.goTowards(v, g, g.ix.homeArea);
+      if (target && target !== v.me.area) return this.goTowards(v, g, target) ?? this.goTowards(v, g, base);
+      if (goods && base !== v.me.area) return this.goTowards(v, g, base);
       if (best) return { c: 'act', id: best.e.id };
-      return this.goTowards(v, g, g.ix.homeArea);
+      return this.goTowards(v, g, base);
     }
     const best = ranked[0];
     if (best && best.s >= 60) return { c: 'act', id: best.e.id };
@@ -905,11 +988,14 @@ export class Bot {
 
   /** A story scene is there but asks for a higher level. */
   private levelGated(g: Game): boolean {
+    const flat = (c: Cond | undefined): Cond[] => (!c ? [] : 'all' in c ? c.all.flatMap(flat) : [c]);
     for (const sc of this.c.scenes) {
-      if (sc.pool || !sc.enabled || !('level' in sc.enabled)) continue;
+      if (sc.pool) continue;
+      const lv = flat(sc.enabled).find((c): c is { level: number } => 'level' in c);
+      if (!lv) continue;
       if (g.flag(`done:${sc.id}`)) continue;
       if (sc.visible && !g.test(sc.visible, this.pid)) continue;
-      if (!g.test(sc.enabled, this.pid)) return true;
+      if (!g.test(lv, this.pid)) return true;
     }
     return false;
   }
@@ -956,6 +1042,8 @@ export class Bot {
       if (a.quest && !this.o.side) continue;
       const area = g.ix.areaOf(a.group);
       if (!areaKnown(g, area)) continue;
+      // a place left behind (the story led far away, no road back) is not a gathering ground
+      if (area !== v.me.area && !routeTo(g, v.me.area, area)) continue;
       if (a.visible && !g.test(a.visible, this.pid)) continue;
       if (a.tool && !heroOf(g, this.pid).tools.has(a.tool)) continue;
       const danger = areaDef(g, area)?.danger ?? 0;

@@ -132,6 +132,12 @@ describe('act two has no dead ends when the stores are emptied', () => {
 });
 
 const ACT3 = (w: World) => !!w.state.flags['p2_act3_done'] && !w.state.scene;
+const ACT41 = (w: World) => !!w.state.flags['p2_kryvets'] && !!w.state.flags['p2_island'] && !w.state.scene;
+const STORY41 = ['s_120', 's_121', 's_122', 's_123'];
+const ACT42 = (w: World) => !!w.state.flags['p2_danylo_inside'] && !w.state.scene;
+const STORY42 = ['s_124', 's_125', 's_126'];
+const ACT4 = (w: World) => !!w.state.flags['p2_act4_done'] && !w.state.scene;
+const STORY43 = ['s_127', 's_128', 's_129'];
 const STORY3 = ['s_100', 's_101', 's_102', 's_103', 's_104', 's_105', 's_106', 's_107', 's_108', 's_109'];
 
 describe('two bots play act three to its end', () => {
@@ -154,6 +160,31 @@ describe('two bots play act three to its end', () => {
     expect(r.world.state.residents['h_15']).toBeDefined();
     // readying alone: some of it was done along the way
     expect(Object.keys(r.world.state.flags).filter((f) => f.startsWith('prep_')).length).toBeGreaterThanOrEqual(2);
+
+    // and on into act four, part one: the long road south, the hiding place, the ashes of two homes
+    const r4 = autoplay({}, {}, { from: r.world, until: ACT41, maxSteps: 120000, stallLimit: 15000 });
+    if (!r4.done) console.log(r4.reason, show(r4.world));
+    expect(r4.done).toBe(true);
+    for (const s of STORY41) expect(r4.world.state.flags[`done:${s}`], s).toBe(1);
+    expect(r4.world.state.meta.act).toBe(4);
+
+    // part two: the rows by night, the boiling under the train, the second strophe at the water
+    const from42 = r4.world.now;
+    const r42 = autoplay({}, {}, { from: r4.world, until: ACT42, maxSteps: 150000, stallLimit: 15000 });
+    if (!r42.done) console.log(r42.reason, show(r42.world));
+    expect(r42.done).toBe(true);
+    for (const s of STORY42) expect(r42.world.state.flags[`done:${s}`], s).toBe(1);
+    const m42 = (r42.world.now - from42) / 60000;
+    expect(m42).toBeGreaterThan(12);
+    expect(m42).toBeLessThan(40);
+
+    // part three: the guild master, the siege of the hiding place with the household at their posts, the letter
+    const r43 = autoplay({}, {}, { from: r42.world, until: ACT4, maxSteps: 150000, stallLimit: 15000 });
+    if (!r43.done) console.log(r43.reason, show(r43.world));
+    expect(r43.done).toBe(true);
+    for (const s of STORY43) expect(r43.world.state.flags[`done:${s}`], s).toBe(1);
+    expect(r43.world.state.meta.actDone).toBe(4);
+    expect(Object.keys(r43.world.state.flags).filter((f) => f.startsWith('post_')).length).toBeGreaterThan(2);
 
     const nr = autoplay({ noPrep: true }, { noPrep: true }, { from: bare, until: ACT3, maxSteps: 200000, stallLimit: 20000 });
     if (!nr.done) console.log(nr.reason, show(nr.world));

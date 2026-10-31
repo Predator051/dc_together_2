@@ -12,9 +12,11 @@
  "leech": [1, 4],
  "matka": [2, 5],
  "oldviper": [1, 2],
+ "osavul": [3, 3],
  "rat": [1, 0],
  "rider": [3, 0],
  "shewolf": [2, 7],
+ "silent": [3, 2],
  "snatcher": [2, 3],
  "viper": [1, 1],
  "wolf": [2, 2]

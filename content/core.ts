@@ -16,6 +16,7 @@ export const traits: Content['traits'] = {
   drag: { name: 'Тягне під воду', text: 'Схопить — і тягне. Напарник визволить.' },
   leech: { name: 'Кровосос', text: 'Присмоктується. Сіль або вогонь зганяють.' },
   shield: { name: 'Щит', text: 'Закривається, і удар іде вполовину.' },
+  numb: { name: 'Не чує болю', text: 'Збитий — підводиться ще раз, якщо його не зв\'язати. Тікати не вміє.' },
 };
 
 export const perks: Content['perks'] = [
@@ -96,7 +97,7 @@ export const hero: Content['hero'] = {
   ],
   tiers: [2, 4, 7, 10, 13, 16, 19],
   // a level or two above where the story leaves the heroes at the end of each act (`.design/balance.md`)
-  caps: { 1: 8, 2: 11, 3: 13 },
+  caps: { 1: 8, 2: 11, 3: 13, 4: 15 },
   temperGift: {
     1: { r_01: 12, r_03: 4, r_15: 3, r_11: 2 },
     2: { r_22: 5, r_26: 2, r_18: 2, r_11: 2 },

@@ -119,19 +119,23 @@ export function goBlock(g: Game, pid: PlayerId, to: string, forView = false): st
   return null;
 }
 
+/** Leaving home: things to be carried to someone (and money) go along by themselves. */
+export function takeCarried(g: Game, pid: PlayerId): void {
+  if (g.p(pid).at !== g.ix.homeArea) return;
+  for (const r of g.ix.c.resources) {
+    const n = r.carry ? (g.s.res[r.id] ?? 0) : 0;
+    if (n > 0) {
+      g.s.res[r.id] = 0;
+      addBag(g, pid, r.id, n);
+    }
+  }
+}
+
 export function go(g: Game, pid: PlayerId, to: string): Result {
   const block = goBlock(g, pid, to);
   if (block) return { ok: false, err: block };
   const p = g.p(pid);
-  // things to be carried to someone go along by themselves
-  if (p.at === g.ix.homeArea)
-    for (const r of g.ix.c.resources) {
-      const n = r.carry ? (g.s.res[r.id] ?? 0) : 0;
-      if (n > 0) {
-        g.s.res[r.id] = 0;
-        addBag(g, pid, r.id, n);
-      }
-    }
+  takeCarried(g, pid);
   const [first, ...rest] = routeLegs(g, pid, p.at, routeTo(g, p.at, to)!);
   const end = g.now + first![1] + rest.reduce((s, [, t]) => s + t, 0);
   p.travel = { from: p.at, to: first![0], since: g.now, until: g.now + first![1] };

@@ -3,6 +3,7 @@ import type { PlayerView, SceneView } from '../../shared/src/protocol.js';
 import { net } from './net.js';
 import { DelveBody, DelveFoot, OperationBody, OperationFoot, StealthBody, StealthFoot } from './delve.js';
 import { IconCheck, IconChevron } from './icons.js';
+import { SquadBody, SquadFoot } from './squad.js';
 import { momentUrl, viewUrl } from './pictures.js';
 import { sound } from './sound.js';
 import { T } from './strings.js';
@@ -48,7 +49,7 @@ export function Scene({ v, sc, locked }: { v: PlayerView; sc: SceneView; locked:
   useEffect(() => {
     const el = bodyRef.current;
     if (!el) return;
-    const last = el.querySelector('.delve, .stealth, .operation') ?? el.querySelector('.block:last-child');
+    const last = el.querySelector('.delve, .stealth, .operation, .squad') ?? el.querySelector('.block:last-child');
     if (last) (last as HTMLElement).scrollIntoView({ block: 'start', behavior: 'smooth' });
   }, [blocksCount, lastRound, room, sc.operation?.turn]);
 
@@ -116,6 +117,7 @@ export function Scene({ v, sc, locked }: { v: PlayerView; sc: SceneView; locked:
           {sc.delve && <DelveBody d={sc.delve} title={sc.title} />}
           {sc.stealth && <StealthBody st={sc.stealth} v={v} />}
           {sc.operation && <OperationBody op={sc.operation} v={v} />}
+          {sc.squad && <SquadBody sq={sc.squad} locked={locked || sc.paused} />}
           {sc.combat && (
             <div class="combat">
               <div class="combat-row">
@@ -162,7 +164,8 @@ export function Scene({ v, sc, locked }: { v: PlayerView; sc: SceneView; locked:
           {!sc.paused && sc.kind === 'stealth' && sc.stealth && <StealthFoot sc={sc} st={sc.stealth} v={v} locked={locked} />}
           {!sc.paused && sc.kind === 'operation' && sc.operation && <OperationFoot sc={sc} op={sc.operation} v={v} locked={locked} />}
           {!sc.paused && sc.kind === 'fight' && <p class="muted waiting">{T.fightScene}</p>}
-          {!sc.paused && sc.kind !== 'text' && sc.kind !== 'delve' && sc.kind !== 'stealth' && sc.kind !== 'operation' && sc.kind !== 'fight' && (
+          {!sc.paused && sc.kind === 'squad' && sc.squad && <SquadFoot sq={sc.squad} v={v} locked={locked} />}
+          {!sc.paused && sc.kind !== 'text' && sc.kind !== 'delve' && sc.kind !== 'stealth' && sc.kind !== 'operation' && sc.kind !== 'fight' && sc.kind !== 'squad' && (
             <div class="options">
               {sc.partnerPicked && !sc.myPick && <p class="partner-picked">
                   <IconCheck />
