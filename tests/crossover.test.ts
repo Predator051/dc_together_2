@@ -6,6 +6,7 @@ import { pasts } from '../content/past/index.js';
 import { validateContent } from '../server/src/validate.js';
 import { ContentIndex, Game } from '../server/src/engine/index.js';
 import { enterPast } from '../server/src/past.js';
+import { resolveParas } from '../server/src/engine/text.js';
 import { pair } from './world.js';
 
 /** A past that remembers these flags (only its flags matter to the main story). */
@@ -46,6 +47,42 @@ describe('the past shows in the present', () => {
     const g = new Game(ix, s, w.now);
     expect(g.test({ mainFlag: 'p2_act3' }, h)).toBe(true);
     expect(g.test({ mainFlag: 'p2_act2_done' }, h)).toBe(false);
+  });
+});
+
+describe('the story remembers in act three', () => {
+  const scene = (id: string) => content.scenes.find((x) => x.id === id)!;
+  const own = (g: Game, p: Parameters<typeof resolveParas>[0], pid: string) => resolveParas(p, (c) => g.test(c, pid as never)).join(' ');
+
+  it('one\'s own line shows only to the one who remembers; the partner reads the story as it is', () => {
+    const { w, h, m } = pair(3);
+    const g = w.g();
+    const arrive = scene('s_108').nodes.arrive!;
+    expect(own(g, arrive.hunter, h)).toBe('Ти береш людей: будити, вести до возів.');
+    w.state.past = { [h]: remembered({ ph_andriy: 1, ph_andriy_called: 1 }), [m]: remembered({ pm_yarema: 1 }) };
+    expect(own(g, arrive.hunter, h)).toContain('пором');
+    expect(own(g, scene('s_108').nodes.win!.maker, m)).toContain('Ярема');
+    expect(own(g, scene('s_108').nodes.win!.maker, h)).toBe('');
+  });
+
+  it('a private word to the deserter of the recruiters, only for one who led a runaway out', () => {
+    const { w, h, m } = pair(3);
+    const node = scene('s_102').nodes.n4 as ChoiceNode;
+    const opt = node.options.find((o) => o.id === 'runaway')!;
+    expect(node.mode).not.toBe('joint');
+    w.state.past = { [h]: remembered({ ph_deserter_saved: 1 }) };
+    const g = w.g();
+    expect(g.optionVisible(opt, h, 'n4')).toBe(true);
+    expect(g.optionVisible(opt, m, 'n4')).toBe(false);
+  });
+
+  it('calling by name wakes a little more for one who once called and was heard — and only for them', () => {
+    const { w, h } = pair(3);
+    const op = scene('s_108').nodes.op as unknown as { moves: Parameters<Game['operationEffect']>[0][] };
+    const name = op.moves.find((x) => x.id === 'name')!;
+    const base = w.g().operationEffect(name, h).delta.awake!;
+    w.state.past = { [h]: remembered({ ph_andriy_called: 1 }) };
+    expect(w.g().operationEffect(name, h).delta.awake).toBe(base + 1);
   });
 });
 
