@@ -18,11 +18,13 @@ export const L4 = {
 export const T4 = {
   key: 't_50',
   stake: 't_51',
+  pebble: 't_52',
 } as const;
 
 export const E4 = {
   looter: 'e_22',
   strays: 'e_23',
+  carter: 'e_24',
 } as const;
 
 export const S4 = {
@@ -30,6 +32,15 @@ export const S4 = {
   south: 's_121',
   ashes: 's_122',
   isle: 's_123',
+  rows: 's_124',
+  brew: 's_125',
+  wake: 's_126',
+} as const;
+
+/** Two of the hiding place who go to live at home. */
+export const H4 = {
+  khariton: 'h_17',
+  horpyna: 'h_18',
 } as const;
 
 export const N4 = {

@@ -134,6 +134,8 @@ describe('act two has no dead ends when the stores are emptied', () => {
 const ACT3 = (w: World) => !!w.state.flags['p2_act3_done'] && !w.state.scene;
 const ACT41 = (w: World) => !!w.state.flags['p2_kryvets'] && !!w.state.flags['p2_island'] && !w.state.scene;
 const STORY41 = ['s_120', 's_121', 's_122', 's_123'];
+const ACT42 = (w: World) => !!w.state.flags['p2_danylo_inside'] && !w.state.scene;
+const STORY42 = ['s_124', 's_125', 's_126'];
 const STORY3 = ['s_100', 's_101', 's_102', 's_103', 's_104', 's_105', 's_106', 's_107', 's_108', 's_109'];
 
 describe('two bots play act three to its end', () => {
@@ -163,6 +165,16 @@ describe('two bots play act three to its end', () => {
     expect(r4.done).toBe(true);
     for (const s of STORY41) expect(r4.world.state.flags[`done:${s}`], s).toBe(1);
     expect(r4.world.state.meta.act).toBe(4);
+
+    // part two: the rows by night, the boiling under the train, the second strophe at the water
+    const from42 = r4.world.now;
+    const r42 = autoplay({}, {}, { from: r4.world, until: ACT42, maxSteps: 150000, stallLimit: 15000 });
+    if (!r42.done) console.log(r42.reason, show(r42.world));
+    expect(r42.done).toBe(true);
+    for (const s of STORY42) expect(r42.world.state.flags[`done:${s}`], s).toBe(1);
+    const m42 = (r42.world.now - from42) / 60000;
+    expect(m42).toBeGreaterThan(12);
+    expect(m42).toBeLessThan(40);
 
     const nr = autoplay({ noPrep: true }, { noPrep: true }, { from: bare, until: ACT3, maxSteps: 200000, stallLimit: 20000 });
     if (!nr.done) console.log(nr.reason, show(nr.world));

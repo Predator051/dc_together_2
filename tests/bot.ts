@@ -710,6 +710,11 @@ export class Bot {
     for (const a of this.c.actions) {
       if (a.kind !== 'craft' && a.kind !== 'build') continue;
       if (a.quest && !this.o.side) continue;
+      // readying a scene: only while it is listed (not for a scene acts away)
+      if (a.prep) {
+        const p = g.ix.preps.get(a.prep);
+        if (this.o.noPrep || !p || g.flag(p.id) || !g.prepOpen(p)) continue;
+      }
       if (!this.worthMaking(a, g)) continue;
       if (a.visible && !g.test(a.visible, this.pid) && !g.test(a.visible, g.other(this.pid))) continue;
       if (a.once && g.flag(`built:${a.id}`)) continue;
@@ -926,11 +931,14 @@ export class Bot {
 
   /** A story scene is there but asks for a higher level. */
   private levelGated(g: Game): boolean {
+    const flat = (c: Cond | undefined): Cond[] => (!c ? [] : 'all' in c ? c.all.flatMap(flat) : [c]);
     for (const sc of this.c.scenes) {
-      if (sc.pool || !sc.enabled || !('level' in sc.enabled)) continue;
+      if (sc.pool) continue;
+      const lv = flat(sc.enabled).find((c): c is { level: number } => 'level' in c);
+      if (!lv) continue;
       if (g.flag(`done:${sc.id}`)) continue;
       if (sc.visible && !g.test(sc.visible, this.pid)) continue;
-      if (!g.test(sc.enabled, this.pid)) return true;
+      if (!g.test(lv, this.pid)) return true;
     }
     return false;
   }
