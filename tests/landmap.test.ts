@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Content } from '../shared/src/content.js';
 import { content } from '../content/index.js';
-import { pasts } from '../content/past/index.js';
+import { pasts, sharedPast } from '../content/past/index.js';
 import map1 from '../client/src/art/map1.json';
 import map2 from '../client/src/art/map2.json';
 import map3 from '../client/src/art/map3.json';
@@ -26,6 +26,7 @@ const SHEETS: Record<string, Sheet> = { map1: map1 as unknown as Sheet, map2: ma
 const USES: Array<[string, Content, string[]]> = [
   ['the story', content, ['map1', 'map2']],
   ...Object.entries(pasts).map(([role, c]) => [`the ${role}'s memories`, c!, ['map2', 'map3']] as [string, Content, string[]]),
+  ['the shared memories', sharedPast, ['map3']],
 ];
 const key = (a: string, b: string) => [a, b].sort().join('|');
 

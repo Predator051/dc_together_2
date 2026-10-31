@@ -1,7 +1,7 @@
 // A test player: looks at its own view (and, for planning, at what the world offers) and sends
 // commands like a person would. Two of them play act one together.
 
-import type { ActionDef, Cond, Content, PlayerId, Role, SceneDef } from '../shared/src/content.js';
+import type { ActionDef, Cond, Content, Effect, PlayerId, Role, SceneDef } from '../shared/src/content.js';
 import type { Command, PlayerView } from '../shared/src/protocol.js';
 import { Rng } from '../shared/src/rng.js';
 import type { Game } from '../server/src/engine/index.js';
@@ -121,6 +121,17 @@ export class Bot {
 
     const needs = this.needs(v, g);
     if (needs) return needs;
+
+    // a scene waits for a count to come down (a trail swept away): do what brings it down
+    const lower = this.c.actions.find(
+      (a) => (!a.role || a.role === v.me.role) && this.lowersGate(a, g) && (!a.visible || g.test(a.visible, this.pid)) && (!a.enabled || g.test(a.enabled, this.pid)),
+    );
+    if (lower) {
+      const area = g.ix.areaOf(lower.group);
+      if (area !== v.me.area) return this.goTowards(v, g, area);
+      const e = v.groups.flatMap((gr) => gr.entries).find((x) => x.id === lower.id);
+      if (e?.enabled && !(e.readyAt && e.readyAt > v.now)) return { c: 'act', id: lower.id };
+    }
 
     // alone: a count the next scene waits for (people hidden, mouths fed) — go and raise it
     if (g.s.solo) {
@@ -824,6 +835,32 @@ export class Bot {
   }
 
   /** This action raises a flag that a scene still to come waits for (and it is not there yet). */
+  /** It brings down a count that a scene waits to see low (`enabled: { flag, lt }`). */
+  private lowersGate(a: ActionDef, g: Game): boolean {
+    const down = new Set<string>();
+    const scan = (effs: Effect[] | undefined) => {
+      for (const e of effs ?? []) {
+        if ('inc' in e && (e.by ?? 1) < 0) down.add(e.inc);
+        if ('set' in e && (e.value ?? 1) === 0) down.add(e.set);
+        if ('unset' in e) down.add(e.unset);
+        if ('if' in e) {
+          scan(e.then);
+          scan(e.else);
+        }
+      }
+    };
+    scan(a.effects);
+    if (!down.size) return false;
+    const flat = (c: Cond | undefined): Cond[] => (!c ? [] : 'all' in c ? c.all.flatMap(flat) : [c]);
+    return this.c.scenes.some(
+      (sc) =>
+        !g.flag(`done:${sc.id}`) &&
+        !sc.pool &&
+        (!sc.visible || g.test(sc.visible, this.pid)) &&
+        flat(sc.enabled).some((c) => 'flag' in c && c.lt !== undefined && down.has(c.flag) && g.flag(c.flag) >= c.lt),
+    );
+  }
+
   private raisesGate(a: ActionDef, g: Game, deep = true): boolean {
     // a count raised, or (a trail) a flag set that the next scene shows by
     const incs = (a.effects ?? []).flatMap((e) => ('inc' in e ? [e.inc] : 'set' in e ? [e.set] : []));

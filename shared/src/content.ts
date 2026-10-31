@@ -1176,6 +1176,11 @@ export interface Content {
   /** Side errands. */
   quests?: QuestDef[];
   /** A past of one hero (`.design/personal.md` §3): its name on the screen while remembering. */
+  /**
+   * A past the two share: what must be done in each own past before it opens (the flag of the chapter that
+   * leads into it, by role). Their flags (ph_…, pm_…) are copied in.
+   */
+  sharedOpens?: Array<{ role: Role; flag: string }>;
   pastTitle?: string;
   /** What one can do alone before a together scene. */
   preps?: PrepDef[];

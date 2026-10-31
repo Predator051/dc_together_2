@@ -22,6 +22,8 @@ export interface StartOptions {
   log?: (msg: string) => void;
   /** The heroes' pasts, by role. */
   pasts?: Partial<Record<Role, Content>>;
+  /** The past the two share. */
+  pastShared?: Content;
 }
 
 export interface Running {
@@ -49,6 +51,7 @@ export async function startServer(o: StartOptions): Promise<Running> {
     log: o.log,
     legacy: o.legacy,
     pasts: o.pasts,
+    pastShared: o.pastShared,
   });
 
   const http = createServer(staticHandler(o.clientDir));

@@ -227,7 +227,8 @@ export function validateContent(c: Content): Report {
 
   // flags of the legacy are written by the server when part one is carried over
   // `main_act` is written into a past by the server (`server/src/past.ts`)
-  const isWritten = (f: string) => written.has(f) || f.startsWith('legacy') || f === 'main_act';
+  // in a shared past, what each hero lived through alone (ph_…, pm_…) is copied in by the server
+  const isWritten = (f: string) => written.has(f) || f.startsWith('legacy') || f === 'main_act' || (!!c.sharedOpens && /^p[hm]_/.test(f));
   const checkCond = (where: string, cond: Cond | undefined) => {
     for (const x of condsOf(cond)) {
       if ('flag' in x && !isWritten(x.flag)) err(`${where}: reads flag "${x.flag}" that is never set`);
@@ -249,7 +250,7 @@ export function validateContent(c: Content): Report {
       if ('weather' in x && !c.weather?.kinds.some((k) => k.id === x.weather)) err(`${where}: unknown weather ${x.weather}`);
       if ('resident' in x && !residentIds.has(x.resident)) err(`${where}: unknown resident ${x.resident}`);
       if ('seen' in x && !res.has(x.seen)) err(`${where}: unknown resource ${x.seen}`);
-      if ('past' in x && !/^p[hm]_/.test(x.past)) err(`${where}: a past's flag is named ph_… (the hunter's) or pm_… (the maker's): ${x.past}`);
+      if ('past' in x && !/^p[hms]_/.test(x.past)) err(`${where}: a past's flag is named ph_… (the hunter's), pm_… (the maker's) or ps_… (the shared): ${x.past}`);
     }
   };
   const checkEffects = (where: string, effs: Effect[], inScene: boolean) => {

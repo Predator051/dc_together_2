@@ -416,7 +416,8 @@ export class Game {
     if ('resident' in c) return !!this.s.residents[c.resident];
     if ('seen' in c) return !!this.s.seenRes[c.seen];
     if ('past' in c) {
-      const has = (x: PlayerId) => !!this.s.past?.[x]?.flags[c.past];
+      // what the two lived through together is remembered by both
+      const has = (x: PlayerId) => !!this.s.past?.[x]?.flags[c.past] || !!this.s.pastShared?.flags[c.past];
       const who = c.who ?? 'me';
       if (who === 'either') return PLAYER_IDS.some(has);
       if (who === 'both') return PLAYER_IDS.every(has);

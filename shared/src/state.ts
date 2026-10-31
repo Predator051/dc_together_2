@@ -26,6 +26,8 @@ export interface PlayerState {
   online: boolean;
   /** In the hero's own past (`.design/personal.md` §3): sitting by the fire at home, needs held. */
   remembering?: boolean;
+  /** Remembering together: in the shared past (`pastShared`), not one's own. */
+  together?: boolean;
   lastSeen: number;
   /** What the world looked like when this player left (v3). */
   away: Snapshot | null;
@@ -432,6 +434,8 @@ export interface WorldState {
   mainFlags?: Record<string, number>;
   /** The heroes' pasts, one world each (only in the main world). */
   past?: Partial<Record<PlayerId, WorldState>>;
+  /** The past the two heroes share once their roads meet (only in the main world). */
+  pastShared?: WorldState;
   /** The hard road is on (both agreed). */
   hard?: boolean;
   /** One proposed the hard road; the other has not answered yet. */

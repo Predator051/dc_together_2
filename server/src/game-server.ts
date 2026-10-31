@@ -12,7 +12,7 @@ import { buildView } from './engine/view.js';
 import { DEFAULT_LEGACY, extractLegacy, isPartOneWorld, legacyFlags } from './legacy.js';
 import { migrateState, type Migration } from './migrations.js';
 import type { Storage } from './storage.js';
-import { enterPast, leavePast, loadPasts, pastIndex, pastOf, rememberBlock, type Pasts } from './past.js';
+import { enterPast, enterShared, leavePast, leaveShared, loadPasts, pastIndex, pastOf, rememberBlock, togetherBlock, type Pasts } from './past.js';
 import type { Legacy } from '../../shared/src/state.js';
 
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -47,6 +47,8 @@ export interface GameServerOptions {
   legacy?: unknown;
   /** The heroes' pasts, by role (`.design/personal.md` §3). */
   pasts?: Partial<Record<Role, Content>>;
+  /** The past the two share once their roads meet. */
+  pastShared?: Content;
 }
 
 const ERR_TEXT: Record<ErrCode, string> = {
@@ -63,6 +65,7 @@ const ERR_TEXT: Record<ErrCode, string> = {
 export class GameServer {
   readonly ix: ContentIndex;
   readonly pasts: Pasts;
+  readonly shared?: ContentIndex;
   state: WorldState;
   readonly inviteCode: string;
   private conns = new Set<Conn>();
@@ -76,6 +79,7 @@ export class GameServer {
   constructor(private readonly opts: GameServerOptions) {
     this.ix = new ContentIndex(opts.content);
     this.pasts = pastIndex(opts.pasts);
+    if (opts.pastShared) this.shared = new ContentIndex(opts.pastShared);
     this.clock = opts.clock ?? Date.now;
     this.logFn = opts.log ?? (() => {});
     const st = opts.storage;
@@ -105,7 +109,7 @@ export class GameServer {
         this.logFn(`World migrated from version ${from} to ${STATE_VERSION}`);
       }
       this.state = state;
-      loadPasts(this.state, this.pasts, now);
+      loadPasts(this.state, this.pasts, now, this.shared);
       this.save();
     } else {
       const seed = opts.seed ?? seedFrom(randomBytes(4).toString('hex'));
@@ -163,7 +167,9 @@ export class GameServer {
 
   /** The world this hero is in now: the main one, or their past. */
   private gameOf(pid: PlayerId): Game {
-    const ix = this.state.players[pid].remembering ? pastOf(this.pasts, this.state, pid) : undefined;
+    const p = this.state.players[pid];
+    if (p.remembering && p.together && this.shared && this.state.pastShared) return new Game(this.shared, this.state.pastShared, this.clock());
+    const ix = p.remembering ? pastOf(this.pasts, this.state, pid) : undefined;
     const s = ix ? this.state.past?.[pid] : undefined;
     return ix && s ? new Game(ix, s, this.clock()) : this.game();
   }
@@ -176,9 +182,14 @@ export class GameServer {
     const g = this.game();
     let changed = g.tick();
     if (changed) this.keepCheckpoints(g);
+    const ticked = new Set<WorldState>();
     for (const pid of PLAYER_IDS) {
       if (!this.inPast(pid)) continue;
-      if (this.gameOf(pid).tick()) changed = true;
+      const pg = this.gameOf(pid);
+      // the shared past is one world for both: it ticks once
+      if (ticked.has(pg.s)) continue;
+      ticked.add(pg.s);
+      if (pg.tick()) changed = true;
     }
     if (changed) {
       this.dirty = true;
@@ -191,27 +202,39 @@ export class GameServer {
     const g = this.gameOf(pid);
     const v = buildView(g, pid);
     if (g.s !== this.state) {
-      v.past = { title: g.ix.c.pastTitle ?? this.ix.ui('past_title') };
-    } else if (pastOf(this.pasts, this.state, pid)) {
+      v.past = { title: g.ix.c.pastTitle ?? this.ix.ui('past_title'), ...(g.s === this.state.pastShared ? { shared: true } : {}) };
+      return v;
+    }
+    if (pastOf(this.pasts, this.state, pid)) {
       const block = rememberBlock(g, pid, this.pasts);
       v.memories = block ? { can: false, reason: g.render(g.ix.ui(block), pid) } : { can: true };
+    }
+    const tb = togetherBlock(g, pid, this.shared);
+    if (this.shared && tb !== 'together_not_yet') {
+      const mateIn = !!this.state.players[g.other(pid)].together;
+      v.together = tb ? { can: false, reason: g.render(g.ix.ui(tb), pid), mateIn } : { can: true, mateIn };
     }
     return v;
   }
 
-  /** Into one's past from the fire, or back. */
-  private remember(pid: PlayerId, on: boolean): string | null {
+  /** Into one's past (or the shared one) from the fire, or back. */
+  private remember(pid: PlayerId, on: boolean, together = false): string | null {
     const g = this.game();
     const ix = pastOf(this.pasts, this.state, pid);
     const other = g.other(pid);
-    if (on) {
+    if (on && together) {
+      const block = togetherBlock(g, pid, this.shared);
+      if (block) return block;
+      enterShared(this.state, pid, this.shared!, this.clock(), this.ix.c.storyFlags);
+      g.logRaw('system', { [other]: g.render(g.ix.ui('mate_remembers_together'), other, pid) }, pid);
+    } else if (on) {
       const block = rememberBlock(g, pid, this.pasts);
       if (block) return block;
       enterPast(this.state, pid, ix!, this.clock(), this.ix.c.storyFlags);
       g.logRaw('system', { [other]: g.render(g.ix.ui('mate_remembers'), other, pid) }, pid);
     } else {
       if (!this.state.players[pid].remembering) return 'err_not_now';
-      const err = leavePast(this.state, pid, ix, this.clock());
+      const err = this.state.players[pid].together ? leaveShared(this.state, pid, this.shared, this.clock()) : leavePast(this.state, pid, ix, this.clock());
       if (err) return err;
       g.logRaw('system', { [other]: g.render(g.ix.ui('mate_back_from_past'), other, pid) }, pid);
     }
@@ -251,8 +274,8 @@ export class GameServer {
     if (!items.length) return;
     items.sort((a, b) => b.n - a.n);
     const msg: ServerMsg = { t: 'delta', by, together, items };
-    // what moves in a past is seen only by the one remembering
-    for (const conn of this.conns) if (conn.pid && (!past || conn.pid === by)) conn.send(msg);
+    // what moves in a past is seen only by those in it
+    for (const conn of this.conns) if (conn.pid && (!past || conn.pid === by || (past.s === this.state.pastShared && this.state.players[conn.pid].together))) conn.send(msg);
   }
 
   /** What went into (or out of) the actor's own bag: shown only to them. */
@@ -304,8 +327,7 @@ export class GameServer {
     const online = this.socketsOf(pid) > 0;
     if (this.state.players[pid].online === online) return;
     this.game().setOnline(pid, online);
-    const past = this.state.players[pid].remembering ? pastOf(this.pasts, this.state, pid) : undefined;
-    if (past && this.state.past?.[pid]) new Game(past, this.state.past[pid]!, this.clock()).setOnline(pid, online);
+    if (this.inPast(pid)) this.gameOf(pid).setOnline(pid, online);
     this.changed();
   }
 
@@ -421,7 +443,7 @@ export class GameServer {
         const cmd = validCommand(msg.cmd);
         if (!cmd) return;
         if (cmd.c === 'remember') {
-          const err = this.remember(c.pid, cmd.on);
+          const err = this.remember(c.pid, cmd.on, !!cmd.together);
           if (!err) this.changed();
           const text = err ? this.game().render(this.ix.ui(err), c.pid) : undefined;
           c.send({ t: 'ack', seq: msg.seq, ok: !err, text, rev: this.rev });
@@ -520,8 +542,8 @@ function validCommand(cmd: unknown): Command | null {
       return { c: 'ask', res: x.res, n: x.n };
     }
     case 'remember': {
-      const x = cmd as { on?: unknown };
-      return typeof x.on === 'boolean' ? { c: 'remember', on: x.on } : null;
+      const x = cmd as { on?: unknown; together?: unknown };
+      return typeof x.on === 'boolean' ? { c: 'remember', on: x.on, ...(x.together === true ? { together: true } : {}) } : null;
     }
     case 'hard': {
       const x = cmd as { on?: unknown };

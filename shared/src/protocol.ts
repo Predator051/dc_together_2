@@ -58,7 +58,7 @@ export type Command =
   /** The asks board: ask the other to bring n of a thing home; take an ask of mine back. */
   | { c: 'ask'; res: string; n: number }
   /** Go into one's own past (memories) from the fire at home, or come back. */
-  | { c: 'remember'; on: boolean }
+  | { c: 'remember'; on: boolean; together?: boolean }
   /** Propose / agree to the hard road, or turn it off. */
   | { c: 'hard'; on: boolean }
   | { c: 'unask'; id: number };
@@ -197,6 +197,8 @@ export interface PartnerView {
   online: boolean;
   /** In their own past (memories). */
   remembering?: boolean;
+  /** In the past the two share. */
+  together?: boolean;
   area: string;
   where: string;
   busy: { text: string; from: number; until: number } | null;
@@ -895,8 +897,10 @@ export interface PlayerView {
   now: number;
   /** In the main world: whether one can go into one's past now (absent: there is no past for this hero). */
   memories?: { can: boolean; reason?: string };
+  /** In the main world: whether the two can go into the past they share (absent: not open yet). */
+  together?: { can: boolean; reason?: string; mateIn: boolean };
   /** In one's past: its name (the screen is the same, the world is another). */
-  past?: { title: string };
+  past?: { title: string; shared?: boolean };
   me: MeView;
   partner: PartnerView;
   day: number;
