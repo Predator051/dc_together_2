@@ -1,4 +1,5 @@
 import type { ActionDef, ClueDef, Cond, GoalDef, MysteryDef, NpcDef, SceneDef } from '../../../shared/src/content.js';
+import { resourcesM } from './base.js';
 import { PE, PG, PL, PM, PN, PR, PS, PT } from './ids.js';
 
 const SEC = 1000;
@@ -20,10 +21,12 @@ export function order(o: {
 }): ActionDef[] {
   const flag = `pm_o${o.n}`;
   const done = `pm_o${o.n}_done`;
+  // the order on the board shows what is asked for
+  const mark = resourcesM.find((r) => r.id === o.make.thing)?.icon;
   return [
     {
       id: o.take.id,
-      icon: 'spot:hall',
+      ...(mark ? { icon: mark } : {}),
       group: PL.shop,
       spot: 'board',
       label: `Взяти замовлення: ${o.label}`,
