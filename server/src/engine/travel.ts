@@ -121,7 +121,7 @@ export function goBlock(g: Game, pid: PlayerId, to: string, forView = false): st
 
 /** Leaving home: things to be carried to someone (and money) go along by themselves. */
 export function takeCarried(g: Game, pid: PlayerId): void {
-  if (g.p(pid).at !== g.ix.homeArea) return;
+  if (g.p(pid).at !== g.homeArea) return;
   for (const r of g.ix.c.resources) {
     const n = r.carry ? (g.s.res[r.id] ?? 0) : 0;
     if (n > 0) {

@@ -5,6 +5,7 @@ import { pasts, sharedPast } from '../content/past/index.js';
 import map1 from '../client/src/art/map1.json';
 import map2 from '../client/src/art/map2.json';
 import map3 from '../client/src/art/map3.json';
+import map4 from '../client/src/art/map4.json';
 
 // The painted map shows the sheet where the hero stands: its own places and, at its edge, the places of
 // another sheet that a road leads to. A place without a spot on the painting sends the whole map back to the
@@ -22,11 +23,11 @@ interface Sheet {
   roads: Record<string, Pt[]>;
   water: Record<string, Pt[]>;
 }
-const SHEETS: Record<string, Sheet> = { map1: map1 as unknown as Sheet, map2: map2 as unknown as Sheet, map3: map3 as unknown as Sheet };
+const SHEETS: Record<string, Sheet> = { map1: map1 as unknown as Sheet, map2: map2 as unknown as Sheet, map3: map3 as unknown as Sheet, map4: map4 as unknown as Sheet };
 const USES: Array<[string, Content, string[]]> = [
   ['the story', content, ['map1', 'map2']],
   ...Object.entries(pasts).map(([role, c]) => [`the ${role}'s memories`, c!, ['map2', 'map3']] as [string, Content, string[]]),
-  ['the shared memories', sharedPast, ['map3']],
+  ['the shared memories', sharedPast, ['map3', 'map4']],
 ];
 const key = (a: string, b: string) => [a, b].sort().join('|');
 

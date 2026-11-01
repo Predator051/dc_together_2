@@ -391,6 +391,8 @@ export interface AreaDef {
   ambush?: number;
   /** Home: the store is here, the bag is emptied on arrival. */
   home?: boolean;
+  /** Home moves here once this holds (the last such area that holds wins over `home`). */
+  homeFrom?: Cond;
   /** Where a hero beaten here comes to (default: home) — on a road far from any home. */
   refuge?: string;
   /** The place is on the map at all (as '?') while this holds. */

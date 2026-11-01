@@ -133,12 +133,25 @@ export class Bot {
       if (e?.enabled && !(e.readyAt && e.readyAt > v.now)) return { c: 'act', id: lower.id };
     }
 
-    // alone: a count the next scene waits for (people hidden, mouths fed) — go and raise it
-    if (g.s.solo) {
+    // alone (or in the past the two share, where each works on their own): a count the next scene waits for
+    // (people hidden, mouths fed, voices won) — go and raise it, or get the thing the step that raises it asks for
+    if (this.alone(g)) {
       // payable where it is done: at home from the store, elsewhere from the store and the bag together
       const payable = (a: ActionDef) =>
-        Object.entries(a.cost ?? {}).every(([r, n]) => (g.ix.areaOf(a.group) === g.ix.homeArea ? (g.s.res[r] ?? 0) + (v.atHome ? 0 : (g.p(this.pid).bag[r] ?? 0)) : this.stock(g, r)) >= n);
-      const raise = this.c.actions.find((a) => this.raisesGate(a, g) && (!a.visible || g.test(a.visible, this.pid)) && (!a.enabled || g.test(a.enabled, this.pid)) && payable(a));
+        // (some food is always kept back to eat)
+        Object.entries(a.cost ?? {}).every(([r, n]) => (g.s.res[r] ?? 0) + (g.p(this.pid).bag[r] ?? 0) - (r === this.c.food ? 6 : 0) >= n);
+      const raise = this.c.actions.find(
+        (a) =>
+          (!a.role || a.role === v.me.role) &&
+          !(a.once && g.flag(`built:${a.id}`)) &&
+          !g.atLimit(a) &&
+          (this.raisesGate(a, g) || this.feedsGate(a, g)) &&
+          (!a.visible || g.test(a.visible, this.pid)) &&
+          (!a.enabled || g.test(a.enabled, this.pid)) &&
+          payable(a) &&
+          // only where a road leads now
+          (g.ix.areaOf(a.group) === v.me.area || !!routeTo(g, v.me.area, g.ix.areaOf(a.group))),
+      );
       if (raise) {
         const area = g.ix.areaOf(raise.group);
         if (area !== v.me.area) {
@@ -148,6 +161,11 @@ export class Bot {
             if (pack) return { c: 'pack', id: pack[0], n: Math.min(g.s.res[pack[0]] ?? 0, pack[1] * 3) };
           }
           return this.goTowards(v, g, area);
+        }
+        // at home it is paid from the store: what is still in the bag goes there first
+        if (v.atHome) {
+          const out = Object.entries(raise.cost ?? {}).find(([r, n]) => (g.s.res[r] ?? 0) < n && (g.p(this.pid).bag[r] ?? 0) > 0);
+          if (out) return { c: 'pack', id: out[0], n: -(g.p(this.pid).bag[out[0]] ?? 0) };
         }
         const e = v.groups.flatMap((gr) => gr.entries).find((x) => x.id === raise.id);
         if (e?.enabled && !(e.readyAt && e.readyAt > v.now)) return { c: 'act', id: raise.id };
@@ -211,7 +229,7 @@ export class Bot {
       // home is worth going to only if there is a fire there, or wood to light one
       const wood = g.ix.c.needs?.campWood ?? '';
       const homeFire = g.stoveState() !== 'cold' || g.stockAll(wood) > 0;
-      if (!v.atHome && !n.fire && homeFire) return this.goTowards(v, g, g.ix.homeArea);
+      if (!v.atHome && !n.fire && homeFire) return this.goTowards(v, g, g.homeArea);
       if (v.atHome && g.stoveState() !== 'warm') {
         const stoke = this.entry(v, 'x_10');
         if (stoke?.enabled) return { c: 'act', id: 'x_10' };
@@ -522,10 +540,10 @@ export class Bot {
     const sup = g.pickFromPool('supper', true);
     const pool = this.c.pools.find((p) => p.id === 'p_01');
     if (sup && (sup.priority ?? 0) > 0 && !g.flag(`done:${sup.id}`) && this.stepsSinceSupper > 30 && g.hasCostAll(pool?.cost))
-      return { area: g.ix.homeArea, id: 'p_01' };
+      return { area: g.homeArea, id: 'p_01' };
     // an errand waits for days to pass: spend the evenings at home now and then
     if (this.o.side && this.stepsSinceSupper > 400 && g.hasCostAll(pool?.cost) && this.waitingForDays(g))
-      return { area: g.ix.homeArea, id: 'p_01' };
+      return { area: g.homeArea, id: 'p_01' };
     return null;
   }
 
@@ -666,6 +684,7 @@ export class Bot {
       const gifts = this.c.actions.filter(
         (a) =>
           !a.yield?.[COIN] &&
+          (!a.role || a.role === g.p(this.pid).role) &&
           (a.effects ?? []).some((e) => 'inc' in e && e.inc === trust.flag && (e.max ?? Infinity) > g.flag(trust.flag)) &&
           (!a.visible || g.test(a.visible, this.pid)) &&
           areaKnown(g, g.ix.areaOf(a.group)),
@@ -772,11 +791,12 @@ export class Bot {
         if (make) add(make.cost);
       }
     // alone in a past: what a count the story waits for costs (food for the hidden) is wanted
-    if (g.s.solo)
+    if (this.alone(g))
       for (const a of this.c.actions)
-        if (this.raisesGate(a, g) && (!a.visible || g.test(a.visible, this.pid))) add(Object.fromEntries(Object.entries(a.cost ?? {}).map(([r, n]) => [r, n * 2])));
+        if ((!a.role || a.role === g.p(this.pid).role) && (this.raisesGate(a, g) || this.feedsGate(a, g)) && (!a.visible || g.test(a.visible, this.pid)))
+          add(Object.fromEntries(Object.entries(a.cost ?? {}).map(([r, n]) => [r, n * 2])));
     // alone in a past: what buys the wanted things is wanted too (money)
-    if (g.s.solo)
+    if (this.alone(g))
       for (const a of this.c.actions)
         if (a.kind === 'trade' && Object.keys(a.yield ?? {}).some((r) => out.has(r))) add(Object.fromEntries(Object.entries(a.cost ?? {}).map(([r, n]) => [r, n * 3])));
     // always keep some food, and wood for the hearth once it matters for warmth and rest
@@ -874,6 +894,27 @@ export class Bot {
     return deep && this.c.actions.some((b) => b !== a && [...flat(b.visible), ...flat(b.enabled)].some(short) && this.raisesGate(b, g, false));
   }
 
+  /** Working on one's own: a past for one, or the past the two share (each does the routine alone). */
+  private alone(g: Game): boolean {
+    return !!g.s.solo || !!this.c.sharedOpens;
+  }
+
+  /** It gets (makes, finds, wins from a foe) the thing a gate-raising step of this hero waits for. */
+  private feedsGate(a: ActionDef, g: Game): boolean {
+    const got = new Set(Object.keys(a.yield ?? {}));
+    for (const e of a.effects ?? []) if ('fight' in e) for (const f of e.fight) for (const r of Object.keys(g.ix.c.enemies.find((x) => x.id === f.enemy)?.loot ?? {})) got.add(r);
+    const flat = (c: Cond | undefined): Cond[] => (!c ? [] : 'all' in c ? c.all.flatMap(flat) : [c]);
+    const role = g.p(this.pid).role;
+    return this.c.actions.some(
+      (b) =>
+        b !== a &&
+        (!b.role || b.role === role) &&
+        (!b.visible || g.test(b.visible, this.pid)) &&
+        this.raisesGate(b, g) &&
+        flat(b.enabled).some((c) => 'owns' in c && got.has(c.owns) && g.stockAll(c.owns) < (c.gte ?? 1)),
+    );
+  }
+
   /** This action takes a thing made to order that the bot carries. */
   private handsOver(a: ActionDef, v: PlayerView): boolean {
     return Object.keys(a.cost ?? {}).some((r) => (this.c.resources.find((x) => x.id === r)?.carry && this.c.resources.find((x) => x.id === r)?.kind === 'tool') && (v.bag.items.some((i) => i.id === r) || (v.atHome && v.res.some((x) => x.id === r && x.n > 0))));
@@ -894,7 +935,7 @@ export class Bot {
   /** Far from home with no road back (a road the story led to): only what is in the bag counts. */
   private roaming(g: Game): boolean {
     const at = g.p(this.pid).at;
-    return at !== g.ix.homeArea && !routeTo(g, at, g.ix.homeArea);
+    return at !== g.homeArea && !routeTo(g, at, g.homeArea);
   }
 
   private stock(g: Game, r: string): number {
@@ -904,8 +945,8 @@ export class Bot {
   /** Where the bot goes back to: home, or — on a road the story led it to, far from home — the refuge there. */
   private base(v: PlayerView, g: Game): string {
     const here = v.me.area;
-    if (routeTo(g, here, g.ix.homeArea)) return g.ix.homeArea;
-    return areaDef(g, here)?.refuge ?? (g.ix.c.areas.some((a) => a.refuge === here) ? here : g.ix.homeArea);
+    if (routeTo(g, here, g.homeArea)) return g.homeArea;
+    return areaDef(g, here)?.refuge ?? (g.ix.c.areas.some((a) => a.refuge === here) ? here : g.homeArea);
   }
 
   private work(v: PlayerView, g: Game, stay = false): Command | null {
@@ -921,7 +962,7 @@ export class Bot {
       if (a.kind === 'craft' && Object.keys(a.yield ?? {}).some((r) => this.c.resources.find((x) => x.id === r)?.carry)) return 90;
       if (this.handsOver(a, v)) return 95;
       // alone in a past: buy what the work waits for
-      if (g.s.solo && a.kind === 'trade' && Object.keys(a.yield ?? {}).some((r) => want.has(r))) return 55;
+      if (this.alone(g) && a.kind === 'trade' && Object.keys(a.yield ?? {}).some((r) => want.has(r))) return 55;
       // an errand's own step (a search, a count, a build away from home): do it while here
       if (a.quest && this.questStep(a, g)) return a.kind === 'build' || a.kind === 'craft' ? 90 : 45;
       if (this.o.careless) {
@@ -954,7 +995,7 @@ export class Bot {
     const goods = v.bag.items.some((i) => i.kind !== 'use' && i.kind !== 'food');
     let target = this.whereToGather(v, g, want);
     // alone in a past: what can only be bought, is bought where it is sold
-    if (!target && g.s.solo) {
+    if (!target && this.alone(g)) {
       const shop = this.c.actions.find(
         (a) => a.kind === 'trade' && Object.keys(a.yield ?? {}).some((r) => want.has(r)) && (!a.visible || g.test(a.visible, this.pid)) && Object.entries(a.cost ?? {}).every(([r, n]) => g.stockAll(r) >= n),
       );
@@ -970,7 +1011,7 @@ export class Bot {
     if (!v.atHome) {
       const base = this.base(v, g);
       // a full bag is emptied only at home (a road's refuge keeps no store)
-      if (v.bag.load >= v.bag.cap * 0.8 && base === g.ix.homeArea) return this.goTowards(v, g, base);
+      if (v.bag.load >= v.bag.cap * 0.8 && base === g.homeArea) return this.goTowards(v, g, base);
       const best = ranked[0];
       // a careless player, having walked somewhere, mostly does something there
       if (this.o.careless && best && this.rng.next() < 0.7) return { c: 'act', id: best.e.id };
@@ -1035,7 +1076,7 @@ export class Bot {
       if (errand || !this.questStep(a, g)) continue;
       const area = g.ix.areaOf(a.group);
       if (!areaKnown(g, area) || (areaDef(g, area)?.danger ?? 0) > lvl + 1) continue;
-      if (a.kind === 'craft' || (a.kind === 'build' && area === g.ix.homeArea)) continue;
+      if (a.kind === 'craft' || (a.kind === 'build' && area === g.homeArea)) continue;
       errand = area;
     }
     for (const a of this.c.actions) {
@@ -1124,16 +1165,23 @@ export class Bot {
     // what the next operation's moves are paid with goes in the bag
     const next = this.storyArea(g);
     const sc = next && this.c.scenes.find((x) => x.id === next.id);
-    if (sc && next!.area !== g.ix.homeArea)
+    if (sc && next!.area !== g.homeArea)
       for (const node of Object.values(sc.nodes)) {
         if (node.type !== 'operation') continue;
         for (const m of node.moves) for (const [id, n] of Object.entries(m.cost ?? {})) want[id] = Math.max(want[id] ?? 0, n * Math.ceil(node.turns / 2));
       }
     // what an errand away from home is paid with goes in the bag
     for (const a of this.c.actions) {
-      if (!this.questStep(a, g) || g.ix.areaOf(a.group) === g.ix.homeArea) continue;
+      if (!this.questStep(a, g) || g.ix.areaOf(a.group) === g.homeArea) continue;
       for (const [id, n] of Object.entries(a.cost ?? {})) want[id] = Math.max(want[id] ?? 0, n);
     }
+    // working on one's own: what a step the story waits for is paid with, away from home
+    if (this.alone(g))
+      for (const a of this.c.actions) {
+        if ((a.role && a.role !== v.me.role) || g.ix.areaOf(a.group) === g.homeArea) continue;
+        if ((a.visible && !g.test(a.visible, this.pid)) || !(this.raisesGate(a, g) || this.feedsGate(a, g))) continue;
+        for (const [id, n] of Object.entries(a.cost ?? {})) want[id] = Math.max(want[id] ?? 0, n);
+      }
     return want;
   }
 }

@@ -1602,7 +1602,7 @@ export function defeat(g: Game, pid: PlayerId): void {
   p.hp = Math.max(1, Math.ceil(p.hpMax * 0.3));
   p.poison = 0;
   const refuge = g.ix.c.areas.find((a) => a.id === p.at)?.refuge;
-  p.at = refuge ?? g.ix.homeArea;
+  p.at = refuge ?? g.homeArea;
   p.travel = null;
   // brought home and laid by the fire: warm and dry, if weak
   if (p.needs) {

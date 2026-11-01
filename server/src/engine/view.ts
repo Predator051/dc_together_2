@@ -137,7 +137,7 @@ function groups(g: Game, pid: PlayerId): GroupView[] {
   const locs = [...g.ix.c.locations].sort((a, b) => a.order - b.order);
   const here = g.p(pid).at;
   for (const loc of locs) {
-    if ((loc.area ?? g.ix.homeArea) !== here) continue;
+    if ((loc.area ?? g.homeArea) !== here) continue;
     if (!g.test(loc.visible, pid)) continue;
     const entries: EntryView[] = [];
     for (const sc of g.ix.c.scenes) {
@@ -1223,7 +1223,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
 
   const stoveState = g.stoveState();
   // The stove is in Ясенець: elsewhere its state is not shown.
-  const stoveText = stoveState === 'never' || me.at !== g.ix.homeArea ? '' : ui(`stove_${stoveState}`);
+  const stoveText = stoveState === 'never' || me.at !== g.homeArea ? '' : ui(`stove_${stoveState}`);
 
   const amb = g.ix.c.ambient;
   const here = me.at;
@@ -1234,7 +1234,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
       break;
     }
   let fire: PlayerView['ambient']['fire'] = 'none';
-  if (here === g.ix.homeArea) fire = stoveState === 'never' ? 'none' : stoveState;
+  if (here === g.homeArea) fire = stoveState === 'never' ? 'none' : stoveState;
   else if (amb?.fires?.[here] && g.test(amb.fires[here]!, pid)) fire = 'warm';
   if (ambKind === 'cellar' || ambKind === 'candle') fire = 'none';
   const fxOf = (pl: typeof me) =>
@@ -1595,7 +1595,7 @@ function prepsView(g: Game, pid: PlayerId): PrepView[] {
     let v = out.get(p.scene);
     if (!v) {
       const sc = g.ix.scenes.get(p.scene)!;
-      const area = sc.group ? g.ix.areaOf(sc.group) : sc.pool ? g.ix.homeArea : g.ix.scoutOf.get(sc.id);
+      const area = sc.group ? g.ix.areaOf(sc.group) : sc.pool ? g.homeArea : g.ix.scoutOf.get(sc.id);
       const name = area ? g.ix.c.areas.find((a) => a.id === area)?.name : undefined;
       v = { scene: sc.id, title: sc.title, ...(name ? { where: name } : {}), items: [] };
       out.set(p.scene, v);
