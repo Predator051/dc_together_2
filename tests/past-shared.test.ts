@@ -152,3 +152,56 @@ describe('chapter five, played by two bots', () => {
     expect(minutes).toBeLessThan(60);
   });
 });
+
+/** The shared past from the ford on (chapter five behind), both heroes in it. */
+function atFord(level = 10): World {
+  const main = new World(1);
+  main.join('Марко', 'm', 'hunter');
+  main.join('Оксана', 'f', 'maker');
+  main.state.past = { p1: walked('hunter', 'p1', level), p2: walked('maker', 'p2', level) };
+  main.state.flags.p2_act4_done = 1;
+  const ix = new ContentIndex(sharedPast);
+  enterShared(main.state, 'p1', ix, main.now, content.storyFlags);
+  enterShared(main.state, 'p2', ix, main.now, content.storyFlags);
+  const w = new World(1, sharedPast);
+  w.state = main.state.pastShared!;
+  w.now = main.now;
+  for (const f of ['ps_met', 'ps_carts_done', 'ps_carts_left', 'ps_ch5_done', 'done:ps_s01', 'done:ps_s02', 'done:ps_s03']) w.state.flags[f] = 1;
+  w.state.flags.main_act = 5;
+  for (const pid of ['p1', 'p2'] as const) w.state.players[pid].at = 'ps_a3';
+  new Game(ix, w.state, w.now).setOnline('p1', true);
+  return w;
+}
+
+describe('chapters six and seven, played by two bots', () => {
+  it('the village: home moves to the widow, five households, the gathering', { timeout: 900_000 }, () => {
+    const w = atFord();
+    const r = autoplay({}, {}, { from: w, content: sharedPast, until: (x) => !!x.state.flags.ps_ch6_done && !x.state.scene, maxSteps: 300000, stallLimit: 20000 });
+    if (!r.done) console.log(r.reason, show(r.world));
+    expect(r.done).toBe(true);
+    const s = r.world.state;
+    const minutes = r.gameTimeMs / 60000;
+    console.log('shared chapter six', Math.round(minutes), 'defeats', r.defeats, 'voices', s.flags.ps_voices, 'level', s.players.p1.level, s.players.p2.level);
+    for (const sc of ['ps_s04', 'ps_s05', 'ps_s06', 'ps_s07', 'ps_s09', 'ps_s10']) expect(s.flags[`done:${sc}`], sc).toBe(1);
+    expect(new Game(new ContentIndex(sharedPast), s, r.world.now).homeArea).toBe('ps_a4');
+    expect(minutes).toBeGreaterThan(15);
+    expect(minutes).toBeLessThan(60);
+  });
+
+  it('the first snow waits for the main story, then ends where the first part begins', { timeout: 600_000 }, () => {
+    const w = atFord();
+    for (const f of ['ps_hanna', 'ps_elder_met', 'ps_feast_done', 'ps_bells_done', 'ps_gathering_done', 'ps_ch6_done', 'ps_bow_asked', 'ps_bow_strung']) w.state.flags[f] = 1;
+    for (const sc of ['ps_s04', 'ps_s05', 'ps_s06', 'ps_s07', 'ps_s08', 'ps_s09', 'ps_s10']) w.state.flags[`done:${sc}`] = 1;
+    for (const pid of ['p1', 'p2'] as const) w.state.players[pid].at = 'ps_a4';
+    const g = new Game(new ContentIndex(sharedPast), w.state, w.now);
+    expect(g.test({ all: [{ flag: 'ps_ch6_done' }, { mainFlag: 'p2_act6_done' }] })).toBe(false);
+    w.state.mainFlags = { ...(w.state.mainFlags ?? {}), p2_act6_done: 1 };
+    const r = autoplay({}, {}, { from: w, content: sharedPast, until: (x) => !!x.state.flags.ps_ch7_done && !x.state.scene, maxSteps: 120000, stallLimit: 15000 });
+    if (!r.done) console.log(r.reason, show(r.world));
+    expect(r.done).toBe(true);
+    const minutes = r.gameTimeMs / 60000;
+    console.log('shared chapter seven', Math.round(minutes));
+    expect(r.world.state.flags.ps_latch).toBe(1);
+    expect(minutes).toBeGreaterThan(6);
+  });
+});

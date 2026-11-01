@@ -35,7 +35,7 @@ export function rememberBlock(g: Game, pid: PlayerId, pasts: Pasts): string | nu
 function fireBlock(g: Game, pid: PlayerId): string | null {
   const p = g.p(pid);
   if (p.remembering) return 'err_not_now';
-  if (p.at !== g.ix.homeArea || p.travel) return 'remember_home';
+  if (p.at !== g.homeArea || p.travel) return 'remember_home';
   if (p.fight !== null) return 'err_in_fight';
   if (g.s.scene) return 'err_in_scene';
   if (g.s.proposal) return 'err_proposal_pending';

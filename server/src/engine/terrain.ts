@@ -203,6 +203,13 @@ const RECIPES: Record<SceneId | 'plain', { ground: string; strokes: Stroke[] }> 
   kryvets: { ground: 'cobble', strokes: [stretch('wall', [1, 2], [2, 3]), scatter('barrel', [1, 2]), scatter('cart', [0, 1]), scatter('crate', [1, 2])] },
   ashtown: { ground: 'cobble', strokes: [stretch('wall', [1, 2], [1, 2]), scatter('log', [1, 2]), scatter('cart', [0, 1]), scatter('rock', [1, 2])] },
   ashisle: { ground: 'grass', strokes: [bank('pick', [1, 2]), fringe('reeds', 0.35), scatter('log', [1, 2]), scatter('stump', [0, 1])] },
+  // the village across the ford (the shared past, chapters 6–7)
+  yhouse: { ground: 'grass', strokes: [stretch('wall', [1, 1], [2, 3]), stretch('fence', [1, 2], [2, 3]), scatter('log', [0, 1]), scatter('barrel', [0, 1]), scatter('tree', [0, 1])] },
+  ysquare: { ground: 'dust', strokes: [stretch('wall', [1, 2], [2, 3]), scatter('cart', [0, 1]), scatter('barrel', [1, 2]), stretch('fence', [0, 1], [2, 2])] },
+  ymill: { ground: 'grass', strokes: [stream(), fringe('reeds', 0.25), fringe('tree', 0.12), scatter('crate', [0, 1])] },
+  yapiary: { ground: 'grass', strokes: [stands('tree', [1, 2], [2, 3]), scatter('crate', [1, 2]), stretch('fence', [0, 1], [2, 2])] },
+  ypines: { ground: 'grass', strokes: [stands('tree', [2, 3], [2, 4]), stands('bush', [1, 1], [1, 2]), scatter('log', [0, 1]), scatter('stump', [1, 2])] },
+  yhill: { ground: 'grass', strokes: [stands('tree', [1, 2], [1, 3]), scatter('rock', [1, 3]), stands('bush', [0, 1], [1, 2])] },
   quarry: { ground: 'sand', strokes: [scatter('rock', [2, 3]), scatter('cart', [0, 1]), scatter('crate', [1, 2]), stands('bush', [0, 1], [1, 2])] },
 };
 

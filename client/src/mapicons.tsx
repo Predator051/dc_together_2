@@ -110,6 +110,52 @@ const DRAW: Record<SceneId, () => JSX.Element> = {
       <path d="M2.5 20h19" />
     </>
   ),
+  // the village across the ford
+  yhouse: () => (
+    <>
+      <path d="M3.5 12.5l8.5-7.5 8.5 7.5" />
+      <path d="M6 11v9h12v-9" />
+      <path d="M10.5 20v-4.5h3V20" />
+      <path class="thin" d="M2.5 20h19M15 8.5V6" />
+    </>
+  ),
+  ysquare: () => (
+    <>
+      <path d="M9 20V8l3-3.5L15 8v12" />
+      <path class="thin" d="M10.5 11.5a1.5 1.5 0 0 1 3 0v2h-3z" />
+      <path d="M3 20v-5l2.5-2 2.5 2v5M16 20v-5l2.5-2 2.5 2v5" />
+      <path d="M2.5 20h19" />
+    </>
+  ),
+  ymill: () => (
+    <>
+      <circle cx="15" cy="13" r="5" />
+      <path class="thin" d="M15 8v10M10 13h10M11.5 9.5l7 7M18.5 9.5l-7 7" />
+      <path d="M3 20V11l4-3 3 2.5" />
+      <path class="thin" d="M2.5 20c3-1 6-1 9 0s6 1 9 0" />
+    </>
+  ),
+  yapiary: () => (
+    <>
+      <path d="M5 20v-8.5a2.5 2.5 0 0 1 5 0V20M14 20v-8.5a2.5 2.5 0 0 1 5 0V20" />
+      <path class="thin" d="M5 14.5h5M14 14.5h5M12 6.5l1 1M10.5 4.5l.8.8" />
+      <path d="M2.5 20h19" />
+    </>
+  ),
+  ypines: () => (
+    <>
+      <path d="M7 20V16M7 4l-4 6h2.5L3 14h8l-2.5-4H11z" />
+      <path d="M17 20V15M17 6l-3.5 5h2L13.5 15h7L18.5 11h2z" />
+      <path class="thin" d="M2.5 20h19" />
+    </>
+  ),
+  yhill: () => (
+    <>
+      <path d="M2.5 20c3-6 6-9 9.5-9s6.5 3 9.5 9" />
+      <path d="M12 11V6.5M11 6.5h2" />
+      <path class="thin" d="M6.5 15.5V13M17.5 15.5V13" />
+    </>
+  ),
   brid: () => (
     <>
       <path d="M2.5 12h19" />

@@ -2,7 +2,7 @@
 // the client must draw every one of them (its tables are typed by these lists).
 
 /** Grounds of the drawn plans of places. */
-export const SCENES = ['yard', 'shore', 'reeds', 'saltflat', 'brine', 'grove', 'dyke', 'causeway', 'road', 'town', 'bog', 'isle', 'willow', 'quarry', 'workshop', 'kryvets', 'hutir', 'brid', 'ashtown', 'ashisle'] as const;
+export const SCENES = ['yard', 'shore', 'reeds', 'saltflat', 'brine', 'grove', 'dyke', 'causeway', 'road', 'town', 'bog', 'isle', 'willow', 'quarry', 'workshop', 'kryvets', 'hutir', 'brid', 'ashtown', 'ashisle', 'yhouse', 'ysquare', 'ymill', 'yapiary', 'ypines', 'yhill'] as const;
 export type SceneId = (typeof SCENES)[number];
 
 /** The heroes as the players see them: role and gender (a look for each pair the game may meet). */

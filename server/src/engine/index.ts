@@ -1,4 +1,4 @@
-import type { QuestDef,
+import type { AreaDef, QuestDef,
   PrepDef,
   ActionDef,
   ChoiceNode,
@@ -140,6 +140,11 @@ export class ContentIndex {
     return this.c.areas.find((a) => a.home)?.id ?? this.c.areas[0]?.id ?? 'home';
   }
 
+  /** Places that become home later on (`AreaDef.homeFrom`). */
+  get movedHomes(): AreaDef[] {
+    return this.c.areas.filter((a) => a.homeFrom);
+  }
+
   /** Area of a location / group id. */
   areaOf(group: string | undefined): string {
     if (!group) return this.homeArea;
@@ -164,6 +169,13 @@ const OK: Result = { ok: true };
 
 export class Game {
   readonly rng: Rng;
+
+  /** Where home is now: the fixed home, or a place it has moved to (`AreaDef.homeFrom`). */
+  get homeArea(): string {
+    let at = this.ix.homeArea;
+    for (const a of this.ix.movedHomes) if (this.test(a.homeFrom!)) at = a.id;
+    return at;
+  }
   /** Scenes queued by effects; started when the current scene ends. */
   /** Kept in the world: a scene queued now may start after a later command ends the current one. */
   private get chain(): string[] {
@@ -303,7 +315,7 @@ export class Game {
 
   atHome(pid: PlayerId): boolean {
     const p = this.p(pid);
-    return !p.travel && p.at === this.ix.homeArea;
+    return !p.travel && p.at === this.homeArea;
   }
 
   /** The day grows long: evening after 25 minutes of play since the last supper. */
@@ -579,8 +591,8 @@ export class Game {
   }
 
   /** Cold stove slows work, but only at home where the stove is. */
-  cooldownMult(area: string = this.ix.homeArea): number {
-    return area === this.ix.homeArea && this.stoveState() === 'cold' ? this.ix.c.stove.coldPenalty : 1;
+  cooldownMult(area: string = this.homeArea): number {
+    return area === this.homeArea && this.stoveState() === 'cold' ? this.ix.c.stove.coldPenalty : 1;
   }
 
   // ----- effects -------------------------------------------------------------
@@ -1086,7 +1098,7 @@ export class Game {
     if (!pr || (pr.by === pid && !this.s.solo)) return this.fail('err_not_now');
     if (!this.bothOnline()) return this.fail('err_need_both');
     const via = this.ix.entry(pr.via);
-    const area = via && via.kind !== 'act' ? this.proposalArea(via.def, pr.by) : this.ix.homeArea;
+    const area = via && via.kind !== 'act' ? this.proposalArea(via.def, pr.by) : this.homeArea;
     if (this.p(pid).at !== area || this.p(pr.by).at !== area) {
       this.s.proposal = null;
       return this.fail('err_not_now');
@@ -1866,7 +1878,7 @@ export class Game {
     const st = this.s.stove;
     const dt = Math.max(0, this.now - this.s.meta.lastTick);
     this.s.meta.lastTick = this.now;
-    const anyoneHome = PLAYER_IDS.some((pid) => this.p(pid).online && this.p(pid).at === this.ix.homeArea);
+    const anyoneHome = PLAYER_IDS.some((pid) => this.p(pid).online && this.p(pid).at === this.homeArea);
     if (!anyoneHome || !st.lit || st.fuel <= 0) return settled;
     const before = this.stoveState();
     st.fuel = Math.max(0, st.fuel - dt);

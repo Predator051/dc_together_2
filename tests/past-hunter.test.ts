@@ -47,7 +47,8 @@ describe("the hunter's past", () => {
     console.log('chapter four', Math.round(ch4), 'defeats', r.defeats, 'level', r.world.state.players.p1.level);
     expect(r.done).toBe(true);
     // about an hour for a person: the bots' busy time is two and a half times shorter
-    expect(ch4).toBeGreaterThan(12);
+    // (the bot raises what a scene waits for on its own since 2026-11-01, a little faster than before)
+    expect(ch4).toBeGreaterThan(10);
     expect(ch4).toBeLessThan(60);
     // the road leaves home behind: the hero ends far from it, on the third sheet of the map
     expect(r.world.state.players.p1.at).not.toBe('ph_a1');

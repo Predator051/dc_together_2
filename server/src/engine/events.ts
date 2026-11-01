@@ -107,12 +107,12 @@ export function settleEvents(g: Game): boolean {
   if (g.s.scene || s.open.some((o) => o.pid === null)) return changed;
   const home = g.joinedIds().filter((pid) => g.p(pid).online && g.atHome(pid) && g.p(pid).fight === null);
   if (!home.length || !due(g, HOME)) return changed;
-  const list = eligible(g, 'home', undefined, g.ix.homeArea);
+  const list = eligible(g, 'home', undefined, g.homeArea);
   if (!list.length) {
     s.next[HOME] = g.now + gap(g);
     return changed;
   }
-  fire(g, weighted(g, list), HOME, null, g.ix.homeArea, home[0]!);
+  fire(g, weighted(g, list), HOME, null, g.homeArea, home[0]!);
   return true;
 }
 

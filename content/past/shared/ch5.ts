@@ -21,7 +21,7 @@ export const resourcesS5: ResourceDef[] = [
     weight: 0.5,
     use: { heal: 6, anywhere: true, label: 'Поїсти', log: { self: 'Хліб, дичина, монастирський мед. Їси мовчки, як усі на дорозі.', other: '{name} їсть.' } },
   },
-  { id: SR.wood, icon: 'wood', name: 'Хмиз і дубові гілки', order: 2, cap: 24, weight: 1 },
+  { id: SR.wood, icon: 'wood', name: 'Хмиз і дрова', order: 2, cap: 24, weight: 1 },
   { id: SR.coin, carry: true, icon: 'coin', name: 'Шаги', order: 3, weight: 0 },
   { id: SR.hide, icon: 'hide', name: 'Шкурки', order: 4, cap: 12, weight: 1 },
   { id: SR.goods, icon: 'ladle', name: 'Ложки й гребінці', order: 5, cap: 12, weight: 0.3, desc: 'Вирізано вечорами біля вогню. На хліб міняються охоче.' },
@@ -90,6 +90,8 @@ export const areasS5: AreaDef[] = [
     where: 'під дубом',
     scene: 'grove',
     home: true,
+    // the road is behind them once the widow takes them in
+    visible: { noFlag: 'ps_hanna' },
     pos: [2, 0],
     danger: 7,
     ambush: 0.04,
@@ -109,7 +111,7 @@ export const areasS5: AreaDef[] = [
     where: 'у монастирі',
     scene: 'grove',
     pos: [6, 0],
-    visible: met,
+    visible: { all: [met, { noFlag: 'ps_hanna' }] },
     danger: 7,
     ambush: 0.06,
     foes: [
