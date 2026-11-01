@@ -1,0 +1,390 @@
+/* Work in motion (workfx.tsx): the vignette of the running work, big in the middle or small in a corner. */
+
+.workfx {
+  --wf: min(56vw, 34vh, 240px);
+  position: fixed;
+  z-index: 28;
+  left: 50%;
+  top: 46%;
+  width: var(--wf);
+  height: var(--wf);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.workfx.on {
+  pointer-events: auto;
+}
+.workfx:not(.on) .wf {
+  visibility: hidden;
+}
+.workfx.small {
+  --wf: 76px;
+  left: auto;
+  top: auto;
+  right: 14px;
+  /* above the strip of places that sits over the bottom bar */
+  bottom: calc(var(--nav-h) + 72px + env(safe-area-inset-bottom));
+  transform: none;
+}
+@media (min-width: 960px) {
+  .workfx.small {
+    bottom: 18px;
+    right: 18px;
+  }
+}
+.workfx:focus-visible {
+  outline: none;
+}
+.workfx:focus-visible .wf {
+  box-shadow: 0 0 0 2px var(--ochre);
+}
+
+.wf {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  /* a warm pool of light on the dark page, its edge sinking into the page */
+  background:
+    radial-gradient(circle at 50% 58%, rgba(196, 154, 69, 0.2) 0%, rgba(196, 154, 69, 0.07) 42%, transparent 66%),
+    radial-gradient(circle at 50% 50%, #2e251b 0%, #241d15 58%, rgba(34, 28, 21, 0.92) 70%, rgba(34, 28, 21, 0) 71%);
+  animation: wf-in 0.35s ease-out both;
+}
+@keyframes wf-in {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+.wf-time {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+.wf-time circle {
+  fill: none;
+  stroke: var(--ochre);
+  stroke-opacity: 0.55;
+  stroke-width: 1.6;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  stroke-linecap: round;
+}
+.workfx.small .wf-time circle {
+  stroke-width: 4;
+}
+.wf-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+/* actors */
+.wf-paint {
+  background-size: 400% 300%;
+  background-repeat: no-repeat;
+}
+.wf-body {
+  position: absolute;
+  left: 25%;
+  top: 29%;
+  width: 50%;
+  height: 50%;
+}
+.wf-ghost,
+.wf-thing {
+  position: absolute;
+  inset: 0;
+}
+.wf-ghost {
+  opacity: 0.22;
+  filter: grayscale(1) brightness(0.8);
+}
+.wf-thing {
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45));
+}
+.wf-face {
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: 50% 30%;
+  box-shadow: 0 0 0 2px rgba(196, 154, 69, 0.35), 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+.wf-tool {
+  position: absolute;
+  left: 30%;
+  top: 30%;
+  width: 40%;
+  height: 40%;
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.5));
+  will-change: transform;
+}
+.wf-svg svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.wf-mini {
+  position: absolute;
+  left: 39%;
+  top: 43%;
+  width: 22%;
+  height: 22%;
+}
+.wf-thread {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.wf-thread polyline {
+  fill: none;
+  stroke: #ddb867;
+  stroke-width: 0.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 2.4 1.6;
+}
+
+/* ground and fire */
+.wf-ground {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 12%;
+  height: 16%;
+  border-radius: 50%;
+}
+.g-soil {
+  background: radial-gradient(ellipse at 50% 40%, #54402a 0%, #3b2a1c 55%, rgba(42, 29, 19, 0) 72%);
+}
+.g-water {
+  background: radial-gradient(ellipse at 50% 45%, rgba(142, 165, 179, 0.55) 0%, rgba(74, 98, 112, 0.5) 50%, rgba(42, 60, 72, 0) 72%);
+  animation: wf-shimmer 2.6s ease-in-out infinite;
+}
+@keyframes wf-shimmer {
+  50% {
+    filter: brightness(1.25);
+  }
+}
+.wf-flame {
+  position: absolute;
+  left: 50%;
+  bottom: 14%;
+  width: 34%;
+  height: 34%;
+  transform: translateX(-50%);
+  transform-origin: 50% 100%;
+  pointer-events: none;
+}
+.wf-flame::before {
+  content: '';
+  position: absolute;
+  left: -30%;
+  right: -30%;
+  bottom: -20%;
+  height: 70%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(224, 112, 58, 0.45) 0%, rgba(194, 78, 54, 0) 70%);
+}
+.wf-tongue {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  border-radius: 50% 50% 46% 46% / 62% 62% 38% 38%;
+  transform-origin: 50% 100%;
+  mix-blend-mode: screen;
+}
+.wf-tongue.a {
+  width: 70%;
+  height: 92%;
+  margin-left: -35%;
+  background: radial-gradient(ellipse at 50% 85%, #f0b04a 0%, #c24e36 55%, rgba(138, 46, 30, 0) 75%);
+  animation: wf-lick 0.9s ease-in-out infinite alternate;
+}
+.wf-tongue.b {
+  width: 46%;
+  height: 70%;
+  margin-left: -30%;
+  background: radial-gradient(ellipse at 50% 85%, #ffd98a 0%, #e0703a 60%, rgba(194, 78, 54, 0) 78%);
+  animation: wf-lick 0.7s ease-in-out infinite alternate-reverse;
+}
+.wf-tongue.c {
+  width: 34%;
+  height: 52%;
+  margin-left: -4%;
+  background: radial-gradient(ellipse at 50% 80%, #fff1c4 0%, #f0b04a 55%, rgba(224, 112, 58, 0) 78%);
+  animation: wf-lick 0.55s ease-in-out infinite alternate;
+}
+@keyframes wf-lick {
+  0% {
+    transform: scale(1, 1) skewX(-4deg);
+  }
+  100% {
+    transform: scale(0.88, 1.12) skewX(5deg);
+  }
+}
+
+/* flying bits */
+.wf-bit {
+  position: absolute;
+  pointer-events: none;
+}
+.b-spark {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #ffd98a;
+  box-shadow: 0 0 4px 1px rgba(240, 160, 74, 0.8);
+}
+.b-ember {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #f0904a;
+  box-shadow: 0 0 5px 1px rgba(224, 112, 58, 0.7);
+}
+.b-chip {
+  width: 6px;
+  height: 3px;
+  background: #a17a52;
+  border-radius: 1px;
+}
+.b-stone {
+  width: 4px;
+  height: 4px;
+  background: #7c776c;
+  border-radius: 1px;
+}
+.b-crumb {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #4a3626;
+}
+.b-curl {
+  width: 8px;
+  height: 8px;
+  border: 2px solid #c8a275;
+  border-right-color: transparent;
+  border-radius: 50%;
+}
+.b-fiber {
+  width: 12px;
+  height: 1.5px;
+  background: #d8c49a;
+  border-radius: 1px;
+}
+.b-leaf {
+  width: 7px;
+  height: 4px;
+  background: #6f8f4e;
+  border-radius: 0 70% 0 70%;
+}
+.b-drop {
+  width: 3px;
+  height: 5px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  background: #a9c1cf;
+}
+.b-tea {
+  width: 3px;
+  height: 5px;
+  border-radius: 50%;
+  background: #b98a4a;
+}
+.b-grain {
+  width: 2.5px;
+  height: 2.5px;
+  border-radius: 50%;
+  background: #efe6d2;
+}
+.b-seed {
+  width: 3px;
+  height: 4px;
+  border-radius: 50%;
+  background: #d8b25a;
+}
+.b-steam {
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(230, 217, 188, 0.4) 0%, rgba(230, 217, 188, 0) 70%);
+}
+.b-dust {
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(168, 151, 119, 0.55) 0%, rgba(168, 151, 119, 0) 70%);
+}
+.b-ring {
+  width: 34%;
+  height: 10%;
+  margin: -5% 0 0 -17%;
+  border-radius: 50%;
+  border: 1.5px solid rgba(190, 210, 222, 0.7);
+}
+.b-glint {
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  background: #fff1c4;
+  box-shadow: 0 0 6px 2px rgba(240, 214, 150, 0.7);
+}
+.b-bee {
+  width: 4px;
+  height: 3px;
+  border-radius: 50%;
+  background: #2a2219;
+  box-shadow: 0 0 0 1px rgba(221, 184, 103, 0.7);
+}
+.b-print {
+  width: 7px;
+  height: 11px;
+  margin: -5px 0 0 -3px;
+  border-radius: 50% 50% 45% 45%;
+  background: rgba(20, 15, 10, 0.55);
+}
+.b-streak {
+  width: 30%;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(230, 217, 188, 0), #e6d9bc);
+  transform-origin: 0 50%;
+}
+.b-glow,
+.b-beat {
+  width: 70%;
+  height: 70%;
+  border-radius: 50%;
+}
+.b-glow {
+  background: radial-gradient(circle, rgba(221, 184, 103, 0.28) 0%, rgba(221, 184, 103, 0) 70%);
+}
+.b-beat {
+  border: 2px solid rgba(216, 105, 76, 0.55);
+}
+
+/* in the corner only the thing and the ring: no flying bits */
+.workfx.small .wf-bit,
+.workfx.small .wf-ground {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wf {
+    animation: none;
+  }
+  .wf-tongue,
+  .g-water {
+    animation: none;
+  }
+}

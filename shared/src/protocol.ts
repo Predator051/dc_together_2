@@ -2,6 +2,7 @@ import type { FightEvent } from './state.js';
 import type { Field } from './field.js';
 import type { AmbientKind, SkyKind, Season, FxKind, Gender, PlayerId, Role, LogKind } from './content.js';
 import type { CropLook } from './pictures.js';
+import type { WorkLook } from './work.js';
 
 // ---------- Client -> server ----------
 
@@ -958,4 +959,6 @@ export interface PlayerView {
   busyUntil: number;
   busyFrom: number;
   busyAction: string | null;
+  /** How the running work looks: the motion and the thing that comes of it. */
+  busyLook: WorkLook | null;
 }

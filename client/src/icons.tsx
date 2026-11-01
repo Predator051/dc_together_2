@@ -146,6 +146,23 @@ export const IconMute = (p: P) => (
   </Svg>
 );
 
+/** A hammer with a motion line: the work shown in motion. */
+export const IconMotion = (p: P) => (
+  <Svg {...p}>
+    <path d="M13 11l6.5 6.5" />
+    <path d="M8.5 4.5l5 5-2.5 2.5-5-5z" />
+    <path d="M3.5 14.5a6 6 0 0 0 4 4.5" />
+  </Svg>
+);
+
+export const IconMotionOff = (p: P) => (
+  <Svg {...p}>
+    <path d="M13 11l6.5 6.5" />
+    <path d="M8.5 4.5l5 5-2.5 2.5-5-5z" />
+    <path d="M4 20L20 4" />
+  </Svg>
+);
+
 export const IconBell = (p: P) => (
   <Svg {...p}>
     <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" />

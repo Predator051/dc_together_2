@@ -10,6 +10,13 @@ import { net } from './net.js';
 import { stationUrl } from './pictures.js';
 import { T } from './strings.js';
 import { texUrl } from './terrain.js';
+import { playWork } from './workfx.js';
+
+/** Gather a bed (-1: every ripe one), and show it coming out of the ground. */
+function gather(bed: number, icon?: string) {
+  net.send({ c: 'harvest', bed });
+  playWork('harvest', icon ?? 'g_ripe');
+}
 
 const MIN = 60_000;
 const W = 900;
@@ -356,6 +363,7 @@ function SeedList({ gv, bed, locked, onSown }: { gv: GardenView; bed: number; lo
           disabled={locked}
           onClick={() => {
             net.send({ c: 'plant', bed, crop: s.crop });
+            playWork('plant', 'g_sprout');
             onSown();
           }}
           key={s.crop}
@@ -434,11 +442,11 @@ export function BedCard({ v, now, bed, locked }: { v: PlayerView; now: number; b
       </div>
       {at.ready && (
         <div class="bed-card-do">
-          <button type="button" class="btn primary" disabled={locked} onClick={() => net.send({ c: 'harvest', bed })}>
+          <button type="button" class="btn primary" disabled={locked} onClick={() => gather(bed, b.crop?.icon)}>
             {T.gardenGather}
           </button>
           {ripe > 1 && (
-            <button type="button" class="btn" disabled={locked} onClick={() => net.send({ c: 'harvest', bed: -1 })}>
+            <button type="button" class="btn" disabled={locked} onClick={() => gather(-1, 'g_ripe')}>
               {T.gardenGatherAll} ({ripe})
             </button>
           )}
@@ -481,7 +489,7 @@ export function GardenBeds({ v, offset, locked }: { v: PlayerView; offset: numbe
             );
           const at = bedNow(b, gv, v, now);
           return at.ready ? (
-            <button type="button" class="bed ready" disabled={locked} onClick={() => net.send({ c: 'harvest', bed: i })}>
+            <button type="button" class="bed ready" disabled={locked} onClick={() => gather(i, b.crop?.icon)}>
               <PlantPic look={b.crop.look} stage={4} class="bed-pic" />
               <span class="bed-name">{b.crop.name}</span>
               <span class="bed-note">{T.gardenGather}</span>
