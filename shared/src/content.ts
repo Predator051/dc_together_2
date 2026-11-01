@@ -1054,9 +1054,14 @@ export interface WeatherDef {
   waters?: boolean;
 }
 
+/** The time of year: which living things are heard outside. */
+export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
+
 export interface WeatherSetDef {
   /** The weather turns from this moment on (before it the sky is just the place's own). */
   from: Cond;
+  /** The time of year: the first whose condition holds (default spring). */
+  seasons?: Array<{ if?: Cond; season: Season }>;
   /** How long one weather holds, ms (random between). */
   span: [number, number];
   /** The first weather. */

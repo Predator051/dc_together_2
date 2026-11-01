@@ -1,15 +1,21 @@
-// Sound: synthesized in the browser with Web Audio — no recordings, no downloads.
-// A quiet bed for the place (wind, river, cave), the fire's crackle, and a short sound for every
+// Sound: synthesized in the browser with Web Audio, except the living things outside (birds, frogs,
+// crickets: short real recordings, `life.ts`). A quiet bed for the place (water, reeds, cave) whose wind
+// follows the weather, the weather itself, the fire's crackle, and a short sound for every
 // action, in step with its visual accent. Materials are modelled, not beeped: wood and iron ring
 // with their own sets of partials, a bowstring is a plucked string, snow crunches in grains.
 // Starts on the first tap (browsers forbid sound before that), pauses with the tab, and can be
 // switched off; the choice is remembered on this device.
 import type { AmbientView } from '../../shared/src/protocol.js';
+import { lifeNow, VOICES, type Voice } from './life.js';
 
 type Fx = NonNullable<AmbientView['fx']>;
 type Kind = AmbientView['kind'];
 
 const KEY = 'bezgomin.sound';
+/** The recordings of living things, by file name (`crow1`), loaded when first heard. */
+const LIFE = Object.fromEntries(
+  Object.entries(import.meta.glob('./sounds/life/*.mp3', { eager: true, query: '?url', import: 'default' })).map(([path, url]) => [path.split('/').pop()!.replace('.mp3', ''), url]),
+);
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 const pick = <T,>(xs: readonly T[]): T => xs[Math.floor(Math.random() * xs.length)]!;
 
@@ -78,6 +84,8 @@ function loadOn(): boolean {
 
 interface Bed {
   out: GainNode;
+  /** The place's own wind, turned up and down by the weather. */
+  air?: GainNode;
   stop: () => void;
 }
 
@@ -95,13 +103,21 @@ class Sound {
   private bed: Bed | null = null;
   private fireBed: Bed | null = null;
   private hiss: Bed | null = null;
-  private state: SoundState = { kind: 'snow', sky: null, fire: 'none', fx: null, partnerFx: null, fxUntil: 0, partnerFxUntil: 0, scene: false, mood: null, dusk: 0 };
+  private state: SoundState = { kind: 'snow', sky: null, weather: null, under: false, season: null, fire: 'none', fx: null, partnerFx: null, fxUntil: 0, partnerFxUntil: 0, scene: false, mood: null, dusk: 0 };
   private moodBed: Bed | null = null;
   private moodKind: Mood = null;
   private bedKind: string | null = null;
   private fireKind: string | null = null;
   private skyBed: Bed | null = null;
   private skyKind: string | null = null;
+  /** The weather and the living things outside go through here: muffled under a roof or in fog. */
+  private outside!: GainNode;
+  private muffle!: BiquadFilterNode;
+  private lifeBufs = new Map<string, Promise<AudioBuffer | null>>();
+  private lifeTimer = 0;
+  private chorusUntil = 0;
+  /** The living things louder or quieter than set (listening tests: `?life=`). */
+  lifeLevel = 1;
   private listeners = new Set<() => void>();
 
   constructor() {
@@ -174,6 +190,7 @@ class Sound {
     void ctx.resume().then(() => {
       this.master.gain.setTargetAtTime(0.7, ctx.currentTime, 0.4);
       this.apply();
+      if (!this.lifeTimer) this.lifeTimer = window.setTimeout(() => this.lifeCall(), rnd(1500, 4000));
     });
   }
 
@@ -189,6 +206,12 @@ class Sound {
     this.master.connect(comp);
     this.bedBus = ctx.createGain();
     this.bedBus.connect(this.master);
+    this.muffle = ctx.createBiquadFilter();
+    this.muffle.type = 'lowpass';
+    this.muffle.frequency.value = 18000;
+    this.muffle.Q.value = 0.5;
+    this.outside = ctx.createGain();
+    this.outside.connect(this.muffle).connect(this.bedBus);
     this.fxBus = ctx.createGain();
     this.fxBus.gain.value = 1.6;
     this.fxBus.connect(this.master);
@@ -216,14 +239,21 @@ class Sound {
       this.bed = this.makeBed(bedKind);
       this.bedKind = bedKind;
     }
+    const life = lifeNow(s, s.dusk);
+    this.bed?.air?.gain.setTargetAtTime(life.air, ctx.currentTime, 2);
+    this.muffle.frequency.setTargetAtTime(s.under ? 900 : s.weather === 'fog' ? 1800 : 18000, ctx.currentTime, 0.8);
+    if (life.chorus && this.chorusUntil < ctx.currentTime) this.chorus();
     const fireKind = s.fire === 'warm' || s.fire === 'low' ? s.fire : 'none';
     if (fireKind !== this.fireKind) {
       this.fadeOut(this.fireBed);
       this.fireBed = fireKind === 'none' ? null : this.makeFire(fireKind === 'warm' ? 1 : 0.45);
       this.fireKind = fireKind;
     }
-    // rain and wind over the place's own sound (frost, warmth and fog are quiet)
-    const skyKind = s.sky === 'rain' || s.sky === 'storm' || s.sky === 'wind' ? s.sky : null;
+    // rain and wind over the place's own sound (frost, warmth and fog are quiet); under a roof through
+    // the walls, not in a cave or a cellar
+    const deep = s.kind === 'cave' || s.kind === 'cellar' || s.kind === 'candle';
+    const w = s.weather;
+    const skyKind = !deep && (w === 'rain' || w === 'storm' || w === 'wind') ? w : null;
     if (skyKind !== this.skyKind) {
       this.fadeOut(this.skyBed);
       this.skyBed = skyKind ? this.makeSky(skyKind) : null;
@@ -455,6 +485,9 @@ class Sound {
     const out = ctx.createGain();
     out.gain.value = 0;
     out.connect(this.bedBus);
+    const air = ctx.createGain();
+    air.gain.value = lifeNow(this.state, this.state.dusk).air;
+    air.connect(out);
     const nodes: AudioScheduledSourceNode[] = [];
     const timers: number[] = [];
 
@@ -464,7 +497,7 @@ class Sound {
       const lp2 = this.filter('lowpass', f * 1.6, 0.5);
       const g = ctx.createGain();
       g.gain.value = level;
-      src.connect(lp).connect(lp2).connect(g).connect(out);
+      src.connect(lp).connect(lp2).connect(g).connect(air);
       src.start();
       nodes.push(src, this.lfo(lp.frequency, rnd(0.04, 0.08), f * 0.5), this.lfo(g.gain, rnd(0.05, 0.11), level * 0.5));
     };
@@ -554,39 +587,25 @@ class Sound {
         src.start();
         nodes.push(src, this.lfo(g.gain, rnd(0.18, 0.3), 0.045), this.lfo(lp.frequency, 0.11, 160));
       }
-      // a frog, a bird, a crack of salt crust: short and rare
-      const life = () => {
-        const t = ctx.currentTime;
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        if (kind === 'salt') {
+      // a crack of salt crust now and then (the living things are recordings: `lifeCall`)
+      if (kind === 'salt') {
+        const crack = () => {
+          const t = ctx.currentTime;
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
           o.type = 'square';
           o.frequency.setValueAtTime(rnd(1800, 2600), t);
           g.gain.setValueAtTime(0.0001, t);
           g.gain.exponentialRampToValueAtTime(0.012, t + 0.002);
           g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
-        } else if (kind === 'marsh' || kind === 'grove') {
-          o.type = 'sawtooth';
-          o.frequency.setValueAtTime(rnd(90, 140), t);
-          o.frequency.exponentialRampToValueAtTime(rnd(70, 90), t + 0.16);
-          g.gain.setValueAtTime(0.0001, t);
-          g.gain.exponentialRampToValueAtTime(kind === 'grove' ? 0.012 : 0.02, t + 0.02);
-          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
-        } else {
-          o.type = 'sine';
-          o.frequency.setValueAtTime(rnd(2400, 3400), t);
-          o.frequency.exponentialRampToValueAtTime(rnd(1800, 2200), t + 0.12);
-          g.gain.setValueAtTime(0.0001, t);
-          g.gain.exponentialRampToValueAtTime(0.008, t + 0.01);
-          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14);
-        }
-        const lp = this.filter('lowpass', 4000);
-        o.connect(g).connect(lp).connect(out);
-        o.start(t);
-        o.stop(t + 0.25);
-        timers.push(window.setTimeout(life, rnd(4000, 12000)));
-      };
-      timers.push(window.setTimeout(life, rnd(2000, 6000)));
+          const lp = this.filter('lowpass', 4000);
+          o.connect(g).connect(lp).connect(out);
+          o.start(t);
+          o.stop(t + 0.05);
+          timers.push(window.setTimeout(crack, rnd(4000, 12000)));
+        };
+        timers.push(window.setTimeout(crack, rnd(2000, 6000)));
+      }
     } else {
       // cellar: close, dull room tone
       const src = this.noiseSrc();
@@ -601,6 +620,7 @@ class Sound {
     out.gain.setTargetAtTime(target, ctx.currentTime, 1.2);
     return {
       out,
+      air,
       stop: () => {
         for (const n of nodes) n.stop();
         for (const t of timers) window.clearTimeout(t);
@@ -689,7 +709,7 @@ class Sound {
     const ctx = this.ctx!;
     const out = ctx.createGain();
     out.gain.value = 0;
-    out.connect(this.bedBus);
+    out.connect(this.outside);
     const nodes: AudioScheduledSourceNode[] = [];
     let timer = 0;
     if (kind === 'wind') {
@@ -744,6 +764,76 @@ class Sound {
         out.disconnect();
       },
     };
+  }
+
+  // ---------- living things ----------
+  private lifeBuf(name: string): Promise<AudioBuffer | null> {
+    let b = this.lifeBufs.get(name);
+    if (!b) {
+      const url = LIFE[name];
+      const ctx = this.ctx!;
+      b = url
+        ? fetch(url)
+            .then((r) => r.arrayBuffer())
+            .then((data) => ctx.decodeAudioData(data))
+            .catch(() => null)
+        : Promise.resolve(null);
+      this.lifeBufs.set(name, b);
+    }
+    return b;
+  }
+
+  /** One recording, somewhere around: a little left or right, nearer or farther, a touch higher or lower. */
+  private async voice(v: Voice, at = 0, gain = 1): Promise<number> {
+    const take = 1 + Math.floor(Math.random() * VOICES[v].takes);
+    const buf = await this.lifeBuf(`${v}${take}`);
+    const ctx = this.ctx;
+    if (!buf || !ctx || ctx.state !== 'running') return 0;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.playbackRate.value = rnd(0.96, 1.04);
+    const g = ctx.createGain();
+    // a chorus keeps one level from take to take; a single call comes from near or far
+    g.gain.value = VOICES[v].gain * gain * this.lifeLevel * (v === 'crickets' ? 1 : rnd(0.6, 1));
+    let node: AudioNode = g;
+    if (ctx.createStereoPanner) {
+      const p = ctx.createStereoPanner();
+      p.pan.value = rnd(-0.8, 0.8);
+      g.connect(p);
+      node = p;
+    }
+    node.connect(this.outside);
+    src.connect(g);
+    const t = ctx.currentTime + at;
+    src.start(t);
+    return buf.duration / src.playbackRate.value;
+  }
+
+  /** The next call of something living, then the one after it (while the sound is on). */
+  private lifeCall(): void {
+    this.lifeTimer = 0;
+    if (!this.ctx || !this.on) return;
+    const life = lifeNow(this.state, this.state.dusk);
+    if (this.ctx.state === 'running' && life.voices.length) {
+      const total = life.voices.reduce((sum, [, w]) => sum + w, 0);
+      let r = Math.random() * total;
+      const v = life.voices.find(([, w]) => (r -= w) < 0)?.[0] ?? life.voices[0]![0];
+      void this.voice(v);
+    }
+    this.lifeTimer = window.setTimeout(() => this.lifeCall(), rnd(life.gap[0], life.gap[1]) * 1000);
+  }
+
+  /** Crickets: takes laid end to end over their fades, for as long as the evening allows. */
+  private chorus(): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.on || ctx.state !== 'running') return;
+    if (!lifeNow(this.state, this.state.dusk).chorus) return;
+    this.chorusUntil = ctx.currentTime + 1;
+    void this.voice('crickets', 0, 1).then((dur) => {
+      if (!dur || !this.ctx) return;
+      this.chorusUntil = this.ctx.currentTime + dur;
+      window.setTimeout(() => this.chorus(), Math.max(1, dur - 1) * 1000);
+    });
   }
 
   private makeFire(level: number): Bed {

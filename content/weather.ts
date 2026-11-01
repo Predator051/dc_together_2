@@ -5,6 +5,8 @@ const MIN = 60_000;
 // Spring over the marshes. Every weather is a trade: something gets harder, something easier.
 export const weather: WeatherSetDef = {
   from: { flag: 'p2_hut' },
+  // spring over the marshes; summer from the third act
+  seasons: [{ if: { flag: 'p2_act3' }, season: 'summer' }, { season: 'spring' }],
   span: [15 * MIN, 25 * MIN],
   first: 'w_clear',
   kinds: [
