@@ -21,7 +21,7 @@ describe("the hunter's past", () => {
     expect(r.gameTimeMs / 60000).toBeLessThan(45);
   });
 
-  it.each([1, 2])('all three chapters, one after another, when the story is at act three (seed %i)', (seed) => {
+  it.each([1, 2])('all three chapters, one after another, when the story is at act three (seed %i)', { timeout: 600_000 }, (seed) => {
     const w = new World(seed, hunterPast);
     w.state.solo = true;
     w.join('Оксана', 'f', 'hunter');

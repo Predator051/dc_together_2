@@ -20,7 +20,7 @@ export const hunterPast: Content = {
   encounters: [],
   clues: [...cluesH1, ...cluesH23, ...cluesH4],
   mysteries: mysteriesH,
-  goals: [...goalsH4, ...goalsH23, ...goalsH1, { id: 'ph_goal0', text: 'Плавні чекають.' }],
+  goals: [...goalsH4, ...goalsH23, ...goalsH1, { id: 'ph_goal_wait', text: 'Спогади тут уриваються. Далі — коли ви з напарником пройдете далі разом.', when: { any: [{ all: [{ flag: 'ph_ch1_done' }, { flag: 'main_act', lt: 2 }] }, { all: [{ flag: 'ph_ch2_done' }, { flag: 'main_act', lt: 3 }] }, { all: [{ flag: 'ph_ch3_done' }, { flag: 'main_act', lt: 4 }] }] } }, { id: 'ph_goal0', text: 'Плавні чекають.' }],
   npcs: [...npcsH, ...npcsH4],
   enemies: [...enemiesH, ...enemiesH4],
   residents: residentsH,

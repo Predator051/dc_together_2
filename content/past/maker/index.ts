@@ -21,7 +21,7 @@ export const makerPast: Content = {
   encounters: [],
   clues: [...cluesM1, ...cluesM2, ...cluesM3, ...cluesM4],
   mysteries: mysteriesM,
-  goals: [...goalsM4, ...goalsM3, ...goalsM2, ...goalsM1, { id: 'pm_goal0', text: 'Майстерня жде роботи.' }],
+  goals: [...goalsM4, ...goalsM3, ...goalsM2, ...goalsM1, { id: 'pm_goal_wait', text: 'Спогади тут уриваються. Далі — коли ви з напарником пройдете далі разом.', when: { any: [{ all: [{ flag: 'pm_ch1_done' }, { flag: 'main_act', lt: 2 }] }, { all: [{ flag: 'pm_ch2_done' }, { flag: 'main_act', lt: 3 }] }, { all: [{ flag: 'pm_ch3_done' }, { flag: 'main_act', lt: 4 }] }] } }, { id: 'pm_goal0', text: 'Майстерня жде роботи.' }],
   npcs: npcsM,
   enemies: [...enemiesM, ...enemiesM4],
   residents: residentsM,
