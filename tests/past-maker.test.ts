@@ -19,7 +19,19 @@ describe("the maker's past", () => {
     expect(r.gameTimeMs / 60000).toBeLessThan(45);
   });
 
-  it.each([1, 2])('all three chapters, one after another, when the story is at act three (seed %i)', (seed) => {
+  it('after a chapter, while the story has not gone further, says the memories wait for both', { timeout: 600_000 }, () => {
+    const w = new World(1, makerPast);
+    w.state.solo = true;
+    w.join('Оксана', 'f', 'maker');
+    w.state.flags.main_act = 2;
+    const r = autoplay({}, {}, { from: w, solo: { content: makerPast, role: 'maker' }, until: (x) => !!x.state.flags.pm_ch2_done && !x.state.scene, maxSteps: 120000, stallLimit: 8000 });
+    expect(r.done).toBe(true);
+    expect(r.world.state.goal).toBe('pm_goal_wait');
+    r.world.state.flags.main_act = 3;
+    expect(r.world.g().currentGoal()).toBe('pm_goal30');
+  });
+
+  it.each([1, 2])('all three chapters, one after another, when the story is at act three (seed %i)', { timeout: 600_000 }, (seed) => {
     const w = new World(seed, makerPast);
     w.state.solo = true;
     w.join('Оксана', 'f', 'maker');
