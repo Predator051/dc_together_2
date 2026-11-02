@@ -51,6 +51,7 @@
 //   tsx scripts/art.ts crops <painted.png> <look>   — five stages of a crop (see `crops`)
 //   tsx scripts/art.ts bed <painted.png>            — an empty raised bed (see `bed`)
 //   tsx scripts/art.ts moment <painted.png> <scene> — a key scene's own moment, cut like a view
+//   tsx scripts/art.ts events <painted.png> <n>     — four pictures of small happenings (see `events`)
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
@@ -400,6 +401,36 @@ function stations(src: string, n: number): void {
   console.log(`stations ${n}: ${keys.join(' ')}`);
 }
 
+// ---------------------------------------------------------------------------- happenings
+
+/**
+ * A sheet of happenings is four pictures in a 2×2 grid divided by black gutters (order: .design/art/events.json,
+ * sheet n; a sheet may hold fewer than four); each quarter becomes client/src/art/events/<event id>.webp, and
+ * the painted ones are listed in client/src/art/events.json.
+ */
+function events(src: string, n: number): void {
+  const order = JSON.parse(readFileSync(join(ROOT, '.design/art/events.json'), 'utf8')) as Array<Array<[string, string]>>;
+  const keys = (order[n - 1] ?? []).map(([k]) => k);
+  if (!keys.length) throw new Error(`no sheet ${n} in .design/art/events.json`);
+  const [w, h] = sizeOf(src);
+  const qw = Math.floor(w / 2);
+  const qh = Math.floor(h / 2);
+  const inset = Math.round(Math.min(qw, qh) * 0.035);
+  const outDir = join(ROOT, 'client/src/art/events');
+  mkdirSync(outDir, { recursive: true });
+  const listPath = join(ROOT, 'client/src/art/events.json');
+  const list = new Set<string>(existsSync(listPath) ? JSON.parse(readFileSync(listPath, 'utf8')) : []);
+  keys.forEach((k, q) => {
+    const x = (q % 2) * qw + inset;
+    const y = Math.floor(q / 2) * qh + inset;
+    magick(src, '-crop', `${qw - 2 * inset}x${qh - 2 * inset}+${x}+${y}`, '+repage', '-resize', '720x480^', '-gravity', 'center', '-extent', '720x480', '-strip', '-quality', '74', '-define', 'webp:method=6', join(outDir, `${k}.webp`));
+    list.add(k);
+  });
+  writeFileSync(listPath, JSON.stringify([...list].sort()) + '\n');
+  keep(src, `events${n}`);
+  console.log(`events ${n}: ${keys.join(' ')}`);
+}
+
 // ---------------------------------------------------------------------------- folk
 
 function folk(src: string, n: number, crop: number): void {
@@ -618,6 +649,7 @@ else if (cmd === 'tex' && args[0] && args[1]) texture(resolve(args[0]), args[1])
 else if (cmd === 'ground' && args[0] && args[1]) ground(resolve(args[0]), args[1]);
 else if (cmd === 'view' && args[0] && args[1]) view(resolve(args[0]), args[1]);
 else if (cmd === 'moment' && args[0] && args[1]) moment(resolve(args[0]), args[1]);
+else if (cmd === 'events' && args[0] && args[1]) events(resolve(args[0]), Number(args[1]));
 else if (cmd === 'hero' && args[0] && args[1]) hero(resolve(args[0]), args[1]);
 else if (cmd === 'stations' && args[0] && args[1]) stations(resolve(args[0]), Number(args[1]));
 else if (cmd === 'folk' && args[0] && args[1]) folk(resolve(args[0]), Number(args[1]), Number(args[2] ?? 0.8));

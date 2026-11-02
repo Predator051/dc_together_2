@@ -264,3 +264,12 @@ bottom fifth will be cropped). No faces shown: people only as small distant figu
 Шаблон шага 3, только две клетки (молот: голова слева вверху, ручка справа внизу — ось вращения в
 `workfx`; игла: ушко справа вверху, остриё слева внизу — от острия тянется нить). Остальные клетки —
 «leave this cell empty». Принят с первого раза. Нарезка `tsx scripts/art.ts things <png> 13`.
+
+## События — листы 2×2, 1536×1024 (`events.json`: порядок и описания, 2026-11-02)
+
+«Generate an image, landscape 1536x1024. One image divided into a 2x2 grid of four separate painted scenes,
+separated by thin solid black gutters; each quarter is its own complete eye-level illustration (3:2) of a small
+moment in a dark folk-tale survival game, with the main subject in the middle of the quarter. No faces shown:
+people only as small figures, seen from behind, or with faces turned away or shaded. Top-left: … Top-right: …
+Bottom-left: … Bottom-right: …» + общий хвост стиля. Лист с меньшим числом сцен — пустые клетки «plain dark
+umber, empty». Нарезка `tsx scripts/art.ts events <png> <n>` → `client/src/art/events/<id>.webp` (720×480).

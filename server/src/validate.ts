@@ -456,7 +456,7 @@ export function validateContent(c: Content): Report {
         }
       }
       for (const k of Object.keys(e.stages ?? {})) if (!reached.has(k)) err(`${w}: stage ${k} is never reached`);
-      if (!e.choices) err(`${w}: a happening needs a choice`);
+      if (e.stages && !e.choices) err(`${w}: steps need a first choice`);
       if (e.choices && e.choices.length < 2) err(`${w}: a card needs at least two choices`);
     }
   }

@@ -1211,7 +1211,7 @@ img.plant-pic {
 }
 
 /* a small happening: a window over the game with its picture; it waits for an answer */
-.event-wrap {
+.sheet-wrap.event-wrap {
   z-index: 29;
   background: rgba(10, 7, 4, 0.78);
   animation: event-dim 0.3s ease backwards;
@@ -1221,7 +1221,7 @@ img.plant-pic {
     background: rgba(10, 7, 4, 0);
   }
 }
-.event-sheet {
+.sheet.event-sheet {
   max-width: 560px;
   padding: 0;
   outline: none;

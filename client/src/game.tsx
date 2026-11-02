@@ -409,7 +409,7 @@ export function Game({ s }: { s: NetState }) {
   const view: Tab = (tab === 'map' && !hasMap) || (tab === 'hero' && !hasHero) ? 'work' : tab;
 
   const tabs: Array<{ id: Tab; label: string; icon: JSX.Element; badge?: boolean }> = [
-    { id: 'work', label: T.tabHere, icon: <IconWork />, badge: v.events.length > 0 && view !== 'work' },
+    { id: 'work', label: T.tabHere, icon: <IconWork /> },
     ...(hasMap ? [{ id: 'map' as Tab, label: T.tabMap, icon: <IconMap /> }] : []),
     ...(hasHero ? [{ id: 'hero' as Tab, label: T.tabHero, icon: <IconHero />, badge: heroBadge && view !== 'hero' }] : []),
     ...(hasNotes ? [{ id: 'notes' as Tab, label: T.tabNotes, icon: <IconNotes />, badge: newNotes && view !== 'notes' }] : []),
