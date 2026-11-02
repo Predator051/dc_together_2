@@ -9,6 +9,8 @@ export function Cell({
   cap,
   cls = '',
   sel = false,
+  id,
+  fresh,
   onPick,
 }: {
   icon?: string;
@@ -18,6 +20,10 @@ export function Cell({
   cap?: number;
   cls?: string;
   sel?: boolean;
+  /** With `fresh`: the thing's id, to take the mark off once it is looked at. */
+  id?: string;
+  /** How much of it has just come in: a small mark and a "+N" that floats up. */
+  fresh?: number;
   onPick?: () => void;
 }) {
   const body = (
@@ -32,17 +38,22 @@ export function Cell({
         </span>
       )}
       <span class="cell-name">{name}</span>
+      {fresh !== undefined && (
+        <span class="cell-plus" key={fresh} aria-hidden="true">
+          +{fresh}
+        </span>
+      )}
     </>
   );
   if (!onPick)
     return (
-      <li class={`cell ${cls}`} data-icon={icon}>
+      <li class={`cell ${cls} ${fresh ? 'fresh' : ''}`} data-icon={icon} data-fresh={fresh ? id : undefined}>
         {body}
       </li>
     );
   return (
     <li>
-      <button type="button" class={`cell ${cls} ${sel ? 'sel' : ''}`} data-icon={icon} aria-pressed={sel} onClick={onPick}>
+      <button type="button" class={`cell ${cls} ${sel ? 'sel' : ''} ${fresh ? 'fresh' : ''}`} data-icon={icon} data-fresh={fresh ? id : undefined} aria-pressed={sel} onClick={onPick}>
         {body}
       </button>
     </li>

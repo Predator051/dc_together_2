@@ -8,7 +8,7 @@ import type { WorkLook, WorkVerb } from '../../shared/src/work.js';
 import { paintedStyle } from './items.js';
 import { sound } from './sound.js';
 import { heroFace } from './portraits.js';
-import { load, store } from './clock.js';
+import { load, secsLeft, store } from './clock.js';
 import { T } from './strings.js';
 
 // ---------- the player's choice: big in the middle, small in the corner, or none ----------
@@ -894,6 +894,12 @@ export function WorkFx({ v, offset, hidden }: { v: PlayerView; offset: number; h
 }
 
 /** The partner's work, small in the other corner: both see the other is at it, and for how long. */
+/** Seconds for a short wait, whole minutes for a long one. */
+function timeLeft(until: number, now: number): string {
+  const s = (until - now) / 1000;
+  return s > 90 ? `${Math.ceil(s / 60)} ${T.min}` : secsLeft(until, now);
+}
+
 export function MateWork({ v, offset, hidden }: { v: PlayerView; offset: number; hidden: boolean }) {
   const mode = usePref();
   const host = useRef<HTMLDivElement>(null);
@@ -920,6 +926,49 @@ export function MateWork({ v, offset, hidden }: { v: PlayerView; offset: number;
   }, [key]);
   useEffect(() => () => live.current?.vig.destroy(), []);
 
-  const label = v.partner.busy ? `${v.partner.name}: ${v.partner.busy.text}` : v.partner.name;
-  return <div ref={host} class={`workfx small mate ${on && !hidden ? 'on' : ''}`} role="img" aria-label={label} title={label} />;
+  // a tap tells what the partner is doing and how long it will take; the note goes away by itself
+  const [told, setTold] = useState(false);
+  const [, tick] = useState(0);
+  const shown = told && on && !hidden && !!b;
+  useEffect(() => {
+    if (!shown) return;
+    const t = setInterval(() => tick((x) => x + 1), 1000);
+    const off = setTimeout(() => setTold(false), 5000);
+    return () => {
+      clearInterval(t);
+      clearTimeout(off);
+    };
+  }, [shown]);
+  const what = v.partner.busy?.text ?? T.busyNow;
+  const label = `${v.partner.name}: ${what}`;
+  const tell = () => setTold(!told);
+  return (
+    <>
+      <div
+        ref={host}
+        class={`workfx small mate ${on && !hidden ? 'on' : ''}`}
+        role="button"
+        tabIndex={on && !hidden ? 0 : -1}
+        aria-label={label}
+        aria-expanded={shown}
+        title={label}
+        onClick={tell}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            tell();
+          }
+        }}
+      />
+      {shown && (
+        <div class="mate-note" role="status" onClick={() => setTold(false)}>
+          <b>{v.partner.name}</b>
+          <span>{what}</span>
+          <small>
+            {T.mateLeft} {timeLeft(b!.until, Date.now() + offset)}
+          </small>
+        </div>
+      )}
+    </>
+  );
 }

@@ -312,7 +312,7 @@ export function BagPanel({ v, locked }: { v: PlayerView; locked: boolean }) {
         items={b.items}
         label={T.bag}
         shelf={(x) => shelfOf(x.kind)}
-        cell={(x) => <Cell icon={x.icon} name={x.name} n={x.n} sel={sel === x.id} onPick={() => setSel(sel === x.id ? null : x.id)} />}
+        cell={(x, fresh) => <Cell id={x.id} fresh={fresh} icon={x.icon} name={x.name} n={x.n} sel={sel === x.id} onPick={() => setSel(sel === x.id ? null : x.id)} />}
       />
       {it && (
         <div class="cell-detail" key={it.id}>
