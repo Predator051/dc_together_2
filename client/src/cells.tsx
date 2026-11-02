@@ -34,10 +34,15 @@ export function Cell({
       <span class="cell-name">{name}</span>
     </>
   );
-  if (!onPick) return <li class={`cell ${cls}`}>{body}</li>;
+  if (!onPick)
+    return (
+      <li class={`cell ${cls}`} data-icon={icon}>
+        {body}
+      </li>
+    );
   return (
     <li>
-      <button type="button" class={`cell ${cls} ${sel ? 'sel' : ''}`} aria-pressed={sel} onClick={onPick}>
+      <button type="button" class={`cell ${cls} ${sel ? 'sel' : ''}`} data-icon={icon} aria-pressed={sel} onClick={onPick}>
         {body}
       </button>
     </li>
