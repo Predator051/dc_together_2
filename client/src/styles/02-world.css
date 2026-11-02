@@ -959,6 +959,13 @@ button.cell {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  width: 100%;
+  margin-bottom: 4px;
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
   color: var(--faded);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -969,6 +976,118 @@ button.cell {
 .shelf-count {
   color: var(--pale);
   letter-spacing: 0;
+}
+/* a finger needs a taller heading to fold a shelf by */
+@media (pointer: coarse) {
+  .shelf-head {
+    min-height: 36px;
+    align-items: center;
+    padding-bottom: 0;
+  }
+  .shelf .shelf-more {
+    padding: 8px 0;
+    margin: -8px 0 4px;
+  }
+}
+@media (hover: hover) {
+  .shelf-head:hover {
+    color: var(--ink-2);
+  }
+}
+.shelf-head:focus-visible {
+  outline: 2px solid var(--ochre);
+  outline-offset: 2px;
+}
+/* the fold mark at the end of the heading, turned while the shelf is shut */
+.shelf-chev {
+  width: 6px;
+  height: 6px;
+  margin-left: auto;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.15s;
+}
+.shelf.shut .shelf-chev {
+  transform: rotate(-45deg);
+}
+.shelf.shut {
+  margin-bottom: 6px;
+}
+.shelf-new {
+  color: var(--ochre-ink);
+  letter-spacing: 0;
+}
+/* a long store: a field to find a thing by its name */
+.shelf-find {
+  display: block;
+  width: 100%;
+  margin: 2px 0 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: rgba(14, 10, 6, 0.28);
+  color: var(--ink);
+  font: 0.86rem var(--sans);
+}
+.shelf-find::placeholder {
+  color: var(--pale);
+}
+.shelf-find:focus {
+  outline: none;
+  border-color: var(--ochre);
+}
+.shelf-none {
+  margin: 0 0 8px;
+  color: var(--pale);
+  font: 0.82rem var(--sans);
+}
+/* a thing that has just come in: a warm edge and a dot, and its "+N" floats up once */
+.cell.fresh {
+  border-color: rgba(196, 154, 69, 0.55);
+}
+.cell.fresh::before {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ochre);
+  box-shadow: 0 0 5px rgba(196, 154, 69, 0.7);
+}
+.cell-plus {
+  position: absolute;
+  top: 18px;
+  right: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ochre-ink);
+  pointer-events: none;
+  animation: cell-plus 1.6s ease-out forwards;
+}
+@keyframes cell-plus {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  15% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cell-plus {
+    animation: none;
+    opacity: 0;
+  }
 }
 .shelf-more {
   display: block;

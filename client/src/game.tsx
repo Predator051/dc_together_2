@@ -62,11 +62,13 @@ function Stock({ v, foldable = false }: { v: PlayerView; foldable?: boolean }) {
             items={[...res, ...tools]}
             label={T.stock}
             shelf={(r) => shelfOf(r.kind, r.ware)}
-            cell={(r) =>
+            cell={(r, fresh) =>
               r.kind === 'tool' || r.kind === 'gear' ? (
-                <Cell icon={r.icon} name={r.name} n={r.n > 1 ? r.n : undefined} />
+                <Cell icon={r.icon} name={r.name} n={r.n > 1 ? r.n : undefined} id={r.id} fresh={fresh} />
               ) : (
                 <Cell
+                  id={r.id}
+                  fresh={fresh}
                   icon={r.icon}
                   name={r.name}
                   n={r.n}

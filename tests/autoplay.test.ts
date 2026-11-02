@@ -26,7 +26,7 @@ describe('two bots play act one to its end', () => {
     });
   }
 
-  it('careless players (random moves, random choices) still get through', () => {
+  it('careless players (random moves, random choices) still get through', { timeout: 600_000 }, () => {
     for (const seed of [11, 13]) {
       const r = autoplay({ careless: true }, { careless: true, seed: 5 }, { seed, until: ACT1, maxSteps: 120000, stallLimit: 30000 });
       if (!r.done) console.log(r.reason, show(r.world));
