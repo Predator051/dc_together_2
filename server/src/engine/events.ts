@@ -166,9 +166,12 @@ export function answerEvent(g: Game, pid: PlayerId, uid: number, choice: number)
   if (!g.hasCostFor(pid, ch.cost)) return g.fail('err_cost');
   g.payCostFor(pid, ch.cost);
   const out: EventOutcome = ch.outcomes.length > 1 ? weighted(g, ch.outcomes) : ch.outcomes[0]!;
-  // at home both read what came of it in the log; away only the one who was there
-  if (o.pid === null) g.log({ all: out.log, kind: 'find' });
-  else g.log({ self: out.log, kind: 'find' }, pid);
+  // at home both read what came of it in the log (the partner — whose choice it was); away only the one who was there
+  if (o.pid === null) {
+    const said = (t: string) => `{name} — «${g.render(ch.label, pid)}». ${t}`;
+    const other = Array.isArray(out.log) ? out.log.map((v) => (typeof v === 'string' ? said(v) : { ...v, text: said(v.text) })) : said(out.log);
+    g.log({ self: out.log, other, kind: 'find' }, pid);
+  } else g.log({ self: out.log, kind: 'find' }, pid);
   g.apply(out.effects, pid);
   const text = g.render(out.log, pid);
   if (g.p(pid).fight !== null) {

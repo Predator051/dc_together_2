@@ -1,3 +1,5 @@
+// Dev helper: play two bots to a given flag, put both at home with one happening open, and store the world
+// in DATA_DIR with sessions dev-p1 / dev-p2 (set localStorage bezgomin.token to one of them).
 import { join, resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { Storage } from '../server/src/storage.js';

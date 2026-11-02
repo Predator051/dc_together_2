@@ -74,7 +74,8 @@ describe('small happenings', () => {
     expect(w.state.res['r_05']).toBe(food + 3);
     const line = w.state.log[w.state.log.length - 1]!;
     expect(line.text.p1).toContain('чаплі');
-    expect(line.text.p2).toBe(line.text.p1);
+    expect(line.text.p2).toContain(line.text.p1!);
+    expect(line.text.p2).toContain('Пустити на юшку');
     // the one who answered reads what came of it and what it brought; the partner's window is gone
     const done = w.view(h).events[0]!;
     expect(done.done).toBe(true);
