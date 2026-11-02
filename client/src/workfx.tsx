@@ -211,9 +211,11 @@ interface VignetteOpts {
   done?: () => void;
 }
 
-/** Where a finished thing goes: the store at home, the bag away; the first of them seen on screen. */
-function keepTarget(home: boolean): HTMLElement | null {
-  const order = home ? ['[data-spot="store"]', '.stock-toggle', '[data-spot="bag"]'] : ['[data-spot="bag"]', '.stock.bag'];
+/** Where a finished thing goes: its own cell in the store (at home) or the bag (away), else that panel or its place on the plan. */
+function keepTarget(home: boolean, icon: string | undefined): HTMLElement | null {
+  const box = home ? 'section.stock:not(.bag):not(.packs)' : 'section.stock.bag';
+  const cell = icon ? [`${box} .cell[data-icon="${CSS.escape(icon)}"] .cell-pic`] : [];
+  const order = home ? [...cell, box, '[data-spot="store"]', '.stock-toggle'] : [...cell, box, '[data-spot="bag"]'];
   for (const sel of [...order, '.bottom-nav button.on']) {
     for (const el of document.querySelectorAll<HTMLElement>(sel)) {
       const r = el.getBoundingClientRect();
@@ -726,7 +728,7 @@ class Vignette {
     if (!thing || !this.root.isConnected || getComputedStyle(this.root).visibility === 'hidden') return;
     const a = thing.getBoundingClientRect();
     if (!a.width) return;
-    const goal = keepTarget(this.opts.home ?? false);
+    const goal = keepTarget(this.opts.home ?? false, this.look.icon);
     const b = goal?.getBoundingClientRect() ?? new DOMRect(window.innerWidth - 36, window.innerHeight - 36, 0, 0);
     const d = document.createElement('div');
     d.className = 'wf-fly wf-paint';
