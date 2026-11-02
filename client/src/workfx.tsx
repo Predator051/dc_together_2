@@ -139,7 +139,7 @@ const P: Record<WorkVerb, Program> = {
   water: { motion: 'dip', prop: 'water', every: 1.6, hit: 0.45, bits: ['ring', 'drop'], n: 5, ground: 'water', stand: 'water' },
   fish: { motion: 'dip', prop: 'weir', every: 2.4, hit: 0.45, bits: ['ring', 'drop'], n: 4, ground: 'water' },
   row: { motion: 'sway', prop: 'oar', every: 1.5, hit: 0.5, bits: ['ring', 'drop'], n: 3, ground: 'water' },
-  steam: { motion: 'stir', prop: 'ladle', every: 1.2, hit: 0.5, bits: ['steam', 'steam', 'ring'], n: 3, flame: true, stand: 'soup' },
+  steam: { motion: 'stir', prop: 'ladle', every: 1.6, hit: 0.5, bits: ['steam', 'steam', 'ring'], n: 3, flame: true, stand: 'soup' },
   walk: { motion: 'steps', every: 0.5, hit: 0, bits: ['print'], n: 1, stand: 'face' },
   twigs: { motion: 'steps', every: 0.5, hit: 0, bits: ['print', 'chip'], n: 2 },
   snare: { motion: 'steps', prop: 'rope', every: 0.55, hit: 0, bits: ['print'], n: 1 },
@@ -196,6 +196,8 @@ interface Body {
 }
 
 const MID = { x: 0.5, y: 0.54 };
+/** Motions that go round and round: they keep their own even pace and never restart on a beat. */
+const CYCLIC = new Set<Motion>(['stir', 'slide', 'sway', 'twist', 'orbit', 'pulse', 'steps']);
 
 // ---------- the vignette ----------
 
@@ -260,7 +262,10 @@ class Vignette {
     host.appendChild(this.root);
     this.build();
     const onBeat = (fx: FxKind) => {
-      if (fx === look.verb) this.begin();
+      if (fx !== look.verb || CYCLIC.has(this.p.motion)) return;
+      // a beat in the middle of a stroke would snap the tool back to its start
+      if (this.stroke >= 0 && performance.now() - this.stroke < this.p.every * 800) return;
+      this.begin();
     };
     beatListeners.add(onBeat);
     this.off = () => beatListeners.delete(onBeat);
@@ -363,8 +368,15 @@ class Vignette {
     if (this.still) return;
 
     const every = this.p.every * 1000;
-    // no beat came in time: keep our own rhythm
-    if (this.stroke < 0 || t - this.stroke > every * 1.15) this.begin();
+    if (CYCLIC.has(this.p.motion)) {
+      // round motions run on their own clock, one turn flowing into the next
+      if (this.stroke < 0) this.begin();
+      else if (t - this.stroke >= every) {
+        this.stroke += Math.floor((t - this.stroke) / every) * every;
+        this.strokes++;
+        this.hitDone = false;
+      }
+    } else if (this.stroke < 0 || t - this.stroke > every * 1.15) this.begin(); // no beat came in time: keep our own rhythm
     const k = clamp((t - this.stroke) / every);
     const { pose, body } = this.move(k, prog);
     if (this.tool && pose) {
@@ -399,8 +411,13 @@ class Vignette {
         return { pose: { x: x + 0.05, y: MID.y - 0.17, r: -12 + 6 * Math.cos(k * Math.PI * 2) } };
       }
       case 'stir': {
+        // round the pot: nearer and bigger at the front, the handle leaning with the turn; the soup follows a little behind
         const a = k * Math.PI * 2;
-        return { pose: { x: MID.x + 0.1 + 0.12 * Math.cos(a), y: MID.y - 0.2 + 0.04 * Math.sin(a), r: -20 + 8 * Math.sin(a) } };
+        const near = Math.sin(a);
+        return {
+          pose: { x: MID.x + 0.07 + 0.13 * Math.cos(a), y: MID.y - 0.21 + 0.05 * near, r: -16 - 14 * Math.cos(a), s: 1 + 0.06 * near },
+          body: { r: 2.5 * Math.sin(a - 0.9), dx: 0.006 * Math.cos(a - 0.9) },
+        };
       }
       case 'tilt': {
         const r = k < 0.25 ? -45 * easeOut(k / 0.25) : k < 0.65 ? -45 : -45 + 45 * easeOut((k - 0.65) / 0.35);
