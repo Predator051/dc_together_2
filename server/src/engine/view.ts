@@ -26,7 +26,7 @@ import { questProgress } from './index.js';
 import { hardView } from './hard.js';
 import { resolveParas } from './text.js';
 import { SKILLS, SLOTS, STATS, type SkillId } from '../../../shared/src/content.js';
-import type { BagView, BeastView, EntrySort, PrepView, FightView, HeroView, LarderView, MapView, ResidentView, WeatherView, YardPieceView } from '../../../shared/src/protocol.js';
+import type { BagView, BeastView, EntrySort, PrepView, FightView, HeroView, LarderView, MapView, PartnerView, ResidentView, WeatherView, YardPieceView } from '../../../shared/src/protocol.js';
 import { TEMPER, perkState, skillLevel, skillXpFor, temperCost, xpForLevel, type TemperKind } from '../../../shared/src/rules.js';
 import { bagCap, bagLoad, gearNote, heroOf, levelCap, ownsCount, perkTree, useNote } from './hero.js';
 import { HERO_AP, activeFoes, activeId, eliteMark, enemyOf, fid, fightMoves, fightOf, holder, moraleOf, walkable } from './fight.js';
@@ -1351,6 +1351,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
       area: o.at,
       where: g.ix.areaWhere(o.at),
       busy: partnerBusy,
+      work: partnerWork(g, other),
       hp: o.hp,
       hpMax: o.hpMax,
     },
@@ -1407,6 +1408,12 @@ function busyFrom(g: Game, pid: PlayerId): number {
 }
 
 /** What the hero's running work looks like (none on the road: the map shows the walk). */
+/** The partner's running work as it is drawn (not a fight or the road). */
+function partnerWork(g: Game, pid: PlayerId): PartnerView['work'] {
+  const look = g.p(pid).joined ? busyLook(g, pid) : null;
+  return look ? { look, from: busyFrom(g, pid), until: g.p(pid).busy!.until } : null;
+}
+
 function busyLook(g: Game, pid: PlayerId): WorkLook | null {
   const me = g.p(pid);
   if (!me.busy || me.busy.until <= g.now || me.travel) return null;

@@ -6,6 +6,7 @@ import type { FxKind } from '../../shared/src/content.js';
 import type { PlayerView } from '../../shared/src/protocol.js';
 import type { WorkLook, WorkVerb } from '../../shared/src/work.js';
 import { paintedStyle } from './items.js';
+import { sound } from './sound.js';
 import { heroFace } from './portraits.js';
 import { load, store } from './clock.js';
 import { T } from './strings.js';
@@ -62,7 +63,6 @@ export function playWork(verb: WorkVerb, icon?: string, ms = 1800): void {
 
 // ---------- programs: how each kind of work moves ----------
 
-type Svg = 'hammer' | 'needle';
 type Motion =
   | 'swing' // a tool on a handle comes down on the thing
   | 'slide' // a blade drawn across it
@@ -110,8 +110,8 @@ type Bit =
 
 interface Program {
   motion: Motion;
-  /** The tool: a painted thing or one drawn here. */
-  prop?: string | { svg: Svg };
+  /** The tool: a painted thing. */
+  prop?: string;
   /** Seconds between blows (strokes). Accents with a beat follow the beat instead. */
   every: number;
   /** Where in a stroke the blow lands (0..1). */
@@ -133,7 +133,7 @@ interface Program {
 const P: Record<WorkVerb, Program> = {
   fire: { motion: 'toss', prop: 'wood', every: 1.4, hit: 0.55, bits: ['ember'], n: 7, flame: true, bare: true },
   flint: { motion: 'strike', prop: 'flint', every: 0.9, hit: 0.3, bits: ['spark'], n: 8, flame: 'grow', bare: true },
-  forge: { motion: 'swing', prop: { svg: 'hammer' }, every: 0.7, hit: 0.12, bits: ['spark'], n: 12, heat: true, stand: 'iron' },
+  forge: { motion: 'swing', prop: 'tool_hammer', every: 0.7, hit: 0.12, bits: ['spark'], n: 12, heat: true, stand: 'iron' },
   whet: { motion: 'slide', prop: 'knife', every: 1.2, hit: 0.5, bits: ['spark'], n: 4 },
   chop: { motion: 'swing', prop: 'axe', every: 1.1, hit: 0.12, bits: ['chip'], n: 7 },
   water: { motion: 'dip', prop: 'water', every: 1.6, hit: 0.45, bits: ['ring', 'drop'], n: 5, ground: 'water', stand: 'water' },
@@ -148,9 +148,9 @@ const P: Record<WorkVerb, Program> = {
   string: { motion: 'twang', prop: 'bow', every: 1.6, hit: 0.3, bits: ['fiber'], n: 3 },
   carve: { motion: 'slide', prop: 'knife', every: 0.9, hit: 0.5, bits: ['curl'], n: 3 },
   rope: { motion: 'twist', every: 1.3, hit: 0.5, bits: ['fiber'], n: 4 },
-  build: { motion: 'swing', prop: { svg: 'hammer' }, every: 1.2, hit: 0.12, bits: ['chip', 'dust'], n: 5, stand: 'wood' },
+  build: { motion: 'swing', prop: 'tool_hammer', every: 1.2, hit: 0.12, bits: ['chip', 'dust'], n: 5, stand: 'wood' },
   rubble: { motion: 'swing', prop: 'pick', every: 1.3, hit: 0.12, bits: ['stone', 'dust'], n: 6, ground: 'soil', stand: 'stone' },
-  scrap: { motion: 'swing', prop: { svg: 'hammer' }, every: 1.4, hit: 0.12, bits: ['stone', 'spark'], n: 5 },
+  scrap: { motion: 'swing', prop: 'tool_hammer', every: 1.4, hit: 0.12, bits: ['stone', 'spark'], n: 5 },
   sift: { motion: 'shake', every: 1.1, hit: 0.2, bits: ['grain'], n: 9 },
   rummage: { motion: 'shake', prop: 'bag', every: 1.3, hit: 0.3, bits: ['dust'], n: 2 },
   bowl: { motion: 'tilt', prop: 'millet', every: 1.8, hit: 0.35, bits: ['seed'], n: 8 },
@@ -161,8 +161,8 @@ const P: Record<WorkVerb, Program> = {
   care: { motion: 'tilt', prop: 'ladle', every: 2.4, hit: 0.35, bits: ['tea', 'steam'], n: 6, stand: 'soup' },
   breath: { motion: 'pulse', every: 3.4, hit: 0, bits: ['glow'], n: 1, stand: 'face' },
   heart: { motion: 'pulse', every: 1.05, hit: 0, bits: ['beat'], n: 1, stand: 'face' },
-  sew: { motion: 'stitch', prop: { svg: 'needle' }, every: 0.8, hit: 0.5, bits: [], n: 0 },
-  make: { motion: 'swing', prop: { svg: 'hammer' }, every: 1, hit: 0.12, bits: ['chip', 'dust'], n: 4, stand: 'wood' },
+  sew: { motion: 'stitch', prop: 'tool_needle', every: 0.8, hit: 0.5, bits: [], n: 0 },
+  make: { motion: 'swing', prop: 'tool_hammer', every: 1, hit: 0.12, bits: ['chip', 'dust'], n: 4, stand: 'wood' },
   pick: { motion: 'pop', every: 1.2, hit: 0.75, bits: ['leaf', 'crumb'], n: 4, ground: 'soil', stand: 'g_ripe' },
   plant: { motion: 'sow', prop: 'seeds', every: 1.8, hit: 0.3, bits: ['seed'], n: 10, ground: 'soil' },
   harvest: { motion: 'pull', every: 1.8, hit: 0.35, bits: ['crumb', 'leaf'], n: 10, ground: 'soil' },
@@ -201,22 +201,27 @@ const CYCLIC = new Set<Motion>(['stir', 'slide', 'sway', 'twist', 'orbit', 'puls
 
 // ---------- the vignette ----------
 
-const SVGS: Record<Svg, string> = {
-  hammer: `<svg viewBox="0 0 100 100" aria-hidden="true"><defs>
-<linearGradient id="wfh-w" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9a7350"/><stop offset="1" stop-color="#5e4129"/></linearGradient>
-<linearGradient id="wfh-i" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8d939a"/><stop offset=".55" stop-color="#4e5359"/><stop offset="1" stop-color="#2e3135"/></linearGradient></defs>
-<path d="M33 37 L86 88" stroke="#1a130d" stroke-opacity=".55" stroke-width="12" stroke-linecap="round"/>
-<path d="M33 37 L86 88" stroke="url(#wfh-w)" stroke-width="8.5" stroke-linecap="round"/>
-<path d="M40 41 L80 80" stroke="#c8a275" stroke-opacity=".45" stroke-width="2" stroke-linecap="round"/>
-<g transform="rotate(-45 30 34)"><rect x="8" y="22" width="44" height="24" rx="4" fill="#1a130d" fill-opacity=".55"/>
-<rect x="10" y="24" width="40" height="20" rx="3" fill="url(#wfh-i)"/><rect x="12" y="26" width="36" height="4" rx="2" fill="#c9ced3" fill-opacity=".55"/>
-<rect x="8" y="23" width="6" height="22" rx="2" fill="#3a3d42"/></g></svg>`,
-  needle: `<svg viewBox="0 0 100 100" aria-hidden="true">
-<path d="M14 86 L80 20" stroke="#1a130d" stroke-opacity=".5" stroke-width="6" stroke-linecap="round"/>
-<path d="M14 86 L80 20" stroke="#c9ced3" stroke-width="3.4" stroke-linecap="round"/>
-<path d="M30 72 L76 26" stroke="#f4f6f8" stroke-opacity=".8" stroke-width="1" stroke-linecap="round"/>
-<ellipse cx="76" cy="24" rx="5" ry="2.4" transform="rotate(-45 76 24)" fill="#2a2219"/></svg>`,
-};
+interface VignetteOpts {
+  /** Follows the beats of the accent (not for the partner's work: those beats are theirs). */
+  beats?: boolean;
+  /** The finished thing flies off to the store (at home) or the bag. */
+  fly?: boolean;
+  home?: boolean;
+  /** Called the moment the work is done (before the flourish). */
+  done?: () => void;
+}
+
+/** Where a finished thing goes: the store at home, the bag away; the first of them seen on screen. */
+function keepTarget(home: boolean): HTMLElement | null {
+  const order = home ? ['[data-spot="store"]', '.stock-toggle', '[data-spot="bag"]'] : ['[data-spot="bag"]', '.stock.bag'];
+  for (const sel of [...order, '.bottom-nav button.on']) {
+    for (const el of document.querySelectorAll<HTMLElement>(sel)) {
+      const r = el.getBoundingClientRect();
+      if (r.width && r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth) return el;
+    }
+  }
+  return null;
+}
 
 /** Draws one work and lives until it is over (then a short flourish). */
 class Vignette {
@@ -238,6 +243,14 @@ class Vignette {
   private size = 200;
   private p: Program;
   private off: () => void;
+  /** This stroke's own length (×every) and small offset of the tool: no two strokes quite alike. */
+  private jit = 1;
+  private nudge = { x: 0, y: 0, r: 0 };
+  /** Points of the work (0..1) where the thing visibly takes a step forward; how many are passed. */
+  private steps: number[];
+  private stepped = 0;
+  /** It yields a real painted thing (not a stand-in). */
+  private real: boolean;
 
   constructor(
     host: HTMLElement,
@@ -250,8 +263,12 @@ class Vignette {
     /** The hero's painted face (shown when resting). */
     private face: string | null,
     private onGone: () => void,
+    private opts: VignetteOpts = {},
   ) {
     this.p = P[look.verb];
+    const span = until - from;
+    this.steps = span > 20000 ? [1 / 3, 2 / 3] : span > 8000 ? [0.5] : [];
+    this.real = !!look.icon && !!paintedStyle(look.icon);
     this.root = document.createElement('div');
     this.root.className = `wf v-${look.verb}`;
     this.root.innerHTML = `<svg class="wf-time" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="48" pathLength="100"/></svg>`;
@@ -262,7 +279,7 @@ class Vignette {
     host.appendChild(this.root);
     this.build();
     const onBeat = (fx: FxKind) => {
-      if (fx !== look.verb || CYCLIC.has(this.p.motion)) return;
+      if (opts.beats === false || fx !== look.verb || CYCLIC.has(this.p.motion)) return;
       // a beat in the middle of a stroke would snap the tool back to its start
       if (this.stroke >= 0 && performance.now() - this.stroke < this.p.every * 800) return;
       this.begin();
@@ -309,13 +326,7 @@ class Vignette {
       this.ghost = this.painted('wf-ghost', icon, this.body);
       this.thing = this.painted('wf-thing', icon, this.body);
     }
-    if (p.prop) {
-      if (typeof p.prop === 'string') this.tool = this.painted('wf-tool', p.prop);
-      else {
-        this.tool = this.el('wf-tool wf-svg');
-        this.tool.innerHTML = SVGS[p.prop.svg];
-      }
-    }
+    if (p.prop) this.tool = this.painted('wf-tool', p.prop);
     if (p.motion === 'stitch') {
       const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       svg.setAttribute('class', 'wf-thread');
@@ -335,6 +346,8 @@ class Vignette {
     this.stroke = performance.now();
     this.strokes++;
     this.hitDone = false;
+    this.jit = 0.9 + Math.random() * 0.22;
+    this.nudge = { x: (Math.random() - 0.5) * 0.02, y: (Math.random() - 0.5) * 0.02, r: (Math.random() - 0.5) * 8 };
   }
 
   private frame(t: number) {
@@ -366,9 +379,11 @@ class Vignette {
       this.flame.style.transform = `translateX(-50%) scale(${k})`;
     }
     if (this.still) return;
+    if (this.stepped < this.steps.length && prog >= this.steps[this.stepped]!) this.step(++this.stepped);
 
-    const every = this.p.every * 1000;
-    if (CYCLIC.has(this.p.motion)) {
+    const cyclic = CYCLIC.has(this.p.motion);
+    const every = this.p.every * 1000 * (cyclic ? 1 : this.jit);
+    if (cyclic) {
       // round motions run on their own clock, one turn flowing into the next
       if (this.stroke < 0) this.begin();
       else if (t - this.stroke >= every) {
@@ -380,6 +395,15 @@ class Vignette {
     const k = clamp((t - this.stroke) / every);
     const { pose, body } = this.move(k, prog);
     if (this.tool && pose) {
+      // a round motion drifts slowly; a stroke is a little off from the last one
+      if (cyclic) {
+        pose.x += 0.012 * Math.sin(t / 1900);
+        pose.y += 0.008 * Math.sin(t / 2700);
+      } else {
+        pose.x += this.nudge.x;
+        pose.y += this.nudge.y;
+        pose.r += this.nudge.r;
+      }
       const s = pose.s ?? 1;
       this.tool.style.transform = `translate(${(pose.x - 0.5) * this.size}px, ${(pose.y - 0.5) * this.size}px) rotate(${pose.r}deg) scale(${s})`;
       this.tool.style.opacity = String(pose.o ?? 1);
@@ -688,9 +712,51 @@ class Vignette {
   }
 
   /** The work is done: the thing shows whole, a little flash, and the vignette goes. */
+  /** The thing takes a visible step forward: a hop and a glint, its grey outline fading. */
+  private step(i: number) {
+    if (this.ghost) this.ghost.style.opacity = String(0.22 * (1 - i / (this.steps.length + 1)));
+    this.body?.animate([{ transform: this.body.style.transform }, { transform: `${this.body.style.transform} translateY(-6%) scale(1.06)`, offset: 0.4 }, { transform: this.body.style.transform }], { duration: 520, easing: 'ease-out' });
+    this.thing?.animate([{ filter: 'brightness(1.5)' }, { filter: 'brightness(1)' }], { duration: 600 });
+    for (let k = 0; k < 4; k++) this.bit('glint', { x: MID.x, y: MID.y - 0.05 }, k);
+  }
+
+  /** The finished thing flies off to where it is kept, and that place nods. */
+  private fly() {
+    const thing = this.thing;
+    if (!thing || !this.root.isConnected || getComputedStyle(this.root).visibility === 'hidden') return;
+    const a = thing.getBoundingClientRect();
+    if (!a.width) return;
+    const goal = keepTarget(this.opts.home ?? false);
+    const b = goal?.getBoundingClientRect() ?? new DOMRect(window.innerWidth - 36, window.innerHeight - 36, 0, 0);
+    const d = document.createElement('div');
+    d.className = 'wf-fly wf-paint';
+    d.style.backgroundImage = thing.style.backgroundImage;
+    d.style.backgroundPosition = thing.style.backgroundPosition;
+    Object.assign(d.style, { left: `${a.left}px`, top: `${a.top}px`, width: `${a.width}px`, height: `${a.height}px` });
+    document.body.appendChild(d);
+    thing.style.opacity = '0';
+    const dx = b.left + b.width / 2 - (a.left + a.width / 2);
+    const dy = b.top + b.height / 2 - (a.top + a.height / 2);
+    const s = clamp(40 / a.width, 0.15, 1);
+    const lift = Math.min(90, Math.abs(dy) * 0.35 + 30);
+    const fly = d.animate(
+      [
+        { transform: 'translate(0, 0) scale(1)' },
+        { transform: `translate(${dx * 0.4}px, ${dy * 0.4 - lift}px) scale(${(1 + s) / 2})`, offset: 0.45 },
+        { transform: `translate(${dx}px, ${dy}px) scale(${s})`, opacity: 0.85 },
+      ],
+      { duration: 720, easing: 'cubic-bezier(.45, 0, .55, 1)' },
+    );
+    fly.onfinish = () => {
+      d.remove();
+      goal?.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.14)', offset: 0.4 }, { transform: 'scale(1)' }], { duration: 360, easing: 'ease-out' });
+    };
+  }
+
   private end(t: number) {
     this.ended = t;
     this.off();
+    this.opts.done?.();
     if (this.thing) {
       this.thing.style.maskImage = 'none';
       this.thing.style.webkitMaskImage = 'none';
@@ -701,6 +767,7 @@ class Vignette {
     this.thing?.animate([{ filter: 'brightness(1.8)' }, { filter: 'brightness(1)' }], { duration: 700 });
     const at = { x: MID.x, y: MID.y - 0.05 };
     for (let i = 0; i < 6; i++) this.bit('glint', at, i);
+    if (this.opts.fly && this.real) window.setTimeout(() => this.fly(), 480);
   }
 
   private finale(t: number) {
@@ -731,6 +798,18 @@ export function loopWork(host: HTMLElement, look: WorkLook, ms: number): () => v
     stop = true;
     vig?.destroy();
   };
+}
+
+/** The work is done: a soft knock (if the sound is on) and a short buzz on a phone (only while the page is in front). */
+function workDone() {
+  sound.done();
+  // browsers refuse (and complain) before the first tap on the page
+  if (document.hidden || navigator.userActivation?.hasBeenActive === false) return;
+  try {
+    navigator.vibrate?.(35);
+  } catch {
+    /* not allowed here */
+  }
 }
 
 function reducedMotion(): boolean {
@@ -768,12 +847,22 @@ export function WorkFx({ v, offset, hidden }: { v: PlayerView; offset: number; h
     if (cur && cur.key === key) return;
     if (!key || !run || !host.current) return; // a finished vignette ends by itself
     cur?.vig.destroy();
-    const vig = new Vignette(host.current, run.look, run.from, run.until, run.clock, reducedMotion(), heroFace(v.me.role, v.me.gender), () => {
-      if (live.current?.vig === vig) {
-        live.current = null;
-        setOn(false);
-      }
-    });
+    const vig = new Vignette(
+      host.current,
+      run.look,
+      run.from,
+      run.until,
+      run.clock,
+      reducedMotion(),
+      heroFace(v.me.role, v.me.gender),
+      () => {
+        if (live.current?.vig === vig) {
+          live.current = null;
+          setOn(false);
+        }
+      },
+      { fly: true, home: v.atHome, done: workDone },
+    );
     live.current = { key, vig };
     setOn(true);
   }, [key]);
@@ -800,4 +889,35 @@ export function WorkFx({ v, offset, hidden }: { v: PlayerView; offset: number; h
       }}
     />
   );
+}
+
+/** The partner's work, small in the other corner: both see the other is at it, and for how long. */
+export function MateWork({ v, offset, hidden }: { v: PlayerView; offset: number; hidden: boolean }) {
+  const mode = usePref();
+  const host = useRef<HTMLDivElement>(null);
+  const live = useRef<{ key: string; vig: Vignette } | null>(null);
+  const [on, setOn] = useState(false);
+  const b = v.partner.work;
+  const look = b && b.until > Date.now() + offset ? b.look : null;
+  const key = mode === 'off' || !look ? null : `${look.verb}:${b!.until}`;
+
+  useEffect(() => {
+    const cur = live.current;
+    if (cur && cur.key === key) return;
+    cur?.vig.destroy();
+    live.current = null;
+    if (!key || !look || !b || !host.current) return;
+    const vig = new Vignette(host.current, look, b.from, b.until, () => Date.now() + offset, reducedMotion(), heroFace(v.partner.role, v.partner.gender), () => {
+      if (live.current?.vig === vig) {
+        live.current = null;
+        setOn(false);
+      }
+    }, { beats: false });
+    live.current = { key, vig };
+    setOn(true);
+  }, [key]);
+  useEffect(() => () => live.current?.vig.destroy(), []);
+
+  const label = v.partner.busy ? `${v.partner.name}: ${v.partner.busy.text}` : v.partner.name;
+  return <div ref={host} class={`workfx small mate ${on && !hidden ? 'on' : ''}`} role="img" aria-label={label} title={label} />;
 }

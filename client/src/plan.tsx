@@ -217,6 +217,7 @@ function SpotButton({
       type="button"
       class={`spot ${on ? 'on-built' : ''} ${active ? 'on' : ''} ${s.ready > 0 || s.id === 'paths' || s.id === 'store' || s.id === 'bag' || s.id === 'folk' ? 'live' : 'idle'} ${s.together ? 'pair' : ''} ${running ? 'running' : ''}`}
       style={{ left: `${at.x}%`, top: `${at.y}%`, '--i': String(i) }}
+      data-spot={s.id}
       aria-label={label}
       aria-pressed={active}
       onClick={onPick}

@@ -16,6 +16,8 @@ const KEY = 'bezgomin.sound';
 const LIFE = Object.fromEntries(
   Object.entries(import.meta.glob('./sounds/life/*.mp3', { eager: true, query: '?url', import: 'default' })).map(([path, url]) => [path.split('/').pop()!.replace('.mp3', ''), url]),
 );
+/** A work is done: a soft knock on a wood block (a real recording, chosen by ear). */
+const DONE_URL = new URL('./sounds/work/done.mp3', import.meta.url).href;
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 const pick = <T,>(xs: readonly T[]): T => xs[Math.floor(Math.random() * xs.length)]!;
 
@@ -114,6 +116,7 @@ class Sound {
   private outside!: GainNode;
   private muffle!: BiquadFilterNode;
   private lifeBufs = new Map<string, Promise<AudioBuffer | null>>();
+  private doneBuf: Promise<AudioBuffer | null> | null = null;
   private lifeTimer = 0;
   private chorusUntil = 0;
   /** The living things louder or quieter than set (listening tests: `?life=`). */
@@ -166,6 +169,27 @@ class Sound {
   beat(fx: Fx, mate: boolean): void {
     if (!this.ctx || !this.on || this.ctx.state !== 'running') return;
     this.play(fx, mate ? 0.5 : -0.15, mate ? 0.45 : 1);
+  }
+
+  /** A work of mine is done (in step with the flash of the finished thing). */
+  done(): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.on || ctx.state !== 'running') return;
+    this.doneBuf ??= fetch(DONE_URL)
+      .then((r) => r.arrayBuffer())
+      .then((data) => ctx.decodeAudioData(data))
+      .catch(() => null);
+    void this.doneBuf.then((buf) => {
+      if (!buf || ctx.state !== 'running') return;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      // never quite the same knock twice
+      src.playbackRate.value = rnd(0.97, 1.03);
+      const g = ctx.createGain();
+      g.gain.value = 0.55;
+      src.connect(g).connect(this.fxBus);
+      src.start();
+    });
   }
 
   /** The partner calls: two soft knocks on wood. */

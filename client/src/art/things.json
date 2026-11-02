@@ -116,6 +116,8 @@
  "tarboots": [6, 5],
  "tea": [6, 4],
  "thyme": [6, 1],
+ "tool_hammer": [13, 0],
+ "tool_needle": [13, 1],
  "torch": [2, 11],
  "tusk": [2, 7],
  "viperskin": [6, 10],
