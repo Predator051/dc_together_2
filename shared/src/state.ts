@@ -400,7 +400,11 @@ export interface WorldState {
       stage?: string;
       lead?: string;
       done?: { by: PlayerId; text: string; gains?: Array<{ name: string; n: number }> };
+      /** Since when nobody who may read it has been in the game. */
+      idle?: number;
     }>;
+    /** Clocks stopped while their hero (or, for the home, everyone) is out of the game: what was left, and since when. */
+    left?: Record<string, { ms: number; at: number }>;
     uid: number;
   };
   /** The home garden: what grows in each bed and how far, until when it is watered, when last counted. */

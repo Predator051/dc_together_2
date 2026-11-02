@@ -205,6 +205,52 @@ describe('small happenings', () => {
     expect(w.view(h).events).toEqual([]);
   });
 
+  it('the clocks run only while someone plays: coming back after a day is not met by happenings', () => {
+    const { w, h, m } = home();
+    only('ev_114', 'ev_134');
+    // the clocks are almost due when both leave the game
+    const s = w.state.events!;
+    for (const k of ['home', 'p1', 'p2']) s.next[k] = w.now + 2 * MIN;
+    w.online(h, false);
+    w.online(m, false);
+    w.advance(24 * 60 * MIN);
+    expect(s.open).toEqual([]);
+    // back: the minutes left are kept, but the first one waits a little after a real absence
+    w.online(h);
+    expect(s.next['home']).toBeGreaterThanOrEqual(w.now + 3 * MIN);
+    expect(s.next[h]).toBeGreaterThanOrEqual(w.now + 3 * MIN);
+    w.advance(2 * MIN);
+    expect(w.view(h).events).toEqual([]);
+    w.state.players[h].at = 'a_03';
+    surely(() => placeEvent(w.g(), h));
+    expect(w.view(h).events).toEqual([]);
+    w.state.players[h].at = 'a_01';
+    w.advance(2 * MIN);
+    expect(w.view(h).events.length).toBe(1);
+  });
+
+  it('a dropped connection only pauses the clock; a window nobody looks at goes away', () => {
+    const { w, h, m } = home();
+    only('ev_114');
+    const s = w.state.events!;
+    s.next['home'] = w.now + 5 * MIN;
+    s.next[h] = w.now + 5 * MIN;
+    w.online(h, false);
+    w.advance(30_000);
+    w.online(h);
+    expect(s.next[h]).toBe(w.now + 5 * MIN);
+    // a home window waits while someone at home plays, and goes away when nobody has for a while
+    due(w);
+    w.advance(1000);
+    expect(s.open.length).toBe(1);
+    w.online(h, false);
+    w.online(m, false);
+    w.advance(2 * MIN);
+    expect(s.open.length).toBe(1);
+    w.advance(5 * MIN);
+    expect(s.open).toEqual([]);
+  });
+
   it('a scratch from a happening never knocks a hero down', () => {
     const { w, h } = home();
     w.state.players[h].hp = 2;

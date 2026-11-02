@@ -1,12 +1,19 @@
 // Small happenings between the story's beats: at home (shared by both), on the road, at work away from home.
-// They come now and then (a gap of ten minutes or so per hero and for the home), never in a fight
-// or a joint scene. Each is a short scene in its own window: it waits for an answer, may go on for a step
+// They come now and then (a gap of ten minutes or so per hero and for the home) — counted only while
+// someone plays: the clocks stop when a hero leaves the game — never in a fight or a joint scene. Each is a short scene in its own window: it waits for an answer, may go on for a step
 // or two, and shows what came of it until the one who answered closes it.
 import type { Effect, EventChoice, EventDef, EventOutcome, PlayerId, Text } from '../../../shared/src/content.js';
 import type { EventView } from '../../../shared/src/protocol.js';
 import type { Game, Result } from './index.js';
 
-const HOUR = 3_600_000;
+const MIN = 60_000;
+const HOUR = 60 * MIN;
+/** After a real absence the first happening waits at least this long. */
+const BACK = 3 * MIN;
+/** Shorter than this, leaving the game is a dropped connection: the clock goes on as it was. */
+const BLINK = 2 * MIN;
+/** A window nobody who may answer it has looked at for this long goes away. */
+const STALE = 5 * MIN;
 /** The key of the home's own timer. */
 const HOME = 'home';
 
@@ -120,13 +127,48 @@ export function placeEvent(g: Game, pid: PlayerId): void {
   tryAway(g, 'place', pid, g.ix.c.events?.place ?? 0);
 }
 
+/**
+ * A hero comes into the game or leaves it. The hero's clock (and the home's, when nobody else plays) stops
+ * with what was left; it goes on when they come back — after a real absence not sooner than in a few minutes,
+ * so coming back is never met by a pile of happenings.
+ */
+export function eventsPresence(g: Game, pid: PlayerId, online: boolean): void {
+  const s = g.s.events;
+  if (!s) return;
+  const left = (s.left ??= {});
+  const keys: string[] = [pid];
+  if (!g.joinedIds().some((x) => x !== pid && g.p(x).online)) keys.push(HOME);
+  for (const k of keys) {
+    if (!online) {
+      if (s.next[k] !== undefined) left[k] = { ms: Math.max(0, s.next[k] - g.now), at: g.now };
+      continue;
+    }
+    const was = left[k];
+    delete left[k];
+    if (s.next[k] === undefined) continue;
+    if (was) s.next[k] = g.now + (g.now - was.at < BLINK ? was.ms : Math.max(was.ms, BACK));
+    // a clock that ran on while nobody played (a world saved before the clocks could stop)
+    else s.next[k] = Math.max(s.next[k], g.now + BACK);
+  }
+}
+
 /** Cards left behind go away; at home, a happening when its time comes. True when something changed. */
 export function settleEvents(g: Game): boolean {
   if (!eventsOn(g)) return false;
   const s = stateOf(g);
   const before = s.open.length;
   // a card from the road or from work goes away when its hero walks off (and one no longer in the game)
-  s.open = s.open.filter((o) => defOf(g, o.id) && (o.pid === null || (g.p(o.pid).at === o.area && !g.p(o.pid).travel)));
+  s.open = s.open.filter((o) => defOf(g, o.id) && (o.done || o.pid === null || (g.p(o.pid).at === o.area && !g.p(o.pid).travel)));
+  // one that nobody who may answer (or read) it has been in the game for goes away too: no old windows on coming back
+  s.open = s.open.filter((o) => {
+    const readers = o.done ? [o.done.by] : o.pid !== null ? [o.pid] : g.joinedIds().filter((x) => g.atHome(x));
+    if (readers.some((x) => g.p(x).online)) {
+      delete o.idle;
+      return true;
+    }
+    o.idle ??= g.now;
+    return g.now - o.idle < STALE;
+  });
   const changed = s.open.length !== before;
   if (g.s.scene || s.open.some((o) => o.pid === null)) return changed;
   const home = g.joinedIds().filter((pid) => g.p(pid).online && g.atHome(pid) && g.p(pid).fight === null);
