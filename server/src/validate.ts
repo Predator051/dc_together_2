@@ -5,6 +5,7 @@ import type {
   Cond,
   Content,
   Effect,
+  EventChoice,
   LogText,
   Para,
   Paras,
@@ -211,7 +212,8 @@ export function validateContent(c: Content): Report {
   }
   for (const ev of c.events?.kinds ?? []) {
     collectWrites(ev.effects ?? []);
-    for (const ch of ev.choices ?? []) for (const o of ch.outcomes) collectWrites(o.effects ?? []);
+    for (const ch of [...(ev.choices ?? []), ...Object.values(ev.stages ?? {}).flatMap((st) => st.choices)])
+      for (const o of ch.outcomes) collectWrites(o.effects ?? []);
   }
   for (const e of c.encounters) {
     written.add(`${e.id}:killed`);
@@ -427,13 +429,34 @@ export function validateContent(c: Content): Report {
       tc.forEach((x) => checkCond(w, x));
       if (e.choices && e.effects) err(`${w}: effects of a card belong to its choices`);
       checkEffects(w, e.effects ?? [], false);
-      for (const [i, ch] of (e.choices ?? []).entries()) {
-        const cw = `${w} choice ${i}`;
-        checkCond(cw, ch.if);
-        checkCost(cw, ch.cost);
-        if (!ch.outcomes.length) err(`${cw}: needs an outcome`);
-        for (const o of ch.outcomes) checkEffects(cw, o.effects ?? [], false);
+      // every step: two choices at least, each leading somewhere; every further step is reached
+      const steps: Array<[string, EventChoice[] | undefined]> = [['', e.choices], ...Object.entries(e.stages ?? {}).map(([k, st]) => [k, st.choices] as [string, EventChoice[]])];
+      const reached = new Set<string>();
+      for (const [key, choices] of steps) {
+        const sw = key ? `${w} stage ${key}` : w;
+        if (key) {
+          const sc: Cond[] = [];
+          textConds(e.stages![key]!.text, sc);
+          sc.forEach((x) => checkCond(sw, x));
+          if (choices && choices.length < 2) err(`${sw}: a card needs at least two choices`);
+        }
+        for (const [i, ch] of (choices ?? []).entries()) {
+          const cw = `${sw} choice ${i}`;
+          checkCond(cw, ch.if);
+          checkCost(cw, ch.cost);
+          if (!ch.outcomes.length) err(`${cw}: needs an outcome`);
+          for (const o of ch.outcomes) {
+            checkEffects(cw, o.effects ?? [], false);
+            if (o.next) {
+              if (!e.stages?.[o.next]) err(`${cw}: unknown stage ${o.next}`);
+              if (o.next === key) err(`${cw}: a step leads back to itself`);
+              reached.add(o.next);
+            }
+          }
+        }
       }
+      for (const k of Object.keys(e.stages ?? {})) if (!reached.has(k)) err(`${w}: stage ${k} is never reached`);
+      if (!e.choices) err(`${w}: a happening needs a choice`);
       if (e.choices && e.choices.length < 2) err(`${w}: a card needs at least two choices`);
     }
   }

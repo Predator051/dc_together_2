@@ -1,7 +1,8 @@
 // Small happenings between the story's beats: at home (shared by both), on the road, at work away from home.
-// They come rarely (a gap of a quarter of an hour or so per hero and for the home), never in a fight
-// or a joint scene, and never stop anything: a card waits for an answer, or it simply happens.
-import type { EventDef, EventOutcome, PlayerId } from '../../../shared/src/content.js';
+// They come now and then (a gap of ten minutes or so per hero and for the home), never in a fight
+// or a joint scene. Each is a short scene in its own window: it waits for an answer, may go on for a step
+// or two, and shows what came of it until the one who answered closes it.
+import type { Effect, EventChoice, EventDef, EventOutcome, PlayerId, Text } from '../../../shared/src/content.js';
 import type { EventView } from '../../../shared/src/protocol.js';
 import type { Game, Result } from './index.js';
 
@@ -10,6 +11,7 @@ const HOUR = 3_600_000;
 const HOME = 'home';
 
 type EventsState = NonNullable<Game['s']['events']>;
+type Open = EventsState['open'][number];
 
 export function eventsOn(g: Game): boolean {
   const e = g.ix.c.events;
@@ -22,6 +24,28 @@ function stateOf(g: Game): EventsState {
 
 function defOf(g: Game, id: string): EventDef | undefined {
   return g.ix.c.events?.kinds.find((e) => e.id === id);
+}
+
+/** What is seen at the step a card has come to, and what can be done there. */
+function stageOf(def: EventDef, o: Open): { text: Text; choices: EventChoice[] } | null {
+  if (o.stage) return def.stages?.[o.stage] ?? null;
+  return def.choices ? { text: def.text, choices: def.choices } : null;
+}
+
+/** What an answer brought and took, to be read with what came of it (the cost, then the effects). */
+function tally(g: Game, cost: Record<string, number> | undefined, effects: Effect[] | undefined): Array<{ name: string; n: number }> {
+  const sum = new Map<string, number>();
+  const put = (name: string, n: number) => sum.set(name, (sum.get(name) ?? 0) + n);
+  const res = (id: string) => g.ix.res.get(id)?.name ?? id;
+  for (const [id, n] of Object.entries(cost ?? {})) put(res(id), -n);
+  for (const e of effects ?? []) {
+    if ('add' in e) for (const [id, n] of Object.entries(e.add)) put(res(id), n);
+    else if ('give' in e) for (const [id, n] of Object.entries(e.give)) put(res(id), n);
+    else if ('take' in e) for (const [id, n] of Object.entries(e.take)) put(res(id), -n);
+    else if ('heal' in e && typeof e.heal === 'number') put(g.ix.ui('st_hp'), e.heal);
+    else if ('xp' in e) put(g.ix.ui('xp_short'), e.xp);
+  }
+  return [...sum].filter(([, n]) => n !== 0).map(([name, n]) => ({ name, n }));
 }
 
 function gap(g: Game): number {
@@ -101,8 +125,8 @@ export function settleEvents(g: Game): boolean {
   if (!eventsOn(g)) return false;
   const s = stateOf(g);
   const before = s.open.length;
-  // a card from the road or from work goes away when its hero walks off
-  s.open = s.open.filter((o) => o.pid === null || (g.p(o.pid).at === o.area && !g.p(o.pid).travel));
+  // a card from the road or from work goes away when its hero walks off (and one no longer in the game)
+  s.open = s.open.filter((o) => defOf(g, o.id) && (o.pid === null || (g.p(o.pid).at === o.area && !g.p(o.pid).travel)));
   const changed = s.open.length !== before;
   if (g.s.scene || s.open.some((o) => o.pid === null)) return changed;
   const home = g.joinedIds().filter((pid) => g.p(pid).online && g.atHome(pid) && g.p(pid).fight === null);
@@ -119,27 +143,45 @@ export function settleEvents(g: Game): boolean {
 function cardFor(g: Game, pid: PlayerId, uid: number) {
   const o = g.s.events?.open.find((x) => x.uid === uid);
   if (!o) return null;
+  // what came of it is for the one who answered
+  if (o.done) return o.done.by === pid ? o : null;
   if (o.pid !== null ? o.pid !== pid : !g.atHome(pid)) return null;
   return o;
 }
 
 export function answerEvent(g: Game, pid: PlayerId, uid: number, choice: number): Result {
   const o = cardFor(g, pid, uid);
+  const s = stateOf(g);
+  if (o?.done) {
+    if (choice !== -1) return g.fail('err_not_now');
+    s.open = s.open.filter((x) => x.uid !== uid);
+    return { ok: true };
+  }
   const def = o && defOf(g, o.id);
-  const ch = def?.choices?.[choice];
+  const ch = def && stageOf(def, o)?.choices[choice];
   if (!o || !ch) return g.fail('err_not_now');
   if (g.p(pid).fight !== null) return g.fail('err_in_fight');
   if (g.sceneBlocksRoutine()) return g.fail('err_in_scene');
   if (ch.if && !g.test(ch.if, pid)) return { ok: false, err: ch.why ? g.render(ch.why, pid) : g.ix.ui('err_not_now') };
   if (!g.hasCostFor(pid, ch.cost)) return g.fail('err_cost');
   g.payCostFor(pid, ch.cost);
-  const s = stateOf(g);
-  s.open = s.open.filter((x) => x.uid !== uid);
   const out: EventOutcome = ch.outcomes.length > 1 ? weighted(g, ch.outcomes) : ch.outcomes[0]!;
-  // at home both see what came of it; away only the one who was there
+  // at home both read what came of it in the log; away only the one who was there
   if (o.pid === null) g.log({ all: out.log, kind: 'find' });
   else g.log({ self: out.log, kind: 'find' }, pid);
   g.apply(out.effects, pid);
+  const text = g.render(out.log, pid);
+  if (g.p(pid).fight !== null) {
+    // a fight broke out: the fight itself is what came of it
+    s.open = s.open.filter((x) => x.uid !== uid);
+  } else if (out.next && def.stages?.[out.next]) {
+    o.stage = out.next;
+    o.lead = text;
+  } else {
+    delete o.lead;
+    const gains = tally(g, ch.cost, out.effects);
+    o.done = { by: pid, text, ...(gains.length ? { gains } : {}) };
+  }
   return { ok: true };
 }
 
@@ -150,12 +192,21 @@ export function eventsView(g: Game, pid: PlayerId, cost: (c: Record<string, numb
   for (const o of s.open) {
     if (!cardFor(g, pid, o.uid)) continue;
     const def = defOf(g, o.id);
-    if (!def?.choices) continue;
+    if (!def) continue;
+    const base = { uid: o.uid, art: def.art ?? def.id, home: o.pid === null };
+    if (o.done) {
+      out.push({ ...base, lead: [], text: o.done.text.split('\n'), done: true, gains: o.done.gains ?? [], choices: [] });
+      continue;
+    }
+    const st = stageOf(def, o);
+    if (!st) continue;
     out.push({
-      uid: o.uid,
-      text: g.render(def.text, pid).split('\n'),
-      home: o.pid === null,
-      choices: def.choices.map((ch) => {
+      ...base,
+      lead: o.lead ? o.lead.split('\n') : [],
+      text: g.render(st.text, pid).split('\n'),
+      done: false,
+      gains: [],
+      choices: st.choices.map((ch) => {
         const locked = ch.if && !g.test(ch.if, pid) ? (ch.why ? g.render(ch.why, pid) : g.ix.ui('err_not_now')) : null;
         const broke = !g.hasCostFor(pid, ch.cost);
         const c = cost(ch.cost);

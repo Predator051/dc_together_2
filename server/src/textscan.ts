@@ -179,11 +179,17 @@ export function collectStrings(c: Content): Found[] {
   for (const [k, v] of Object.entries(c.ui)) out.push({ where: `ui ${k}`, text: v });
   for (const e of c.events?.kinds ?? []) {
     pushText(out, `event ${e.id}.text`, e.text);
-    for (const [i, ch] of (e.choices ?? []).entries()) {
-      pushText(out, `event ${e.id}.choice${i}`, ch.label);
-      pushText(out, `event ${e.id}.choice${i}.why`, ch.why);
-      ch.outcomes.forEach((o, j) => pushText(out, `event ${e.id}.choice${i}.out${j}`, o.log));
+    const steps: Array<[string, NonNullable<typeof e.choices>]> = [['', e.choices ?? []]];
+    for (const [k, st] of Object.entries(e.stages ?? {})) {
+      pushText(out, `event ${e.id}.${k}.text`, st.text);
+      steps.push([`.${k}`, st.choices]);
     }
+    for (const [k, choices] of steps)
+      for (const [i, ch] of choices.entries()) {
+        pushText(out, `event ${e.id}${k}.choice${i}`, ch.label);
+        pushText(out, `event ${e.id}${k}.choice${i}.why`, ch.why);
+        ch.outcomes.forEach((o, j) => pushText(out, `event ${e.id}${k}.choice${i}.out${j}`, o.log));
+      }
   }
   for (const w of c.weather?.kinds ?? []) {
     out.push({ where: `weather ${w.id}.name`, text: w.name });

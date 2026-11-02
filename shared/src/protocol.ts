@@ -51,6 +51,7 @@ export type Command =
   /** Rest by a fire: at home or at a campfire. */
   | { c: 'rest' }
   /** Answer a small happening (the card's uid and the choice's index). */
+  /** Answer a happening (`choice` -1: close what came of it). */
   | { c: 'event'; uid: number; choice: number }
   /** The home garden: sow a seed into an empty bed, gather a ripe one. */
   | { c: 'plant'; bed: number; crop: string }
@@ -883,9 +884,17 @@ export interface GardenView {
 /** A small happening waiting for an answer. */
 export interface EventView {
   uid: number;
+  /** Its picture key (client/src/art/events/<key>.webp). */
+  art: string;
+  /** What came of the step before (a scene of several steps). */
+  lead: string[];
   text: string[];
   /** A home one: either hero at home may answer. */
   home: boolean;
+  /** It is over: `text` is what came of it, and it waits only to be closed. */
+  done: boolean;
+  /** What it brought and took (shown with what came of it). */
+  gains: Array<{ name: string; n: number }>;
   choices: Array<{ label: string; enabled: boolean; reason?: string; cost?: CostView[] }>;
 }
 

@@ -970,8 +970,16 @@ export interface GardenDef {
 export interface EventOutcome {
   w?: number;
   effects?: Effect[];
-  /** What happened, for the log (the one who chose; at home everyone sees it). */
+  /** What happened: shown in the event's own window to the one who chose, and kept in the log. */
   log: Text;
+  /** The scene goes on: the next step of the same happening (its key in `stages`). */
+  next?: string;
+}
+
+/** A further step of a happening: what is seen now and what can be done. */
+export interface EventStage {
+  text: Text;
+  choices: EventChoice[];
 }
 
 export interface EventChoice {
@@ -985,9 +993,10 @@ export interface EventChoice {
 }
 
 /**
- * A small happening between the story's beats. Home ones come while someone is at home and are
- * shared (either hero may answer); road ones on arriving somewhere, place ones after work there.
- * Without choices it simply happens (a line in the log); with them, a card waits for an answer.
+ * A small happening between the story's beats: a short scene with a choice that costs something.
+ * Home ones come while someone is at home and are shared (either hero may answer); road ones on
+ * arriving somewhere, place ones after work there. It comes as a window that waits for an answer
+ * (and then shows what came of it); one without choices simply happens (a line in the log).
  */
 export interface EventDef {
   id: string;
@@ -1005,6 +1014,10 @@ export interface EventDef {
   /** good: a find; bad: a warning (colours the log line of a choice-less event). */
   tone?: 'good' | 'bad';
   choices?: EventChoice[];
+  /** Further steps, reached through an outcome's `next`. */
+  stages?: Record<string, EventStage>;
+  /** Its picture (client/src/art/events/<key>.webp); by default its own id. */
+  art?: string;
 }
 
 export interface EventSetDef {

@@ -24,7 +24,7 @@ import { StoreStage } from './store.js';
 import { FolkStage } from './folk.js';
 import { NeedsBar, NeedsSheet } from './needs.js';
 import { WeatherChip } from './weather.js';
-import { EventCards } from './events.js';
+import { EventModal } from './events.js';
 import { AsksStrip } from './asks.js';
 import { gardenWants } from './garden.js';
 import { MateWork, WorkFx, workPref } from './workfx.js';
@@ -487,7 +487,6 @@ export function Game({ s }: { s: NetState }) {
           <span class="goal-label">{T.goal}.</span> {v.goal}
         </p>
       )}
-      <EventCards v={v} locked={locked} />
       {v.memories && v.atHome && !v.past && (
         <button
           type="button"
@@ -734,6 +733,7 @@ export function Game({ s }: { s: NetState }) {
       {shownFight && <FightPanel f={shownFight} v={v} locked={locked || !!shownFight.ended} onGone={() => setGoneFight(shownFight.id)} />}
       {!v.scene && !shownFight && v.summary && <Summary s={v.summary} me={v.me.name} partner={v.partner.name} />}
       {!v.scene && !shownFight && !v.summary && v.welcome && <Welcome w={v.welcome} partner={v.partner.name} />}
+      <EventModal v={v} locked={locked} hidden={!!v.scene || !!shownFight || !!v.summary || !!v.welcome} />
       <WorkFx v={v} offset={s.offset} hidden={!!v.scene || !!shownFight || !!v.summary || !!v.welcome} />
       <MateWork v={v} offset={s.offset} hidden={!!v.scene || !!shownFight || !!v.summary || !!v.welcome} />
       {dayCard !== null && (

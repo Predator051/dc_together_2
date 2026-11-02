@@ -561,7 +561,7 @@ function validCommand(cmd: unknown): Command | null {
     }
     case 'event': {
       const x = cmd as { uid?: unknown; choice?: unknown };
-      if (typeof x.uid !== 'number' || !Number.isInteger(x.uid) || typeof x.choice !== 'number' || !Number.isInteger(x.choice) || x.choice < 0 || x.choice > 9) return null;
+      if (typeof x.uid !== 'number' || !Number.isInteger(x.uid) || typeof x.choice !== 'number' || !Number.isInteger(x.choice) || x.choice < -1 || x.choice > 9) return null;
       return { c: 'event', uid: x.uid, choice: x.choice };
     }
     case 'job': {

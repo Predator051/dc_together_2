@@ -8,6 +8,7 @@ import stations from './art/stations.json';
 import stationSlotsJson from './art/station-slots.json';
 import views from './art/views.json';
 import moments from './art/moments.json';
+import eventArt from './art/events.json';
 import marks from './art/marks.json';
 import yardCells from './art/yard.json';
 import type { YardPieceView } from '../../shared/src/protocol.js';
@@ -356,6 +357,14 @@ const PAINTED_VIEWS = new Set(views as string[]);
 /** The picture of a place seen at eye level, or null while it is not painted. */
 // A key scene's own moment (scripts/art.ts moment): it heads the scene instead of the place.
 const PAINTED_MOMENTS = new Set(moments as string[]);
+
+// The picture of a small happening (scripts/art.ts events): the head of its window.
+const PAINTED_EVENTS = new Set(eventArt as string[]);
+
+export function eventUrl(key: string): string | null {
+  if (!PAINTED_EVENTS.has(key)) return null;
+  return new URL(`./art/events/${key}.webp`, import.meta.url).href;
+}
 
 export function momentUrl(scene: string): string | null {
   if (!PAINTED_MOMENTS.has(scene)) return null;
