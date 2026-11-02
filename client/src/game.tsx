@@ -27,7 +27,7 @@ import { WeatherChip } from './weather.js';
 import { EventCards } from './events.js';
 import { AsksStrip } from './asks.js';
 import { gardenWants } from './garden.js';
-import { WorkFx, workPref } from './workfx.js';
+import { MateWork, WorkFx, workPref } from './workfx.js';
 
 import { SAFETY_MS, useServerClock, Fill, useMedia, load, store, type Ctx } from './clock.js';
 import { Group, PlaceHead } from './works.js';
@@ -735,6 +735,7 @@ export function Game({ s }: { s: NetState }) {
       {!v.scene && !shownFight && v.summary && <Summary s={v.summary} me={v.me.name} partner={v.partner.name} />}
       {!v.scene && !shownFight && !v.summary && v.welcome && <Welcome w={v.welcome} partner={v.partner.name} />}
       <WorkFx v={v} offset={s.offset} hidden={!!v.scene || !!shownFight || !!v.summary || !!v.welcome} />
+      <MateWork v={v} offset={s.offset} hidden={!!v.scene || !!shownFight || !!v.summary || !!v.welcome} />
       {dayCard !== null && (
         <div class="day-card" key={dayCard} aria-hidden="true">
           <span>{T.day}</span>

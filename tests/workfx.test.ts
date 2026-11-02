@@ -8,6 +8,7 @@ import { EXTRA_VERBS, type WorkVerb } from '../shared/src/work.js';
 import { ContentIndex, Game, newWorld } from '../server/src/engine/index.js';
 import { workLook } from '../server/src/engine/view.js';
 import painted from '../client/src/art/things.json';
+import { pair } from './world.js';
 
 const cells = painted as unknown as Record<string, [number, number]>;
 const source = readFileSync(new URL('../client/src/workfx.tsx', import.meta.url), 'utf8');
@@ -49,5 +50,17 @@ describe('work in motion', () => {
     expect(props.length).toBeGreaterThan(10);
     expect(props.filter((p) => !cells[p])).toEqual([]);
     for (const k of ['g_ripe', 'g_sprout']) expect(cells[k], k).toBeTruthy();
+  });
+
+  it("the partner sees how the other hero's work is drawn, and nothing once it is over", () => {
+    const { w, h, m } = pair();
+    const act = w.view(h).groups.flatMap((g) => g.entries).find((e) => e.enabled && e.kind === 'act')!;
+    expect(w.cmd(h, { c: 'act', id: act.id }).ok).toBe(true);
+    const mine = w.view(h);
+    const seen = w.view(m).partner.work;
+    expect(mine.busyLook).not.toBeNull();
+    expect(seen).toEqual({ look: mine.busyLook, from: mine.busyFrom, until: mine.busyUntil });
+    w.rest(h);
+    expect(w.view(m).partner.work).toBeNull();
   });
 });

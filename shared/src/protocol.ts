@@ -203,6 +203,8 @@ export interface PartnerView {
   area: string;
   where: string;
   busy: { text: string; from: number; until: number } | null;
+  /** The partner's running work as it is drawn (not a fight or the road). */
+  work: { look: WorkLook; from: number; until: number } | null;
   hp: number;
   hpMax: number;
 }
