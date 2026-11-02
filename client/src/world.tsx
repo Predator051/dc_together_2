@@ -1,5 +1,5 @@
 // Panels of the second part: the map, the hero, the bag, a fight, the household.
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { MapNodeView, PlayerView } from '../../shared/src/protocol.js';
 import { net } from './net.js';
 import { MapIcon } from './mapicons.js';
@@ -10,6 +10,7 @@ import { Portrait } from './portraits.js';
 import { Thing } from './items.js';
 import { Cell } from './cells.js';
 import { Sheet } from './sheet.js';
+import { load, store } from './clock.js';
 import { IconEye, IconPair, IconSignGo } from './icons.js';
 import { T } from './strings.js';
 import { Shelves, shelfOf } from './groups.js';
@@ -55,6 +56,42 @@ export function MapPanel({ v, locked, now, desktop }: { v: PlayerView; locked: b
   const [box, width] = useWidth();
   const boxEl = useRef<HTMLDivElement | null>(null);
   const picked = m.nodes.find((n) => n.id === sel) ?? null;
+  // the painted land takes the screen down to its bottom (above the tabs on a phone): no page to scroll past it
+  const wrap = useRef<HTMLDivElement | null>(null);
+  const isPainted = !!paintedMap(m);
+  useLayoutEffect(() => {
+    const el = wrap.current;
+    if (!el) return;
+    window.scrollTo(0, 0);
+    const fit = () => {
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      // what the column keeps under the map (its margins) comes off too, so the map ends on the screen
+      const col = el.closest('.col-mid');
+      const view = el.closest('.mapview');
+      const under = view ? view.getBoundingClientRect().bottom - el.getBoundingClientRect().bottom : 0;
+      let pad = 0;
+      for (let p = col?.parentElement; p && p !== document.body; p = p.parentElement) {
+        const st = getComputedStyle(p);
+        pad += (parseFloat(st.paddingBottom) || 0) + (parseFloat(st.marginBottom) || 0) + (parseFloat(st.borderBottomWidth) || 0);
+      }
+      // (the page's own bottom padding already makes room for the tabs fixed at the bottom of a phone)
+      const px = window.innerHeight - top - Math.max(0, under) - pad - 4;
+      el.style.setProperty('--land-h', `${Math.max(320, Math.round(px))}px`);
+    };
+    fit();
+    addEventListener('resize', fit);
+    return () => removeEventListener('resize', fit);
+  }, [isPainted, !!m.travel, desktop]);
+  // on a wide screen the map may spread over the journal's room too (remembered)
+  const [full, setFull] = useState(() => load('bezgomin.mapFull') === 'on');
+  useEffect(() => {
+    document.body.classList.toggle('map-full', desktop && full);
+    return () => document.body.classList.remove('map-full');
+  }, [desktop, full]);
+  const toggleFull = () => {
+    store('bezgomin.mapFull', full ? 'off' : 'on');
+    setFull(!full);
+  };
   // a map wider than the screen opens on where you stand
   const hereX = here ? here.x : null;
   useEffect(() => {
@@ -137,7 +174,7 @@ export function MapPanel({ v, locked, now, desktop }: { v: PlayerView; locked: b
           key: 'more',
           label: T.mapMore,
           icon: <IconEye />,
-          onDo: () => (sheeted ? setInfo(true) : boxEl.current?.parentElement?.querySelector('.map-card')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })),
+          onDo: () => (sheeted ? setInfo(true) : painted ? setInfo(true) : boxEl.current?.parentElement?.querySelector('.map-card')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })),
         },
       ]
     : [];
@@ -194,7 +231,38 @@ export function MapPanel({ v, locked, now, desktop }: { v: PlayerView; locked: b
         </p>
       )}
       {painted ? (
-        <LandMap m={land!} sel={sel} onPick={setSel} ring={ring} now={now} wayIds={way} dusk={duskOf(v.dayAt, now)} sky={v.ambient.sky ?? undefined} />
+        <div class="land-wrap" ref={wrap}>
+          <LandMap
+            m={land!}
+            sel={sel}
+            onPick={setSel}
+            ring={ring}
+            now={now}
+            wayIds={way}
+            dusk={duskOf(v.dayAt, now)}
+            sky={v.ambient.sky ?? undefined}
+            full={desktop ? { on: full, toggle: toggleFull } : undefined}
+            aside={sheeted ? 0 : 412}
+          />
+          <div class="land-legend" aria-hidden="true">
+            <span>
+              <i class="dot me" /> {T.mapHere}
+            </span>
+            <span>
+              <i class="dot mate" /> {v.partner.name || '—'}
+            </span>
+          </div>
+          {!picked && here && <p class="land-hint">{T.mapTap}</p>}
+          {/* on a wide screen the card of the picked place lies over the land, by its edge */}
+          {picked && !sheeted && (
+            <div class={`land-card ${info ? 'open' : ''}`}>
+              <button type="button" class="land-card-x" aria-label={T.mapClose} title={T.mapClose} onClick={() => setSel(null)}>
+                ×
+              </button>
+              {card(picked)}
+            </div>
+          )}
+        </div>
       ) : (
       <div
         class={`map-box ${w > width ? 'scrolls' : ''}`}
@@ -273,6 +341,7 @@ export function MapPanel({ v, locked, now, desktop }: { v: PlayerView; locked: b
       </svg>
       </div>
       )}
+      {!painted && (
       <div class="map-legend">
         <span>
           <i class="dot me" /> {T.mapHere}
@@ -281,8 +350,9 @@ export function MapPanel({ v, locked, now, desktop }: { v: PlayerView; locked: b
           <i class="dot mate" /> {v.partner.name || '—'}
         </span>
       </div>
-      {picked && !sheeted && card(picked)}
-      {!picked && <p class="desc map-hint">{here ? T.mapTap : ''}</p>}
+      )}
+      {picked && !painted && card(picked)}
+      {!picked && !painted && <p class="desc map-hint">{here ? T.mapTap : ''}</p>}
       {picked && sheeted && info && (
         <Sheet desktop={false} label={picked.name} bar={<h3 class="map-sheet-name">{picked.name}</h3>} back={T.planBack} bodyKey={picked.id} onClose={() => setInfo(false)}>
           {card(picked)}

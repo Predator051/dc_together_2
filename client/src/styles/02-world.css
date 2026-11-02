@@ -91,6 +91,9 @@
 .mapview {
   padding-bottom: 12px;
 }
+.layout.map-open .mapview {
+  padding-bottom: 0;
+}
 .map-travel {
   margin: 0 0 8px;
   font-family: var(--sans);
@@ -273,7 +276,7 @@
 .land {
   position: relative;
   /* on a phone the land takes the screen between the header and the tabs, the card follows below */
-  height: clamp(300px, calc(100dvh - var(--nav-h) - 190px), 640px);
+  height: var(--land-h, clamp(300px, calc(100dvh - var(--nav-h) - 190px), 640px));
   margin-bottom: 4px;
   overflow: hidden;
   border-radius: 10px;
@@ -283,6 +286,117 @@
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+}
+/* the land with what lies over it: the legend, a hint, the card of the picked place */
+.land-wrap {
+  position: relative;
+  container-type: inline-size;
+}
+.land-wrap .land {
+  margin-bottom: 0;
+}
+.land-legend {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1;
+  display: flex;
+  gap: 12px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: rgba(22, 17, 12, 0.72);
+  font: 0.78rem var(--sans);
+  color: var(--ink-2);
+  pointer-events: none;
+}
+.land-legend .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 4px;
+  border-radius: 50%;
+}
+.land-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  z-index: 1;
+  margin: 0;
+  padding: 4px 12px;
+  border-radius: 12px;
+  background: rgba(22, 17, 12, 0.72);
+  transform: translateX(-50%);
+  font: 0.8rem var(--sans);
+  color: var(--faded);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.land-card {
+  position: absolute;
+  top: 10px;
+  right: 62px;
+  z-index: 2;
+  width: min(340px, calc(100% - 84px));
+  max-height: calc(100% - 20px);
+  overflow-y: auto;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  animation: land-card-in 0.18s ease-out both;
+  scrollbar-width: thin;
+}
+.land-card .map-card {
+  background: rgba(38, 31, 23, 0.97);
+}
+.land-card.open .map-card {
+  border-color: var(--ochre);
+}
+/* a narrow map (the journal beside it): the card lies along the bottom, the place stays in the top half */
+@container (max-width: 759px) {
+  .land-card {
+    top: auto;
+    bottom: 10px;
+    left: 10px;
+    right: 62px;
+    width: auto;
+    max-height: 48%;
+    animation-name: land-card-up;
+  }
+}
+@keyframes land-card-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes land-card-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+}
+.land-card-x {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(22, 17, 12, 0.75);
+  font: 20px/1 var(--sans);
+  color: var(--ink);
+  cursor: pointer;
+}
+.land-card-x:hover,
+.land-card-x:focus-visible {
+  color: var(--ochre-ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .land-card {
+    animation: none;
+  }
 }
 .land:active {
   cursor: grabbing;
@@ -699,6 +813,17 @@
   color: var(--ink);
   cursor: pointer;
 }
+.land-tool svg path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.land-tool.full.on {
+  border-color: var(--ochre);
+  color: var(--ochre-ink);
+}
 .land-tool .dot {
   display: block;
   width: 12px;
@@ -715,7 +840,7 @@
 }
 @media (min-width: 960px) {
   .layout.map-open .land {
-    height: min(74vh, 760px);
+    height: var(--land-h, min(74vh, 760px));
   }
 }
 @media (prefers-reduced-motion: reduce) {
