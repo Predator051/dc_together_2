@@ -6,6 +6,7 @@ import type { FxKind } from '../../shared/src/content.js';
 import type { PlayerView } from '../../shared/src/protocol.js';
 import type { WorkLook, WorkVerb } from '../../shared/src/work.js';
 import { paintedStyle } from './items.js';
+import { sound } from './sound.js';
 import { heroFace } from './portraits.js';
 import { load, store } from './clock.js';
 import { T } from './strings.js';
@@ -799,8 +800,9 @@ export function loopWork(host: HTMLElement, look: WorkLook, ms: number): () => v
   };
 }
 
-/** The work is done: a short buzz on a phone (only while the page is in front). */
+/** The work is done: a soft knock (if the sound is on) and a short buzz on a phone (only while the page is in front). */
 function workDone() {
+  sound.done();
   // browsers refuse (and complain) before the first tap on the page
   if (document.hidden || navigator.userActivation?.hasBeenActive === false) return;
   try {
