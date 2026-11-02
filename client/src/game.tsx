@@ -28,6 +28,7 @@ import { EventCards } from './events.js';
 import { AsksStrip } from './asks.js';
 import { gardenWants } from './garden.js';
 import { MateWork, WorkFx, workPref } from './workfx.js';
+import { Shelves, shelfOf } from './groups.js';
 
 import { SAFETY_MS, useServerClock, Fill, useMedia, load, store, type Ctx } from './clock.js';
 import { Group, PlaceHead } from './works.js';
@@ -54,20 +55,27 @@ function Stock({ v, foldable = false }: { v: PlayerView; foldable?: boolean }) {
           <IconDown class="topic-chev" />
         </button>
       )}
-      {shown && res.length > 0 && (
+      {shown && (res.length > 0 || tools.length > 0) && (
         <>
           {!foldable && <h3>{T.stock}</h3>}
-          <ul class="cells" aria-label={T.stock}>
-            {res.map((r) => (
-              <Cell
-                icon={r.icon}
-                name={r.name}
-                n={r.n}
-                cap={r.cap}
-                cls={`${r.cap !== undefined && r.n >= r.cap ? 'full' : ''} ${r.n === 0 ? 'empty' : ''}`}
-              />
-            ))}
-          </ul>
+          <Shelves
+            items={[...res, ...tools]}
+            label={T.stock}
+            shelf={(r) => shelfOf(r.kind, r.ware)}
+            cell={(r) =>
+              r.kind === 'tool' || r.kind === 'gear' ? (
+                <Cell icon={r.icon} name={r.name} n={r.n > 1 ? r.n : undefined} />
+              ) : (
+                <Cell
+                  icon={r.icon}
+                  name={r.name}
+                  n={r.n}
+                  cap={r.cap}
+                  cls={`${r.cap !== undefined && r.n >= r.cap ? 'full' : ''} ${r.n === 0 ? 'empty' : ''}`}
+                />
+              )
+            }
+          />
         </>
       )}
       {shown && folk.length > 0 && (
@@ -80,16 +88,6 @@ function Stock({ v, foldable = false }: { v: PlayerView; foldable?: boolean }) {
             </span>
           ))}
         </p>
-      )}
-      {shown && tools.length > 0 && (
-        <>
-          <p class="il-head cells-head">{T.items}</p>
-          <ul class="cells" aria-label={T.items}>
-            {tools.map((r) => (
-              <Cell icon={r.icon} name={r.name} n={r.n > 1 ? r.n : undefined} />
-            ))}
-          </ul>
-        </>
       )}
     </section>
   );

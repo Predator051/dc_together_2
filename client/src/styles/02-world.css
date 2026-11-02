@@ -951,6 +951,39 @@ button.cell {
   font-family: var(--sans);
   font-size: 0.9rem;
 }
+/* the store and the bag by shelves: a quiet heading with how many kinds are there */
+.shelf + .shelf {
+  margin-top: 4px;
+}
+.shelf-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--faded);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 3px;
+}
+.shelf-count {
+  color: var(--pale);
+  letter-spacing: 0;
+}
+.shelf-more {
+  display: block;
+  margin: -4px 0 8px;
+  padding: 2px 0;
+  background: none;
+  border: 0;
+  color: var(--pale);
+  font: 0.78rem var(--sans);
+  cursor: pointer;
+}
+.shelf-more:hover,
+.shelf-more:focus-visible {
+  color: var(--ink-2);
+}
 /* what can be done with the picked thing, under the cells */
 .cell-detail {
   display: flex;
