@@ -356,6 +356,8 @@ interface Cam {
 }
 
 const K_MAX = 1.35;
+/** From this width of the map the card of a picked place lies by its right edge, below it along the bottom. */
+const CARD_WIDE = 760;
 /** A tap this far from a place (sheet px, more when zoomed out) picks it. */
 const NEAR_TAP = 120;
 
@@ -411,15 +413,21 @@ function limits(box: HTMLElement): { kMin: number; cover: number; bw: number; bh
 /** How far wider land may be dragged past its edge, so a place by the edge can come into the open. */
 const SLACK = 90;
 
-/** Land narrower than the box sits in its middle; wider land goes only a little past its edge. */
-function fit(pos: number, span: number, room: number): number {
-  return span <= room ? (room - span) / 2 : Math.min(SLACK, Math.max(room - span - SLACK, pos));
+/** How much of the box the card of a picked place covers (right, bottom): the land may go that far further. */
+let COVER: Pt = [0, 0];
+
+/** Land narrower than the box sits in its middle; wider land goes only a little past its edge (and past the card). */
+function fit(pos: number, span: number, room: number, cover = 0): number {
+  const lo = room - cover - span - SLACK;
+  if (span > room) return Math.min(SLACK, Math.max(lo, pos));
+  const mid = (room - span) / 2;
+  return cover ? Math.min(mid, Math.max(lo, pos)) : mid;
 }
 
 function clamp(box: HTMLElement, c: Cam): Cam {
   const { kMin, bw, bh } = limits(box);
   const k = Math.max(kMin, Math.min(K_MAX, c.k));
-  return { k, x: fit(c.x, SHEET.w * k, bw), y: fit(c.y, SHEET.h * k, bh) };
+  return { k, x: fit(c.x, SHEET.w * k, bw, COVER[0]), y: fit(c.y, SHEET.h * k, bh, COVER[1]) };
 }
 
 function centerOn(box: HTMLElement, p: Pt, k: number): Cam {
@@ -447,6 +455,8 @@ export function LandMap({
   wayIds,
   dusk,
   sky,
+  full,
+  aside = 0,
 }: {
   m: MapView;
   sel: string | null;
@@ -459,6 +469,10 @@ export function LandMap({
   sky?: string;
   /** The way to the picked place, stop by stop, to light up. */
   wayIds: string[];
+  /** The map spread over the whole page (the journal put away), where the screen is wide enough for it. */
+  full?: { on: boolean; toggle: () => void };
+  /** How much of the right side a card covers while a place is picked. */
+  aside?: number;
 }) {
   const boxRef = useRef<HTMLDivElement | null>(null);
   const worldRef = useRef<HTMLDivElement | null>(null);
@@ -537,13 +551,23 @@ export function LandMap({
   useEffect(() => {
     const box = boxRef.current;
     const p = sel ? SHEET.at[sel] : undefined;
-    if (!box || !p) return;
+    if (!box || !p) {
+      COVER = [0, 0];
+      return;
+    }
     const at = () => [cam.current.x + p[0] * cam.current.k, cam.current.y + p[1] * cam.current.k] as Pt;
     const bw = box.clientWidth;
     const bh = box.clientHeight;
     let [x, y] = at();
-    if (x < 110 || x > bw - 110 || y < 130 || y > bh - 50) {
-      cam.current = centerOn(box, [p[0], p[1] - 30 / cam.current.k], cam.current.k);
+    // the card of the place lies over the land: by the right edge of a wide map, along the bottom of a
+    // narrow one (see .land-card); the place keeps to the open part
+    const wide = bw >= CARD_WIDE;
+    const room = aside && wide ? bw - aside : bw;
+    const roomH = aside && !wide ? bh * 0.5 : bh;
+    COVER = [bw - room, bh - roomH];
+    if (x < 110 || x > room - 110 || y < 130 || y > roomH - 50) {
+      const c = centerOn(box, [p[0], p[1] - 30 / cam.current.k], cam.current.k);
+      cam.current = clamp(box, { ...c, x: c.x - (bw - room) / 2, y: c.y - (bh - roomH) / 2 });
       apply(true);
       [x, y] = at();
     }
@@ -557,6 +581,18 @@ export function LandMap({
     const pts = new Map<number, Pt>();
     let moved = 0;
     let pinch: { d: number; k: number } | null = null;
+    // how fast the land was going under the finger, so a flick lets it roll on and slow down
+    let vel: Pt = [0, 0];
+    let lastT = 0;
+    let roll = 0;
+    const stop = () => {
+      cancelAnimationFrame(roll);
+      roll = 0;
+    };
+    const panBy = (dx: number, dy: number, glide = false) => {
+      cam.current = clamp(box, { ...cam.current, x: cam.current.x + dx, y: cam.current.y + dy });
+      apply(glide);
+    };
     const zoomAt = (k: number, cx: number, cy: number, glide = false) => {
       const c = cam.current;
       const r = box.getBoundingClientRect();
@@ -568,8 +604,13 @@ export function LandMap({
     };
     const down = (e: PointerEvent) => {
       if (e.button !== 0 && e.pointerType === 'mouse') return;
+      stop();
       pts.set(e.pointerId, [e.clientX, e.clientY]);
-      if (pts.size === 1) moved = 0;
+      if (pts.size === 1) {
+        moved = 0;
+        vel = [0, 0];
+        lastT = e.timeStamp;
+      }
       if (pts.size === 2) {
         const [a, b] = [...pts.values()] as [Pt, Pt];
         pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, k: cam.current.k };
@@ -593,13 +634,33 @@ export function LandMap({
       // a tap stays a tap until the finger really moves; only then the map takes the pointer
       if (moved > 6 && !box.hasPointerCapture(e.pointerId)) box.setPointerCapture(e.pointerId);
       if (moved > 6) {
-        cam.current = clamp(box, { ...cam.current, x: cam.current.x + dx, y: cam.current.y + dy });
-        apply();
+        panBy(dx, dy);
+        const dt = Math.max(1, e.timeStamp - lastT);
+        vel = [0.7 * (dx / dt) + 0.3 * vel[0], 0.7 * (dy / dt) + 0.3 * vel[1]];
+        lastT = e.timeStamp;
       }
     };
     const up = (e: PointerEvent) => {
+      const was = pts.size;
       pts.delete(e.pointerId);
       if (pts.size < 2) pinch = null;
+      // a flick: the land rolls on and slows down (a finger that stopped before letting go rolls nothing)
+      if (was !== 1 || moved <= 6 || e.timeStamp - lastT > 80 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      let [vx, vy] = vel;
+      if (Math.hypot(vx, vy) < 0.25) return;
+      let t = performance.now();
+      const step = (now: number) => {
+        const dt = Math.min(32, now - t);
+        t = now;
+        const before = cam.current;
+        panBy(vx * dt, vy * dt);
+        const decay = Math.pow(0.995, dt);
+        vx *= decay;
+        vy *= decay;
+        const stuck = cam.current.x === before.x && cam.current.y === before.y;
+        roll = Math.hypot(vx, vy) > 0.02 && !stuck ? requestAnimationFrame(step) : 0;
+      };
+      roll = requestAnimationFrame(step);
     };
     // a drag that ends over a place must not pick it
     const click = (e: MouseEvent) => {
@@ -609,9 +670,35 @@ export function LandMap({
         moved = 0;
       }
     };
+    // a pinch on the touchpad (it comes as the wheel with ctrl) and a mouse wheel zoom; two fingers
+    // sliding on the touchpad move the land
     const wheel = (e: WheelEvent) => {
       e.preventDefault();
-      zoomAt(cam.current.k * Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY);
+      stop();
+      if (e.ctrlKey) return zoomAt(cam.current.k * Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY);
+      const notch = e.deltaMode !== 0 || (e.deltaX === 0 && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
+      if (notch) return zoomAt(cam.current.k * Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY);
+      panBy(-e.deltaX, -e.deltaY);
+    };
+    // a double click (or tap) on the land comes closer there
+    const dbl = (e: MouseEvent) => {
+      if ((e.target as Element).closest('.land-pin, .pin-ring, .land-tools')) return;
+      zoomAt(cam.current.k * 1.6, e.clientX, e.clientY, true);
+    };
+    // the keys move the land too, while nothing else wants them
+    const key = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+      const t = e.target instanceof Element ? e.target : null;
+      if (t?.closest('input, textarea, select, [contenteditable], .sheet, [role="dialog"]')) return;
+      const STEP = 120;
+      const d: Record<string, Pt> = { ArrowLeft: [STEP, 0], ArrowRight: [-STEP, 0], ArrowUp: [0, STEP], ArrowDown: [0, -STEP] };
+      const r = box.getBoundingClientRect();
+      if (d[e.key]) panBy(d[e.key]![0], d[e.key]![1], true);
+      else if (e.key === '+' || e.key === '=') zoomAt(cam.current.k * 1.35, r.left + r.width / 2, r.top + r.height / 2, true);
+      else if (e.key === '-' || e.key === '_') zoomAt(cam.current.k / 1.35, r.left + r.width / 2, r.top + r.height / 2, true);
+      else return;
+      stop();
+      e.preventDefault();
     };
     box.addEventListener('pointerdown', down);
     box.addEventListener('pointermove', move);
@@ -619,6 +706,8 @@ export function LandMap({
     box.addEventListener('pointercancel', up);
     box.addEventListener('click', click, true);
     box.addEventListener('wheel', wheel, { passive: false });
+    box.addEventListener('dblclick', dbl);
+    window.addEventListener('keydown', key);
     (box as HTMLDivElement & { zoomBy?: (f: number) => void }).zoomBy = (f: number) => {
       const r = box.getBoundingClientRect();
       zoomAt(cam.current.k * f, r.left + r.width / 2, r.top + r.height / 2, true);
@@ -630,6 +719,9 @@ export function LandMap({
       box.removeEventListener('pointercancel', up);
       box.removeEventListener('click', click, true);
       box.removeEventListener('wheel', wheel);
+      box.removeEventListener('dblclick', dbl);
+      window.removeEventListener('keydown', key);
+      stop();
     };
   }, []);
 
@@ -767,6 +859,19 @@ export function LandMap({
         <button class="land-tool me" onClick={toMe} aria-label={T.mapToMe} title={T.mapToMe}>
           <span class="dot me" />
         </button>
+        {full && (
+          <button
+            class={`land-tool full ${full.on ? 'on' : ''}`}
+            onClick={full.toggle}
+            aria-pressed={full.on}
+            aria-label={full.on ? T.mapFullOff : T.mapFullOn}
+            title={full.on ? T.mapFullOff : T.mapFullOn}
+          >
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+              {full.on ? <path d="M8 3v5H3M12 3v5h5M8 17v-5H3M12 17v-5h5" /> : <path d="M3 8V3h5M17 8V3h-5M3 12v5h5M17 12v5h-5" />}
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );

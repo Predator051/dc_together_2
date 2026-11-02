@@ -3632,6 +3632,28 @@ mark {
     border-left: none;
     padding-left: 0;
   }
+  /* the map over the whole page: the journal steps aside */
+  body.map-full .layout.map-open {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  body.map-full .layout.map-open .col-right {
+    display: none;
+  }
+  body.map-full .layout.map-open .col-mid {
+    border-right: none;
+    padding-right: 0;
+  }
+  /* the map itself fills the screen; the column needs no height of its own */
+  .layout.map-open .col-mid {
+    min-height: 0;
+  }
+  /* with the map open the page itself stays still: the journal scrolls in its own column */
+  .layout.map-open {
+    padding-bottom: 0;
+  }
+  .layout.map-open .col-right {
+    max-height: calc(100dvh - 132px);
+  }
   /* the page scrolls under the header: the middle tabs stick right below it, with no band above */
   .col-mid .side-switch {
     top: 64px;
