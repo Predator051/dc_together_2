@@ -37,6 +37,7 @@ import { outside, seasonNow, weatherNow } from './weather.js';
 import { eventsView } from './events.js';
 import { asksView } from './asks.js';
 import { bedCount, gardenView } from './garden.js';
+import { workVerb, type WorkLook } from '../../../shared/src/work.js';
 import { FOLK, NEED, TRADE, coldLevel, mealFading } from '../../../shared/src/rules.js';
 
 const LOG_SEND = 120;
@@ -1369,6 +1370,7 @@ export function buildView(g: Game, pid: PlayerId): PlayerView {
     busyUntil: me.busy && me.busy.until > g.now ? me.busy.until : 0,
     busyFrom: busyFrom(g, pid),
     busyAction: me.busy && me.busy.until > g.now ? me.busy.action : null,
+    busyLook: busyLook(g, pid),
     hero: heroView(g, pid),
     bag: bagView(g, pid),
     needs: needsView(g, pid),
@@ -1402,6 +1404,25 @@ function busyFrom(g: Game, pid: PlayerId): number {
   if (a) return me.busy.until - g.actionTime(a, pid);
   if (me.busy.action.startsWith('rest:')) return me.busy.until - 60_000;
   return g.now;
+}
+
+/** What the hero's running work looks like (none on the road: the map shows the walk). */
+function busyLook(g: Game, pid: PlayerId): WorkLook | null {
+  const me = g.p(pid);
+  if (!me.busy || me.busy.until <= g.now || me.travel) return null;
+  const id = me.busy.action;
+  const a = g.ix.actions.get(id);
+  if (a) return workLook(g, a);
+  if (id === 'camp') return { verb: 'fire', icon: 'wood' };
+  if (id === 'rest:fire') return { verb: 'breath' };
+  if (id === 'rest:defeat') return { verb: 'heart' };
+  if (id.startsWith('teach:')) return { verb: 'care' };
+  return null;
+}
+
+export function workLook(g: Game, a: ActionDef): WorkLook {
+  const icon = actionIcon(g, a);
+  return { verb: workVerb(g.ix.c.ambient?.actions[a.id], a.kind, actionSort(g, a)), ...(icon ? { icon } : {}) };
 }
 
 function visibleDelta(g: Game, before: Record<string, number>, after: Record<string, number>): DeltaItem[] {

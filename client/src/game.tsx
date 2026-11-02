@@ -11,7 +11,7 @@ import type { Spot } from './plan.js';
 import { notifier } from './notify.js';
 import { sound } from './sound.js';
 import { Scene } from './scene.js';
-import { IconBell, IconBellOff, IconDown, IconFlame, IconHero, IconLog, IconMap, IconMute, IconNotes, IconPair, IconPin, IconSnow, IconSound, IconWork } from './icons.js';
+import { IconBell, IconBellOff, IconDown, IconFlame, IconHero, IconLog, IconMap, IconMotion, IconMotionOff, IconMute, IconNotes, IconPair, IconPin, IconSnow, IconSound, IconWork } from './icons.js';
 import { T } from './strings.js';
 import { BagPanel, MapPanel, NearFight, PackList, ResidentsPanel } from './world.js';
 import { FightPanel } from './fight.js';
@@ -27,6 +27,7 @@ import { WeatherChip } from './weather.js';
 import { EventCards } from './events.js';
 import { AsksStrip } from './asks.js';
 import { gardenWants } from './garden.js';
+import { WorkFx, workPref } from './workfx.js';
 
 import { SAFETY_MS, useServerClock, Fill, useMedia, load, store, type Ctx } from './clock.js';
 import { Group, PlaceHead } from './works.js';
@@ -101,6 +102,18 @@ function SoundToggle() {
   return (
     <button class={`sound-toggle ${sound.on ? 'on' : ''}`} aria-label={label} title={label} onClick={() => sound.toggle()}>
       {sound.on ? <IconSound /> : <IconMute />}
+    </button>
+  );
+}
+
+function WorkFxToggle() {
+  const [, force] = useState(0);
+  useEffect(() => workPref.subscribe(() => force((x) => x + 1)), []);
+  const on = workPref.mode !== 'off';
+  const label = on ? T.workFxOff : T.workFxOn;
+  return (
+    <button class={`sound-toggle ${on ? 'on' : ''}`} aria-label={label} title={label} onClick={() => workPref.set(on ? 'off' : 'big')}>
+      {on ? <IconMotion /> : <IconMotionOff />}
     </button>
   );
 }
@@ -583,6 +596,7 @@ export function Game({ s }: { s: NetState }) {
             </span>
           )}
           <NotifyToggle />
+          <WorkFxToggle />
           <SoundToggle />
           <span class={`net ${s.connected ? 'ok' : 'bad'}`} title={s.connected ? T.onlineDot : T.offlineDot} />
         </div>
@@ -720,6 +734,7 @@ export function Game({ s }: { s: NetState }) {
       {shownFight && <FightPanel f={shownFight} v={v} locked={locked || !!shownFight.ended} onGone={() => setGoneFight(shownFight.id)} />}
       {!v.scene && !shownFight && v.summary && <Summary s={v.summary} me={v.me.name} partner={v.partner.name} />}
       {!v.scene && !shownFight && !v.summary && v.welcome && <Welcome w={v.welcome} partner={v.partner.name} />}
+      <WorkFx v={v} offset={s.offset} hidden={!!v.scene || !!shownFight || !!v.summary || !!v.welcome} />
       {dayCard !== null && (
         <div class="day-card" key={dayCard} aria-hidden="true">
           <span>{T.day}</span>

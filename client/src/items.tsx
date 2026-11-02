@@ -855,19 +855,18 @@ export function hasMark(icon?: string): boolean {
   return !!icon && (!!PAINTED[icon] || icon in DRAW);
 }
 
+/** The background that shows a painted mark (its atlas and cell); null when the thing is not painted. */
+export function paintedStyle(icon?: string): { backgroundImage: string; backgroundPosition: string } | null {
+  const p = icon ? PAINTED[icon] : undefined;
+  if (!p) return null;
+  const [n, i] = p;
+  return { backgroundImage: `url(${atlas(n)})`, backgroundPosition: `${((i % 4) / 3) * 100}% ${(Math.floor(i / 4) / 2) * 100}%` };
+}
+
 /** A thing's small mark; nothing at all when the thing has none. */
 export function Thing({ icon }: { icon?: string }) {
-  const p = icon ? PAINTED[icon] : undefined;
-  if (p) {
-    const [n, i] = p;
-    return (
-      <span
-        class="item-icon painted"
-        style={{ backgroundImage: `url(${atlas(n)})`, backgroundPosition: `${((i % 4) / 3) * 100}% ${(Math.floor(i / 4) / 2) * 100}%` }}
-        aria-hidden="true"
-      />
-    );
-  }
+  const style = paintedStyle(icon);
+  if (style) return <span class="item-icon painted" style={style} aria-hidden="true" />;
   const draw = icon ? (DRAW as Record<string, () => JSX.Element>)[icon] : undefined;
   return draw ? draw() : null;
 }

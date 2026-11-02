@@ -3,6 +3,7 @@
 // and does not animate at all for people who ask for reduced motion.
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { AmbientView } from '../../shared/src/protocol.js';
+import { workBeat } from './workfx.js';
 import { sound } from './sound.js';
 
 type Fx = NonNullable<AmbientView['fx']>;
@@ -558,7 +559,10 @@ export function Ambient({
   const still = reducedMotion();
 
   useEffect(() => {
-    engine.current = new Engine(still ? null : backRef.current, still ? null : frontRef.current, (fx, mate) => sound.beat(fx, mate));
+    engine.current = new Engine(still ? null : backRef.current, still ? null : frontRef.current, (fx, mate) => {
+      sound.beat(fx, mate);
+      workBeat(fx, mate);
+    });
     return () => {
       engine.current?.destroy();
       engine.current = null;

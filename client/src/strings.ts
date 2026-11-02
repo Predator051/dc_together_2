@@ -104,6 +104,10 @@ export const T = {
   deltaBoth: 'Разом',
   soundOn: 'Увімкнути звук',
   soundOff: 'Вимкнути звук',
+  workFxOn: 'Показувати роботу',
+  workFxOff: 'Не показувати роботу',
+  workFxSmall: 'Згорнути в куток',
+  workFxBig: 'Розгорнути',
   mateCan: 'може тут',
   mateNow: 'зараз',
   // a workplace's painting: works on it, the picked one in a card below
