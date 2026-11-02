@@ -12,6 +12,7 @@ import { Cell } from './cells.js';
 import { Sheet } from './sheet.js';
 import { IconEye, IconPair, IconSignGo } from './icons.js';
 import { T } from './strings.js';
+import { Shelves, shelfOf } from './groups.js';
 import { LarderStrip, signed } from './folk.js';
 
 function secs(ms: number): string {
@@ -307,11 +308,12 @@ export function BagPanel({ v, locked }: { v: PlayerView; locked: boolean }) {
         </span>
       </h3>
       <Bar n={b.load} max={b.cap} cls="load" />
-      <ul class="cells" aria-label={T.bag}>
-        {b.items.map((x) => (
-          <Cell icon={x.icon} name={x.name} n={x.n} sel={sel === x.id} onPick={() => setSel(sel === x.id ? null : x.id)} />
-        ))}
-      </ul>
+      <Shelves
+        items={b.items}
+        label={T.bag}
+        shelf={(x) => shelfOf(x.kind)}
+        cell={(x) => <Cell icon={x.icon} name={x.name} n={x.n} sel={sel === x.id} onPick={() => setSel(sel === x.id ? null : x.id)} />}
+      />
       {it && (
         <div class="cell-detail" key={it.id}>
           <span class="bag-name">
