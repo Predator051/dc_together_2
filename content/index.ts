@@ -15,7 +15,7 @@ import { ambient } from './ambient.js';
 import { hero, perks, roleTitles, trades, traits } from './core.js';
 import { ui } from './ui.js';
 import { weather } from './weather.js';
-import { events } from './events.js';
+import { events } from './events/index.js';
 import { garden, gardenActions, gardenFx, gardenLocations, gardenResources } from './garden.js';
 import { folkActions, folkResources } from './folk.js';
 import { needs, needs1Actions, needs1Fx, needs1Resources } from './a1/needs.js';

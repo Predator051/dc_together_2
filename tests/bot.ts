@@ -81,6 +81,7 @@ export class Bot {
     if (v.proposal) return null; // mine: wait for the answer
     // a small happening: answer it (a careless player at random, a careful one the first that can be done)
     const ev = v.events[0];
+    if (ev?.done) return { c: 'event', uid: ev.uid, choice: -1 };
     if (ev) {
       const ok = ev.choices.map((c, i) => ({ c, i })).filter((x) => x.c.enabled);
       if (ok.length) return { c: 'event', uid: ev.uid, choice: (this.o.careless ? this.rng.pick(ok) : ok[0]!).i };

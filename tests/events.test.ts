@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import type { EventDef, PlayerId } from '../shared/src/content.js';
+import type { PlayerId } from '../shared/src/content.js';
 import { placeEvent, roadEvent } from '../server/src/engine/events.js';
 import { ix, pair, World } from './world.js';
 
@@ -34,79 +34,120 @@ function due(w: World): void {
   for (const k of ['home', 'p1', 'p2']) s.next[k] = w.now - 1;
 }
 
+/** Let an away happening come for sure. */
+function surely<T>(f: () => T): T {
+  const { road, place } = ix.c.events!;
+  ix.c.events!.road = 1;
+  ix.c.events!.place = 1;
+  try {
+    return f();
+  } finally {
+    ix.c.events!.road = road;
+    ix.c.events!.place = place;
+  }
+}
+
 describe('small happenings', () => {
-  it('none before the hut; at home one comes when its time is up, and either hero may answer', () => {
+  it('none before the hut; at home one comes when its time is up, either hero may answer, and what came of it waits to be closed', () => {
     const r = pair(3);
     r.w.advance(1000);
     expect(r.w.state.events).toBeUndefined();
     const { w, h, m } = home();
-    only('ev_04');
+    only('ev_114');
     // the first look only starts the clock
     expect(w.view(h).events).toEqual([]);
     due(w);
     w.advance(1000);
     const card = w.view(h).events[0]!;
     expect(card.home).toBe(true);
+    expect(card.done).toBe(false);
+    expect(card.art).toBe('ev_114');
     expect(w.view(m).events[0]!.uid).toBe(card.uid);
     // the partner away from home does not see it
     w.state.players[m].at = 'a_02';
     expect(w.view(m).events).toEqual([]);
-    expect(w.cmd(m, { c: 'event', uid: card.uid, choice: 0 }).ok).toBe(false);
-    // feeding the stranger costs food and leaves rope; both read what happened
-    w.state.res['r_05'] = 5;
-    const rope = w.state.res['r_03'] ?? 0;
-    expect(w.cmd(h, { c: 'event', uid: card.uid, choice: 0 }).ok).toBe(true);
-    expect(w.state.res['r_05']).toBe(3);
-    expect(w.state.res['r_03']).toBe(rope + 2);
-    expect(w.view(h).events).toEqual([]);
+    expect(w.cmd(m, { c: 'event', uid: card.uid, choice: 1 }).ok).toBe(false);
+    w.state.players[m].at = 'a_01';
+    // the heron goes into the pot: food, and both read it in the log
+    const food = w.state.res['r_05'] ?? 0;
+    expect(w.cmd(h, { c: 'event', uid: card.uid, choice: 1 }).ok).toBe(true);
+    expect(w.state.res['r_05']).toBe(food + 3);
     const line = w.state.log[w.state.log.length - 1]!;
-    expect(line.text.p1).toContain('мотузки');
-    expect(line.text.p2).toBe(line.text.p1);
-    // not again soon
+    expect(line.text.p1).toContain('чаплі');
+    expect(line.text.p2).toContain(line.text.p1!);
+    expect(line.text.p2).toContain('Пустити на юшку');
+    // the one who answered reads what came of it and what it brought; the partner's window is gone
+    const done = w.view(h).events[0]!;
+    expect(done.done).toBe(true);
+    expect(done.choices).toEqual([]);
+    expect(done.text.join(' ')).toContain('чаплі');
+    expect(done.gains).toEqual([{ name: 'Харчі', n: 3 }]);
+    expect(w.view(m).events).toEqual([]);
+    expect(w.cmd(h, { c: 'event', uid: card.uid, choice: 0 }).ok).toBe(false);
+    expect(w.cmd(m, { c: 'event', uid: card.uid, choice: -1 }).ok).toBe(false);
+    expect(w.cmd(h, { c: 'event', uid: card.uid, choice: -1 }).ok).toBe(true);
+    expect(w.view(h).events).toEqual([]);
+    // once only
     due(w);
     w.advance(1000);
     expect(w.view(h).events).toEqual([]);
   });
 
-  it('a choice that cannot be paid for is locked and says why', () => {
+  it('a choice that cannot be paid for is locked and says why; what it costs is counted', () => {
     const { w, h } = home();
-    only('ev_04');
+    only('ev_114');
     due(w);
-    w.state.res['r_05'] = 0;
-    w.state.res['r_04'] = 0;
+    w.state.res['r_12'] = 0;
+    w.state.res['r_05'] = 5;
     w.advance(1000);
     const card = w.view(h).events[0]!;
     expect(card.choices[0]!.enabled).toBe(false);
-    expect(card.choices[0]!.cost?.[0]!.ok).toBe(false);
-    expect(card.choices[2]!.enabled).toBe(true);
+    expect(card.choices[0]!.cost?.some((c) => !c.ok)).toBe(true);
     expect(w.cmd(h, { c: 'event', uid: card.uid, choice: 0 }).ok).toBe(false);
-    expect(w.cmd(h, { c: 'event', uid: card.uid, choice: 2 }).ok).toBe(true);
+    w.state.res['r_12'] = 2;
+    expect(w.view(h).events[0]!.choices[0]!.enabled).toBe(true);
+    expect(w.cmd(h, { c: 'event', uid: card.uid, choice: 0 }).ok).toBe(true);
+    expect(w.state.res['r_12']).toBe(1);
+    const gains = w.view(h).events[0]!.gains;
+    expect(gains).toContainEqual({ name: 'Кістки', n: -1 });
+    expect(gains).toContainEqual({ name: 'Харчі', n: -1 });
   });
 
-  it('one without choices simply happens: a line in the log and what it brings', () => {
+  it('a scene of several steps: what came of the first is shown above the next', () => {
     const { w, h } = home();
-    w.g().apply([{ resident: 'h_01' }]);
-    only('ev_07');
+    only('ev_108');
     due(w);
-    const reed = w.state.res['r_02'] ?? 0;
     w.advance(1000);
-    expect(w.view(h).events).toEqual([]);
-    expect(w.state.res['r_02']).toBe(reed + 3);
-    expect(w.state.log[w.state.log.length - 1]!.kind).toBe('find');
+    const card = w.view(h).events[0]!;
+    expect(card.lead).toEqual([]);
+    expect(w.cmd(h, { c: 'event', uid: card.uid, choice: 0 }).ok).toBe(true);
+    const step = w.view(h).events[0]!;
+    expect(step.done).toBe(false);
+    expect(step.lead.join(' ')).toContain('ганчірка');
+    expect(step.text.join(' ')).toContain('мисочка');
+    const iron = w.state.res['r_18'] ?? 0;
+    expect(w.cmd(h, { c: 'event', uid: card.uid, choice: 0 }).ok).toBe(true);
+    expect(w.state.res['r_18']).toBe(iron + 2);
+    expect(w.view(h).events[0]!.done).toBe(true);
   });
 
-  it('away: a card is for the one who is there and goes away when that hero walks off', () => {
+  it('a fight that breaks out is what came of it: the window goes away', () => {
+    const { w, h } = home();
+    only('ev_101');
+    due(w);
+    w.advance(1000);
+    const card = w.view(h).events[0]!;
+    expect(w.cmd(h, { c: 'event', uid: card.uid, choice: 0 }).ok).toBe(true);
+    expect(w.state.players[h].fight).not.toBeNull();
+    expect(w.state.events!.open).toEqual([]);
+  });
+
+  it('away: a window is for the one who is there and goes away when that hero walks off', () => {
     const { w, h, m } = home();
-    only('ev_22');
+    only('ev_134');
     w.state.players[h].at = 'a_03';
     due(w);
-    const p = ix.c.events!.place;
-    ix.c.events!.place = 1;
-    try {
-      placeEvent(w.g(), h);
-    } finally {
-      ix.c.events!.place = p;
-    }
+    surely(() => placeEvent(w.g(), h));
     const card = w.view(h).events[0]!;
     expect(card.home).toBe(false);
     expect(w.view(m).events).toEqual([]);
@@ -116,39 +157,35 @@ describe('small happenings', () => {
     expect(w.cmd(h, { c: 'event', uid: card.uid, choice: 1 }).ok).toBe(false);
   });
 
-  it('a once-only find never comes twice; road ones only where they belong', () => {
+  it('a once-only find never comes twice; road ones only where and when they belong', () => {
     const { w, h } = home();
-    only('ev_26', 'ev_23');
-    const road = ix.c.events!.road;
-    const place = ix.c.events!.place;
-    ix.c.events!.road = 1;
-    ix.c.events!.place = 1;
-    try {
+    only('ev_145', 'ev_138');
+    surely(() => {
       w.state.players[h].at = 'a_07';
       due(w);
       placeEvent(w.g(), h);
+      const card = w.view(h).events[0]!;
+      expect(w.cmd(h, { c: 'event', uid: card.uid, choice: 0 }).ok).toBe(true);
       expect(w.state.players[h].bag['r_18']).toBe(1);
+      expect(w.cmd(h, { c: 'event', uid: card.uid, choice: -1 }).ok).toBe(true);
       due(w);
       placeEvent(w.g(), h);
-      expect(w.state.players[h].bag['r_18']).toBe(1);
+      expect(w.view(h).events).toEqual([]);
       // the salt crust needs sun or wind on the salt flat
       w.state.weather = { id: 'w_rain', until: w.now + 60 * MIN, next: 'w_clear' };
       w.state.players[h].at = 'a_04';
       due(w);
       roadEvent(w.g(), h);
-      expect(w.state.players[h].bag['r_07'] ?? 0).toBe(0);
+      expect(w.view(h).events).toEqual([]);
       w.state.weather = { id: 'w_wind', until: w.now + 60 * MIN, next: 'w_clear' };
       roadEvent(w.g(), h);
-      expect(w.state.players[h].bag['r_07']).toBe(2);
-    } finally {
-      ix.c.events!.road = road;
-      ix.c.events!.place = place;
-    }
+      expect(w.view(h).events[0]!.art).toBe('ev_138');
+    });
   });
 
   it('nothing comes during a joint scene or a fight', () => {
     const { w, h } = home();
-    only('ev_04');
+    only('ev_114');
     due(w);
     w.state.scene = { id: 's_x', node: 'n', mode: 'joint', paused: false } as never;
     w.advance(1000);
@@ -160,6 +197,60 @@ describe('small happenings', () => {
     expect(w.state.events!.open).toEqual([]);
   });
 
+  it('a window of a happening no longer in the game goes away', () => {
+    const { w, h } = home();
+    w.state.events!.open.push({ uid: 99, id: 'ev_gone', pid: null, area: 'a_01', at: w.now });
+    w.advance(1000);
+    expect(w.state.events!.open).toEqual([]);
+    expect(w.view(h).events).toEqual([]);
+  });
+
+  it('the clocks run only while someone plays: coming back after a day is not met by happenings', () => {
+    const { w, h, m } = home();
+    only('ev_114', 'ev_134');
+    // the clocks are almost due when both leave the game
+    const s = w.state.events!;
+    for (const k of ['home', 'p1', 'p2']) s.next[k] = w.now + 2 * MIN;
+    w.online(h, false);
+    w.online(m, false);
+    w.advance(24 * 60 * MIN);
+    expect(s.open).toEqual([]);
+    // back: the minutes left are kept, but the first one waits a little after a real absence
+    w.online(h);
+    expect(s.next['home']).toBeGreaterThanOrEqual(w.now + 3 * MIN);
+    expect(s.next[h]).toBeGreaterThanOrEqual(w.now + 3 * MIN);
+    w.advance(2 * MIN);
+    expect(w.view(h).events).toEqual([]);
+    w.state.players[h].at = 'a_03';
+    surely(() => placeEvent(w.g(), h));
+    expect(w.view(h).events).toEqual([]);
+    w.state.players[h].at = 'a_01';
+    w.advance(2 * MIN);
+    expect(w.view(h).events.length).toBe(1);
+  });
+
+  it('a dropped connection only pauses the clock; a window nobody looks at goes away', () => {
+    const { w, h, m } = home();
+    only('ev_114');
+    const s = w.state.events!;
+    s.next['home'] = w.now + 5 * MIN;
+    s.next[h] = w.now + 5 * MIN;
+    w.online(h, false);
+    w.advance(30_000);
+    w.online(h);
+    expect(s.next[h]).toBe(w.now + 5 * MIN);
+    // a home window waits while someone at home plays, and goes away when nobody has for a while
+    due(w);
+    w.advance(1000);
+    expect(s.open.length).toBe(1);
+    w.online(h, false);
+    w.online(m, false);
+    w.advance(2 * MIN);
+    expect(s.open.length).toBe(1);
+    w.advance(5 * MIN);
+    expect(s.open).toEqual([]);
+  });
+
   it('a scratch from a happening never knocks a hero down', () => {
     const { w, h } = home();
     w.state.players[h].hp = 2;
@@ -167,10 +258,13 @@ describe('small happenings', () => {
     expect(w.state.players[h].hp).toBe(1);
   });
 
-  it('every kind of happening reads right and its choices lead somewhere', () => {
-    for (const e of all as EventDef[]) {
-      if (!e.choices) expect(e.effects?.length ?? 0).toBeGreaterThan(0);
-      for (const ch of e.choices ?? []) expect(ch.outcomes.length).toBeGreaterThan(0);
+  it('there are a hundred and more, each a choice with somewhere to go, spread over the story', () => {
+    expect(all.length).toBeGreaterThanOrEqual(100);
+    for (const e of all) {
+      expect(e.choices?.length ?? 0).toBeGreaterThanOrEqual(2);
+      for (const ch of [...e.choices!, ...Object.values(e.stages ?? {}).flatMap((s) => s.choices)]) expect(ch.outcomes.length).toBeGreaterThan(0);
     }
+    expect(all.filter((e) => e.where === 'home').length).toBeGreaterThanOrEqual(30);
+    expect(all.filter((e) => e.where !== 'home').length).toBeGreaterThanOrEqual(60);
   });
 });

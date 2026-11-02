@@ -15,6 +15,7 @@ import grounds from '../client/src/art/grounds.json';
 import perkMarks from '../client/src/art/perks.json';
 import yardArt from '../client/src/art/yard.json';
 import moments from '../client/src/art/moments.json';
+import eventArt from '../client/src/art/events.json';
 import { SKILLS, STATS } from '../shared/src/content.js';
 
 // Every mark of a thing is painted; a new mark needs its cell in an atlas (scripts/art.ts things).
@@ -191,6 +192,19 @@ describe('painted moments', () => {
     for (const id of moments as string[]) {
       expect((MOMENTS as readonly string[]).includes(id), id).toBe(true);
       expect(existsSync(new URL(`../client/src/art/moments/${id}.webp`, import.meta.url)), id).toBe(true);
+    }
+  });
+});
+
+// Pictures of small happenings (scripts/art.ts events): every happening of the story has its own, each on disk.
+describe('painted happenings', () => {
+  it('every happening has its picture, and every picture belongs to one', () => {
+    const kinds = content.events?.kinds ?? [];
+    const keys = new Set(kinds.map((e) => e.art ?? e.id));
+    for (const k of keys) expect((eventArt as string[]).includes(k), k).toBe(true);
+    for (const k of eventArt as string[]) {
+      expect(keys.has(k), k).toBe(true);
+      expect(existsSync(new URL(`../client/src/art/events/${k}.webp`, import.meta.url)), k).toBe(true);
     }
   });
 });

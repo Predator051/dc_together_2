@@ -387,7 +387,24 @@ export interface WorldState {
   events?: {
     next: Record<string, number>;
     last: Record<string, number>;
-    open: Array<{ uid: number; id: string; pid: PlayerId | null; area: string; at: number }>;
+    /**
+     * `stage`: the step it has come to (none: the first); `lead`: what came of the step before;
+     * `done`: it is over, and the one who answered reads what came of it until they close it.
+     */
+    open: Array<{
+      uid: number;
+      id: string;
+      pid: PlayerId | null;
+      area: string;
+      at: number;
+      stage?: string;
+      lead?: string;
+      done?: { by: PlayerId; text: string; gains?: Array<{ name: string; n: number }> };
+      /** Since when nobody who may read it has been in the game. */
+      idle?: number;
+    }>;
+    /** Clocks stopped while their hero (or, for the home, everyone) is out of the game: what was left, and since when. */
+    left?: Record<string, { ms: number; at: number }>;
     uid: number;
   };
   /** The home garden: what grows in each bed and how far, until when it is watered, when last counted. */

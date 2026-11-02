@@ -37,7 +37,7 @@ import type { LogEntry, PlayerState, WorldState } from '../../../shared/src/stat
 import { PART, STATE_VERSION } from '../../../shared/src/state.js';
 import { FOLK, PERK, gatherMult } from '../../../shared/src/rules.js';
 import { settleWeather, skyFor, turnWeather, weatherNow } from './weather.js';
-import { answerEvent, placeEvent, settleEvents } from './events.js';
+import { answerEvent, eventsPresence, placeEvent, settleEvents } from './events.js';
 import { harvest, plant, settleGarden, waterGarden } from './garden.js';
 import {
   addBag,
@@ -1850,6 +1850,8 @@ export class Game {
     if (p.online === online) return;
     // the needs count up to now as they were (in the game or not)
     settleNeeds(this);
+    // the clocks of small happenings run only while someone plays
+    eventsPresence(this, pid, online);
     p.online = online;
     p.lastSeen = this.now;
     if (!online) {
